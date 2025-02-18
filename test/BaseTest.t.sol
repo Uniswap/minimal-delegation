@@ -11,9 +11,11 @@ contract BaseTest is Test {
 
     function setUp() public {
         minimalDelegation = new MinimalDelegation();
+        _delegate(signer, address(minimalDelegation));
+    }
 
-        // delegate the signer to the minimalDelegation
-        vm.etch(signer, bytes.concat(hex"ef0100", abi.encodePacked(address(minimalDelegation))));
-        require(signer.code.length > 0, "signer not delegated");
+    function _delegate(address _signer, address _implementation) internal {
+        vm.etch(_signer, bytes.concat(hex"ef0100", abi.encodePacked(_implementation)));
+        require(_signer.code.length > 0, "signer not delegated");
     }
 }
