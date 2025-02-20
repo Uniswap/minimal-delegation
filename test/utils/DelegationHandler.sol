@@ -2,10 +2,10 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
-import {Key, KeyLib, KeyType} from "../src/lib/KeyLib.sol";
-import {MinimalDelegation} from "../src/MinimalDelegation.sol";
+import {Key, KeyLib, KeyType} from "../../src/lib/KeyLib.sol";
+import {MinimalDelegation} from "../../src/MinimalDelegation.sol";
 
-contract BaseTest is Test {
+contract DelegationHandler is Test {
     using KeyLib for Key;
 
     MinimalDelegation public minimalDelegation;
@@ -15,7 +15,7 @@ contract BaseTest is Test {
     address mockSecp256k1PublicKey = makeAddr("mockSecp256k1PublicKey");
     Key public mockSecp256k1Key = Key(0, KeyType.Secp256k1, true, abi.encodePacked(mockSecp256k1PublicKey));
 
-    function setUp() public {
+    function setUpDelegation() public {
         minimalDelegation = new MinimalDelegation();
         _delegate(signer, address(minimalDelegation));
     }
