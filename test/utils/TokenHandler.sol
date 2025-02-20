@@ -15,8 +15,14 @@ contract TokenHandler {
     }
 
     function buildTransferCall(address token, address to, uint256 amount) internal pure returns (Calls memory call) {
-        call.to = token;
-        call.value = 0;
-        call.data = abi.encodeWithSelector(ERC20.transfer.selector, to, amount);
+        if (token == address(0)) {
+            call.to = to;
+            call.value = amount;
+            call.data = "";
+        } else {
+            call.to = token;
+            call.value = 0;
+            call.data = abi.encodeWithSelector(ERC20.transfer.selector, to, amount);
+        }
     }
 }

@@ -57,10 +57,13 @@ contract MinimalDelegation is IERC7821 {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
+    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
+    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
     function _execute(Calls[] memory calls) private {
         for (uint256 i = 0; i < calls.length; i++) {
             Calls memory _call = calls[i];
-            (bool success,) = _call.to.call{value: _call.value}(_call.data);
+            address to = _call.to == address(0) ? address(this) : _call.to;
+            (bool success,) = to.call{value: _call.value}(_call.data);
             if (!success) revert IERC7821.CallFailed();
         }
     }

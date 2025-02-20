@@ -19,6 +19,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         setUpDelegation();
         setUpTokens();
 
+        vm.deal(address(minimalDelegation), 100e18);
         tokenA.mint(address(minimalDelegation), 100e18);
         tokenB.mint(address(minimalDelegation), 100e18);
     }
@@ -48,7 +49,24 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         vm.prank(address(minimalDelegation));
         minimalDelegation.execute(BATCHED_CALL, executionData);
 
+        uint256 nativeBalanceBefore = address(minimalDelegation).balance;
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         assertEq(tokenB.balanceOf(address(receiver)), 1e18);
+        // native balance should not change
+        assertEq(address(minimalDelegation).balance, nativeBalanceBefore);
+    }
+
+    function test_execute_native() public {
+        Calls[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls);
+
+        vm.prank(address(minimalDelegation));
+        minimalDelegation.execute(BATCHED_CALL, executionData);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+        assertEq(address(receiver).balance, 1e18);
     }
 }
