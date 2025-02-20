@@ -22,10 +22,13 @@ contract MinimalDelegationTest is BaseTest {
     }
 
     function test_revoke() public {
-        bytes32 keyHash = mockSecp256k1Key.hash();
+        // first authorize the key
+        bytes32 keyHash = minimalDelegation.authorize(mockSecp256k1Key);
 
+        // then revoke the key
         minimalDelegation.revoke(keyHash);
 
+        // then expect the key to not exist
         vm.expectRevert(KeyDoesNotExist.selector);
         minimalDelegation.getKey(keyHash);
     }
