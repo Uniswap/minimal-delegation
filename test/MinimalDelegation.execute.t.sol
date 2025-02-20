@@ -30,6 +30,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         }
     }
 
+    function test_execute_auth_reverts() public {
+        vm.expectRevert(IERC7821.Unauthorized.selector);
+        minimalDelegation.execute(BATCHED_CALL, abi.encode(CallBuilder.init()));
+    }
+
     function test_execute() public {
         Calls[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
