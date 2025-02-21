@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {BaseTest} from "./BaseTest.t.sol";
+import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {Key, KeyType, KeyLib} from "../src/lib/KeyLib.sol";
 
-contract MinimalDelegationTest is BaseTest {
+contract MinimalDelegationTest is DelegationHandler {
     using KeyLib for Key;
 
     error KeyDoesNotExist();
+
+    function setUp() public {
+        setUpDelegation();
+    }
 
     function test_authorize() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
