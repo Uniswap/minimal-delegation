@@ -25,10 +25,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     }
 
     function test_execute_fuzz_reverts(bytes32 mode) public {
+        vm.startPrank(address(minimalDelegation));
         if (mode != BATCHED_CALL) {
             vm.expectRevert(IERC7821.UnsupportedExecutionMode.selector);
-            minimalDelegation.execute(mode, "");
         }
+        minimalDelegation.execute(mode, abi.encode(CallBuilder.init()));
     }
 
     function test_execute_auth_reverts() public {
