@@ -24,7 +24,7 @@ contract MinimalDelegation is IERC7821 {
         if (mode.isBatchedCall()) {
             Calls[] memory calls = abi.decode(executionData, (Calls[]));
             _authorizeCaller();
-            _execute(calls);
+            _execute(mode, calls);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -59,12 +59,17 @@ contract MinimalDelegation is IERC7821 {
 
     // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
     // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
-    function _execute(Calls[] memory calls) private {
+    function _execute(bytes32 mode, Calls[] memory calls) private {
+        bool shouldRevert = mode.shouldRevert();
         for (uint256 i = 0; i < calls.length; i++) {
-            Calls memory _call = calls[i];
-            address to = _call.to == address(0) ? address(this) : _call.to;
-            (bool success,) = to.call{value: _call.value}(_call.data);
-            if (!success) revert IERC7821.CallFailed();
+            (bool success, bytes memory output) = _execute(calls[i]);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
+    }
+
+    function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
+        address to = _call.to == address(0) ? address(this) : _call.to;
+        (success, output) = to.call{value: _call.value}(_call.data);
     }
 }
