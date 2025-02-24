@@ -29,7 +29,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
             vm.expectRevert(IERC7821.UnsupportedExecutionMode.selector);
         }
         minimalDelegation.execute(mode, "");
-    } 
+    }
 
     function test_execute_auth_reverts() public {
         vm.expectRevert(IERC7821.Unauthorized.selector);
