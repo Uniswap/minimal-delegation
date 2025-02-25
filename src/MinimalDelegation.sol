@@ -39,15 +39,18 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         emit Authorized(keyHash, key);
     }
 
+    /// @dev Revokes the key with the `keyHash`.
     function revoke(bytes32 keyHash) external {
         _revoke(keyHash);
         emit Revoked(keyHash);
     }
 
+    /// @dev Returns the number of authorized keys.
     function keyCount() external view returns (uint256) {
         return MinimalDelegationStorageLib.get().keyHashes.length();
     }
 
+    /// @dev Returns the key at the `i`-th position in the key list.
     function keyAt(uint256 i) external view returns (Key memory key) {
         return getKey(MinimalDelegationStorageLib.get().keyHashes.at(i));
     }
