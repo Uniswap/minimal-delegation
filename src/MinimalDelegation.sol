@@ -3,13 +3,16 @@ pragma solidity ^0.8.23;
 
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {Key, KeyLib} from "./lib/KeyLib.sol";
-import {MinimalDelegationStorageLib} from "./lib/MinimalDelegationStorageLib.sol";
+import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./lib/MinimalDelegationStorageLib.sol";
 import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
+import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 
-contract MinimalDelegation is IERC7821 {
+contract MinimalDelegation is IERC7821, IKeyManagement {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /// @dev The key does not exist.
     error KeyDoesNotExist();
@@ -32,21 +35,28 @@ contract MinimalDelegation is IERC7821 {
 
     /// @dev Authorizes the `key`.
     function authorize(Key memory key) external returns (bytes32 keyHash) {
-        keyHash = key.hash();
-        MinimalDelegationStorageLib.get().keyStorage[keyHash] = abi.encode(key);
+        keyHash = _authorize(key);
         emit Authorized(keyHash, key);
     }
 
+    function revoke(bytes32 keyHash) external {
+        _revoke(keyHash);
+        emit Revoked(keyHash);
+    }
+
+    function keyCount() external view returns (uint256) {
+        return MinimalDelegationStorageLib.get().keyHashes.length();
+    }
+
+    function keyAt(uint256 i) external view returns (Key memory key) {
+        return getKey(MinimalDelegationStorageLib.get().keyHashes.at(i));
+    }
+
     /// @dev Returns the key corresponding to the `keyHash`. Reverts if the key does not exist.
-    function getKey(bytes32 keyHash) external view returns (Key memory key) {
+    function getKey(bytes32 keyHash) public view returns (Key memory key) {
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
-    }
-
-    function revoke(bytes32 keyHash) external {
-        delete MinimalDelegationStorageLib.get().keyStorage[keyHash];
-        emit Revoked(keyHash);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -65,6 +75,21 @@ contract MinimalDelegation is IERC7821 {
             address to = _call.to == address(0) ? address(this) : _call.to;
             (bool success,) = to.call{value: _call.value}(_call.data);
             if (!success) revert IERC7821.CallFailed();
+        }
+    }
+
+    function _authorize(Key memory key) private returns (bytes32 keyHash) {
+        keyHash = key.hash();
+        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
+        minimalDelegationStorage.keyStorage[keyHash] = abi.encode(key);
+        minimalDelegationStorage.keyHashes.add(keyHash);
+    }
+
+    function _revoke(bytes32 keyHash) private {
+        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
+        delete minimalDelegationStorage.keyStorage[keyHash];
+        if (!minimalDelegationStorage.keyHashes.remove(keyHash)) {
+            revert KeyDoesNotExist();
         }
     }
 }
