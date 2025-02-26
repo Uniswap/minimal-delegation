@@ -26,7 +26,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         tokenB.mint(address(minimalDelegation), 100e18);
     }
 
-    function test_execute_reverts() public {
+    function test_execute_reverts_withUnsupportedExecutionMode() public {
         // Test specific modes since the fuzz is just over the first 2 bytes.
         bytes32[] memory modes = new bytes32[](3);
         bytes32 invalid_mode_1 = 0x0101100000000000000000000000000000000000000000000000000000000000;
