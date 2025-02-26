@@ -27,7 +27,7 @@ library ModeDecoder {
 
     // Supported modes:
     // 0x01           | 0x00      | unused        | 0x78210001   | unused
-    // 0x01           | 0x01      | unused        | 0x00000000   | unused
+    // 0x01           | 0x01      | unused        | 0x78210001   | unused
     // - A batched call that supports optional opData
     // - A batched call that does not revert on failure, and supports optional opData
     function supportsOpData(bytes32 mode) internal pure returns (bool) {
