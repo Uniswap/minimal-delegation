@@ -2,8 +2,8 @@
 pragma solidity ^0.8.23;
 
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {Key, KeyLib} from "./lib/KeyLib.sol";
-import {MinimalDelegationStorageLib} from "./lib/MinimalDelegationStorageLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorageLib.sol";
 import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 
