@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
-import {Key, KeyType, KeyLib} from "../src/lib/KeyLib.sol";
+import {Key, KeyType, KeyLib} from "../src/libraries/KeyLib.sol";
 
 contract MinimalDelegationTest is DelegationHandler {
     using KeyLib for Key;
