@@ -52,7 +52,6 @@ contract MinimalDelegationTest is DelegationHandler {
         assertEq(minimalDelegation.keyCount(), 1);
 
         mockSecp256k1Key.expiry = uint40(block.timestamp + 3600);
-        keyHash = mockSecp256k1Key.hash();
         // already authorized key should be updated
         minimalDelegation.authorize(mockSecp256k1Key);
 
@@ -105,6 +104,8 @@ contract MinimalDelegationTest is DelegationHandler {
         assertEq(minimalDelegation.keyCount(), 2);
     }
 
+    /// forge-config: default.fuzz.runs = 100
+    /// forge-config: ci.fuzz.runs = 500
     function test_fuzz_keyCount(uint8 numKeys) public {
         Key memory mockSecp256k1Key;
         string memory publicKey = "";

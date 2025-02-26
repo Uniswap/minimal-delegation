@@ -75,6 +75,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
     function _authorize(Key memory key) private returns (bytes32 keyHash) {
         keyHash = key.hash();
         MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
+        // If the keyHash already exists, it does not revert and updates the key instead.
         minimalDelegationStorage.keyStorage[keyHash] = abi.encode(key);
         minimalDelegationStorage.keyHashes.add(keyHash);
     }
