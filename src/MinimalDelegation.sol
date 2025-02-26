@@ -14,15 +14,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
-    /// @dev The key does not exist.
-    error KeyDoesNotExist();
-
-    /// @dev Emitted when a key is authorized.
-    event Authorized(bytes32 indexed keyHash, Key key);
-
-    /// @dev Emitted when a key is revoked.
-    event Revoked(bytes32 indexed keyHash);
-
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
             Calls[] memory calls = abi.decode(executionData, (Calls[]));
@@ -33,33 +24,33 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         }
     }
 
-    /// @dev Authorizes the `key`.
+    /// @inheritdoc IKeyManagement
     function authorize(Key memory key) external returns (bytes32 keyHash) {
+        _authorizeCaller();
         keyHash = _authorize(key);
         emit Authorized(keyHash, key);
     }
 
-    /// @dev Revokes the key with the `keyHash`.
+    /// @inheritdoc IKeyManagement
     function revoke(bytes32 keyHash) external {
+        _authorizeCaller();
         _revoke(keyHash);
         emit Revoked(keyHash);
     }
 
-    /// @dev Returns the number of authorized keys.
+    /// @inheritdoc IKeyManagement
     function keyCount() external view returns (uint256) {
         return MinimalDelegationStorageLib.get().keyHashes.length();
     }
 
-    /// @dev Returns the key at the `i`-th position in the key list.
-    function keyAt(uint256 i) external view returns (Key memory key) {
-        return getKey(MinimalDelegationStorageLib.get().keyHashes.at(i));
+    /// @inheritdoc IKeyManagement
+    function keyAt(uint256 i) external view returns (Key memory) {
+        return _getKey(MinimalDelegationStorageLib.get().keyHashes.at(i));
     }
 
-    /// @dev Returns the key corresponding to the `keyHash`. Reverts if the key does not exist.
-    function getKey(bytes32 keyHash) public view returns (Key memory key) {
-        bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
-        if (data.length == 0) revert KeyDoesNotExist();
-        return abi.decode(data, (Key));
+    /// @inheritdoc IKeyManagement
+    function getKey(bytes32 keyHash) external view returns (Key memory) {
+        return _getKey(keyHash);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -94,5 +85,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         if (!minimalDelegationStorage.keyHashes.remove(keyHash)) {
             revert KeyDoesNotExist();
         }
+    }
+
+    function _getKey(bytes32 keyHash) private view returns (Key memory) {
+        bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
+        if (data.length == 0) revert KeyDoesNotExist();
+        return abi.decode(data, (Key));
     }
 }

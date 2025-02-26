@@ -5,7 +5,7 @@ libs = ["lib"]
 odyssey = true
 
 [profile.default.fuzz]
-runs = 1000
+runs = 100
 
 [profile.ci.fuzz]
 runs = 100000
