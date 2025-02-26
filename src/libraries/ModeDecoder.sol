@@ -28,8 +28,8 @@ library ModeDecoder {
     // Supported modes:
     // 0x01           | 0x00      | unused        | 0x78210001   | unused
     // 0x01           | 0x01      | unused        | 0x78210001   | unused
-    // - A batched call that supports optional opData
-    // - A batched call that does not revert on failure, and supports optional opData
+    // - A batched call that requires opData
+    // - A batched call that does not revert on failure, and requires opData
     function supportsOpData(bytes32 mode) internal pure returns (bool) {
         return mode == BATCHED_CALL_SUPPORTS_OPDATA || mode == BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT;
     }
