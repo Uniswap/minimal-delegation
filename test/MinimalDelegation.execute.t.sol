@@ -14,6 +14,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
     bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
     bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
+    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA = 0x0100000000007821000100000000000000000000000000000000000000000000;
+    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT =
+        0x0101000000007821000100000000000000000000000000000000000000000000;
 
     address receiver = makeAddr("receiver");
 
@@ -119,6 +122,36 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         vm.startPrank(address(minimalDelegation));
         minimalDelegation.execute(BATCHED_CAN_REVERT_CALL, executionData);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+        // the second transfer failed
+        assertEq(tokenB.balanceOf(address(receiver)), 0);
+    }
+
+    function test_execute_batch_opData_empty() public {
+        Calls[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls, "");
+
+        vm.startPrank(address(minimalDelegation));
+        minimalDelegation.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+        assertEq(tokenB.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_batch_opData_empty_canRevert_succeeds() public {
+        Calls[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        // this call reverts but the batch should succeed
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 101e18));
+
+        bytes memory executionData = abi.encode(calls, "");
+
+        vm.startPrank(address(minimalDelegation));
+        minimalDelegation.execute(BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT, executionData);
 
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         // the second transfer failed

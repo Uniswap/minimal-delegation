@@ -25,6 +25,9 @@ contract MinimalDelegation is IERC7821 {
             Calls[] memory calls = abi.decode(executionData, (Calls[]));
             _authorizeCaller();
             _execute(mode, calls);
+        } else if (mode.supportsOpData()) {
+            (Calls[] memory calls, bytes memory opData) = abi.decode(executionData, (Calls[], bytes));
+            _execute(mode, calls, opData);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -50,15 +53,26 @@ contract MinimalDelegation is IERC7821 {
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return mode.isBatchedCall();
+        return mode.isBatchedCall() || mode.supportsOpData();
     }
 
     function _authorizeCaller() private view {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
-    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
-    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
+    // Execute a batch of calls according to the mode and any optionally provided opData
+    function _execute(bytes32 mode, Calls[] memory calls, bytes memory opData) private {
+        if (opData.length == 0) {
+            _authorizeCaller();
+            return _execute(mode, calls);
+        }
+        // TODO: unpack anything required from opData
+        // verify signature from within opData
+        // if signature is valid, execute the calls
+        revert("TODO");
+    }
+
+    // Execute a batch of calls according to the mode
     function _execute(bytes32 mode, Calls[] memory calls) private {
         bool shouldRevert = mode.shouldRevert();
         for (uint256 i = 0; i < calls.length; i++) {
@@ -68,6 +82,7 @@ contract MinimalDelegation is IERC7821 {
         }
     }
 
+    // Execute a single call
     function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
         (success, output) = to.call{value: _call.value}(_call.data);
