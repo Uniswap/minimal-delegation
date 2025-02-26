@@ -6,8 +6,9 @@ import {Key, KeyLib} from "./lib/KeyLib.sol";
 import {MinimalDelegationStorageLib} from "./lib/MinimalDelegationStorageLib.sol";
 import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
+import {ERC1271} from "./ERC1271.sol";
 
-contract MinimalDelegation is IERC7821 {
+contract MinimalDelegation is IERC7821, ERC1271 {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
 
@@ -71,5 +72,13 @@ contract MinimalDelegation is IERC7821 {
     function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
         (success, output) = to.call{value: _call.value}(_call.data);
+    }
+
+    function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
+        return ("Uniswap Minimal Delegation", "1");
+    }
+
+    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
+        revert("Not implemented");
     }
 }
