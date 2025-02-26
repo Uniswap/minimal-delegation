@@ -10,7 +10,7 @@ struct Calls {
 interface IERC7821 {
     error UnsupportedExecutionMode();
     error Unauthorized();
-    error CallFailed();
+    error CallFailed(bytes reason);
 
     function execute(bytes32 mode, bytes calldata executionData) external payable;
 
