@@ -62,14 +62,10 @@ contract MinimalDelegation is IERC7821 {
 
     // Execute a batch of calls according to the mode and any optionally provided opData
     function _execute(bytes32 mode, Calls[] memory calls, bytes memory opData) private {
-        if (opData.length == 0) {
-            _authorizeCaller();
-            return _execute(mode, calls);
-        }
         // TODO: unpack anything required from opData
         // verify signature from within opData
         // if signature is valid, execute the calls
-        revert("TODO");
+        revert("Not implemented");
     }
 
     // Execute a batch of calls according to the mode
