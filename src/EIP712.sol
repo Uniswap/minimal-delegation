@@ -14,9 +14,6 @@ abstract contract EIP712 is IERC5267 {
     /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
     bytes32 internal constant _DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
-    bytes32 private immutable _cachedNameHash;
-    bytes32 private immutable _cachedVersionHash;
-
     /// @dev Precomputed `typeHash` used to produce EIP-712 compliant hash when applying the anti
     ///      cross-account-replay layer.
     ///
@@ -25,7 +22,10 @@ abstract contract EIP712 is IERC5267 {
     ///         - An EIP-712 hash: keccak256("\x19\x01" || someDomainSeparator || hashStruct(someStruct))
     bytes32 private constant _MESSAGE_TYPEHASH = keccak256("UniswapMinimalDelegationMessage(bytes32 hash)");
 
-    /// @dev Cache the hashes for cheaper runtime gas costs.
+    /// @dev Cached name and version hashes for cheaper runtime gas costs.
+    bytes32 private immutable _cachedNameHash;
+    bytes32 private immutable _cachedVersionHash;
+
     constructor() {
         string memory name;
         string memory version;
