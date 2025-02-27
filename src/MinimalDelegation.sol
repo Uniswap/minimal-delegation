@@ -19,6 +19,9 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
             Calls[] memory calls = abi.decode(executionData, (Calls[]));
             _authorizeCaller();
             _execute(mode, calls);
+        } else if (mode.supportsOpData()) {
+            (Calls[] memory calls, bytes memory opData) = abi.decode(executionData, (Calls[], bytes));
+            _execute(mode, calls, opData);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -54,13 +57,14 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return mode.isBatchedCall();
+        return mode.isBatchedCall() || mode.supportsOpData();
     }
 
     function _authorizeCaller() private view {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
+    // Execute a batch of calls according to the mode
     function _authorize(Key memory key) private returns (bytes32 keyHash) {
         keyHash = key.hash();
         MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
@@ -83,6 +87,14 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         return abi.decode(data, (Key));
     }
 
+    // Execute a batch of calls according to the mode and any optionally provided opData
+    function _execute(bytes32 mode, Calls[] memory calls, bytes memory opData) private {
+        // TODO: unpack anything required from opData
+        // verify signature from within opData
+        // if signature is valid, execute the calls
+        revert("Not implemented");
+    }
+
     // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
     // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
     function _execute(bytes32 mode, Calls[] memory calls) private {
@@ -94,6 +106,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         }
     }
 
+    // Execute a single call
     function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
         (success, output) = to.call{value: _call.value}(_call.data);
