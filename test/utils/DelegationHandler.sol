@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
-import {Key, KeyLib, KeyType} from "../../src/lib/KeyLib.sol";
+import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
 import {MinimalDelegation} from "../../src/MinimalDelegation.sol";
 
 contract DelegationHandler is Test {
@@ -14,6 +14,11 @@ contract DelegationHandler is Test {
 
     address mockSecp256k1PublicKey = makeAddr("mockSecp256k1PublicKey");
     Key public mockSecp256k1Key = Key(0, KeyType.Secp256k1, true, abi.encodePacked(mockSecp256k1PublicKey));
+
+    address mockSecp256k1PublicKey2 = makeAddr("mockSecp256k1PublicKey2");
+    // May need to remove block.timestamp in the future if using vm.roll / warp
+    Key public mockSecp256k1Key2 =
+        Key(uint40(block.timestamp + 3600), KeyType.Secp256k1, false, abi.encodePacked(mockSecp256k1PublicKey2));
 
     function setUpDelegation() public {
         minimalDelegation = new MinimalDelegation();
