@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 /// @title IERC1271
+/// @dev Unified interface for ERC1271, EIP712, and ERC5267
 interface IERC1271 {
     function eip712Domain()
         external
