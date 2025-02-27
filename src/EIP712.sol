@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol";
+import {IEIP712} from "./interfaces/IEIP712.sol";
 
 /// @title EIP712
 ///
@@ -10,16 +11,11 @@ import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol
 ///
 /// @author Uniswap
 /// @author Modified from Coinbase (https://github.com/coinbase/smart-wallet)
-abstract contract EIP712 is IERC5267 {
+abstract contract EIP712 is IEIP712, IERC5267 {
     /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
     bytes32 internal constant _DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
-    /// @dev Precomputed `typeHash` used to produce EIP-712 compliant hash when applying the anti
-    ///      cross-account-replay layer.
-    ///
-    ///      The original hash must either be:
-    ///         - An EIP-191 hash: keccak256("\x19Ethereum Signed Message:\n" || len(someMessage) || someMessage)
-    ///         - An EIP-712 hash: keccak256("\x19\x01" || someDomainSeparator || hashStruct(someStruct))
+    /// @dev Precomputed `typeHash` used to produce EIP-712 compliant hash for replay protection
     bytes32 private constant _MESSAGE_TYPEHASH = keccak256("UniswapMinimalDelegationMessage(bytes32 hash)");
 
     /// @dev Cached name and version hashes for cheaper runtime gas costs.
@@ -74,28 +70,24 @@ abstract contract EIP712 is IERC5267 {
             keccak256(abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this)));
     }
 
-    /// @notice Returns the EIP-712 typed hash of the `UniswapMinimalDelegationMessage(bytes32 hash)` data structure.
-    ///
-    /// @param hash The `UniswapMinimalDelegationMessage.hash` field to hash.
-    ///
-    /// @return The resulting EIP-712 hash.
-    function _hashTypedData(bytes32 hash) internal view virtual returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), _hashStruct(hash)));
+    /// @notice Public getter for `_hashTypedData()` to produce a replay-safe hash from the given `hash`.
+    /// @return The corresponding replay-safe hash.
+    function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
+        return _hashTypedData(hash);
     }
 
-    /// @dev Implements hashStruct(s : 𝕊) = keccak256(typeHash || encodeData(s)).
-    /// @dev See https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct.
-    ///
-    /// @return The EIP-712 `hashStruct` result.
-    function _hashStruct(bytes32 hash) internal view virtual returns (bytes32) {
-        return keccak256(abi.encode(_MESSAGE_TYPEHASH, hash));
+    /// @notice Returns the EIP-712 typed hash of the `UniswapMinimalDelegationMessage(bytes32 hash)` data structure.
+    /// @return The resulting EIP-712 hash.
+    function _hashTypedData(bytes32 hash) internal view returns (bytes32) {
+        return
+            keccak256(abi.encodePacked("\x19\x01", domainSeparator(), keccak256(abi.encode(_MESSAGE_TYPEHASH, hash))));
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.
     ///
-    /// @dev MUST be defined by the implementation.
-    ///
     /// @return name    The user readable name of signing domain.
     /// @return version The current major version of the signing domain.
-    function _domainNameAndVersion() internal view virtual returns (string memory name, string memory version);
+    function _domainNameAndVersion() internal pure returns (string memory name, string memory version) {
+        return ("Uniswap Minimal Delegation", "1");
+    }
 }

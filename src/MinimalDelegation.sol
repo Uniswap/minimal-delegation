@@ -114,10 +114,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271 {
         (success, output) = to.call{value: _call.value}(_call.data);
     }
 
-    function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
-        return ("Uniswap Minimal Delegation", "1");
-    }
-
     /// @dev Keyhash logic not implemented yet
     function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
         (bool isValid,) = _unwrapAndValidateSignature(hash, signature);
@@ -125,6 +121,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271 {
     }
 
     /// @dev Returns if the signature is valid, along with its `keyHash`.
+    /// @dev If signed with the root private key the keyHash is 0.
     function _unwrapAndValidateSignature(bytes32 digest, bytes calldata signature)
         internal
         view
@@ -132,7 +129,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271 {
     {
         // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
         if (signature.length == 64 || signature.length == 65) {
-            // keyHash for the root private key is 0
             return (ECDSA.recoverCalldata(digest, signature) == address(this), 0);
         }
         // not implemented
