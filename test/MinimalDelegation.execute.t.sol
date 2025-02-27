@@ -14,6 +14,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
     bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
     bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
+    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA = 0x0100000000007821000100000000000000000000000000000000000000000000;
+    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT =
+        0x0101000000007821000100000000000000000000000000000000000000000000;
 
     address receiver = makeAddr("receiver");
 
@@ -123,5 +126,17 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         // the second transfer failed
         assertEq(tokenB.balanceOf(address(receiver)), 0);
+    }
+
+    function test_execute_batch_opData_reverts_notImplemented() public {
+        Calls[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls, "");
+
+        vm.startPrank(address(minimalDelegation));
+        vm.expectRevert();
+        minimalDelegation.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
     }
 }
