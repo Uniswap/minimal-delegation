@@ -50,4 +50,31 @@ contract ERC1271Test is DelegationHandler {
         );
         assertEq(expected, replaySafeHash);
     }
+
+    function test_isValidSignature_sep256k1_succeeds() public {
+        bytes32 hash = keccak256("test");
+        bytes32 replaySafeHash = IERC1271(address(signer)).replaySafeHash(hash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, replaySafeHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        // ensure the call returns the ERC1271 magic value
+        assertEq(IERC1271(address(signer)).isValidSignature(hash, signature), bytes4(0x1626ba7e));
+    }
+
+    function test_isValidSignature_sep256k1_invalidSigner() public {
+        bytes32 hash = keccak256("test");
+        bytes32 replaySafeHash = IERC1271(address(signer)).replaySafeHash(hash);
+        // sign with a different private key
+        uint256 invalidPrivateKey = 0xdeadbeef;
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(invalidPrivateKey, replaySafeHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        // ensure the call returns the ERC1271 invalid magic value
+        assertEq(IERC1271(address(signer)).isValidSignature(hash, signature), bytes4(0xffffffff));
+    }
+
+    function test_isValidSignature_invalidSignatureLength_reverts() public {
+        bytes32 hash = keccak256("test");
+        bytes memory signature = new bytes(63);
+        vm.expectRevert("Not implemented");
+        IERC1271(address(signer)).isValidSignature(hash, signature);
+    }
 }

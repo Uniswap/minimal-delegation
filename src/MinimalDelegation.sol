@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
-import {ModeDecoder} from "./libraries/ModeDecoder.sol";
-import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271 {
@@ -117,7 +118,24 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271 {
         return ("Uniswap Minimal Delegation", "1");
     }
 
+    /// @dev Keyhash logic not implemented yet
     function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
+        (bool isValid,) = _unwrapAndValidateSignature(hash, signature);
+        return isValid;
+    }
+
+    /// @dev Returns if the signature is valid, along with its `keyHash`.
+    function _unwrapAndValidateSignature(bytes32 digest, bytes calldata signature)
+        internal
+        view
+        returns (bool isValid, bytes32 keyHash)
+    {
+        // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
+        if (signature.length == 64 || signature.length == 65) {
+            // keyHash for the root private key is 0
+            return (ECDSA.recoverCalldata(digest, signature) == address(this), 0);
+        }
+        // not implemented
         revert("Not implemented");
     }
 }
