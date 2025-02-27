@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
-import {Key, KeyLib, KeyType} from "../../src/lib/KeyLib.sol";
+import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
 import {MinimalDelegation} from "../../src/MinimalDelegation.sol";
 
 contract DelegationHandler is Test {

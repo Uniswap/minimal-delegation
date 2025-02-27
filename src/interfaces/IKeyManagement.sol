@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {Key} from "../lib/KeyLib.sol";
+import {Key} from "../libraries/KeyLib.sol";
 
 interface IKeyManagement {
     /// @dev Emitted when a key is authorized.

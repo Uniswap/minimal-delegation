@@ -2,8 +2,8 @@
 pragma solidity ^0.8.23;
 
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {Key, KeyLib} from "./lib/KeyLib.sol";
-import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./lib/MinimalDelegationStorageLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
@@ -18,7 +18,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         if (mode.isBatchedCall()) {
             Calls[] memory calls = abi.decode(executionData, (Calls[]));
             _authorizeCaller();
-            _execute(calls);
+            _execute(mode, calls);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -61,17 +61,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
-    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
-    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
-    function _execute(Calls[] memory calls) private {
-        for (uint256 i = 0; i < calls.length; i++) {
-            Calls memory _call = calls[i];
-            address to = _call.to == address(0) ? address(this) : _call.to;
-            (bool success,) = to.call{value: _call.value}(_call.data);
-            if (!success) revert IERC7821.CallFailed();
-        }
-    }
-
     function _authorize(Key memory key) private returns (bytes32 keyHash) {
         keyHash = key.hash();
         MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
@@ -92,5 +81,21 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
+    }
+
+    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
+    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
+    function _execute(bytes32 mode, Calls[] memory calls) private {
+        bool shouldRevert = mode.shouldRevert();
+        for (uint256 i = 0; i < calls.length; i++) {
+            (bool success, bytes memory output) = _execute(calls[i]);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+        }
+    }
+
+    function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
+        address to = _call.to == address(0) ? address(this) : _call.to;
+        (success, output) = to.call{value: _call.value}(_call.data);
     }
 }
