@@ -88,7 +88,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
     }
 
     // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32 mode, Calls[] memory calls, bytes memory opData) private {
+    function _execute(bytes32, Calls[] memory, bytes memory) private pure {
         // TODO: unpack anything required from opData
         // verify signature from within opData
         // if signature is valid, execute the calls
