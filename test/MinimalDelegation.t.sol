@@ -16,7 +16,9 @@ contract MinimalDelegationTest is DelegationHandler {
         setUpDelegation();
     }
 
-    function test_authorize() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_authorize_gas() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
         vm.expectEmit(true, false, false, true);
@@ -25,6 +27,16 @@ contract MinimalDelegationTest is DelegationHandler {
         vm.prank(address(minimalDelegation));
         minimalDelegation.authorize(mockSecp256k1Key);
         vm.snapshotGasLastCall("authorize");
+    }
+
+    function test_authorize() public {
+        bytes32 keyHash = mockSecp256k1Key.hash();
+
+        vm.expectEmit(true, false, false, true);
+        emit Authorized(keyHash, mockSecp256k1Key);
+
+        vm.prank(address(minimalDelegation));
+        minimalDelegation.authorize(mockSecp256k1Key);
 
         Key memory fetchedKey = minimalDelegation.getKey(keyHash);
         assertEq(fetchedKey.expiry, 0);
@@ -64,7 +76,9 @@ contract MinimalDelegationTest is DelegationHandler {
         assertEq(minimalDelegation.keyCount(), 1);
     }
 
-    function test_revoke() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_revoke_gas() public {
         // first authorize the key
         vm.startPrank(address(minimalDelegation));
         bytes32 keyHash = minimalDelegation.authorize(mockSecp256k1Key);
@@ -76,6 +90,19 @@ contract MinimalDelegationTest is DelegationHandler {
         // then revoke the key
         minimalDelegation.revoke(keyHash);
         vm.snapshotGasLastCall("revoke");
+    }
+
+    function test_revoke() public {
+        // first authorize the key
+        vm.startPrank(address(minimalDelegation));
+        bytes32 keyHash = minimalDelegation.authorize(mockSecp256k1Key);
+        assertEq(minimalDelegation.keyCount(), 1);
+
+        vm.expectEmit(true, false, false, true);
+        emit Revoked(keyHash);
+
+        // then revoke the key
+        minimalDelegation.revoke(keyHash);
 
         // then expect the key to not exist
         vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
