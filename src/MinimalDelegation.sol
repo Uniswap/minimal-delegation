@@ -10,11 +10,20 @@ import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
+import {EIP712} from "./EIP712.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271 {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+
+    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
+        if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
+            return _1271_MAGIC_VALUE;
+        }
+
+        return _1271_INVALID_VALUE;
+    }
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {

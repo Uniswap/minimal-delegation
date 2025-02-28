@@ -11,7 +11,7 @@ import {IEIP712} from "./interfaces/IEIP712.sol";
 ///
 /// @author Uniswap
 /// @author Modified from Coinbase (https://github.com/coinbase/smart-wallet)
-abstract contract EIP712 is IEIP712, IERC5267 {
+contract EIP712 is IEIP712, IERC5267 {
     /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
     bytes32 internal constant _DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
