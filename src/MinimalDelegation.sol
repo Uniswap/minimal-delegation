@@ -1,18 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
-import {ModeDecoder} from "./libraries/ModeDecoder.sol";
-import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {ModeDecoder} from "./libraries/ModeDecoder.sol";
+import {ERC1271} from "./ERC1271.sol";
+import {EIP712} from "./EIP712.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+
+    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
+        if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
+            return _1271_MAGIC_VALUE;
+        }
+
+        return _1271_INVALID_VALUE;
+    }
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -110,5 +121,26 @@ contract MinimalDelegation is IERC7821, IKeyManagement {
     function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
         (success, output) = to.call{value: _call.value}(_call.data);
+    }
+
+    /// @dev Keyhash logic not implemented yet
+    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
+        (bool isValid,) = _unwrapAndValidateSignature(hash, signature);
+        return isValid;
+    }
+
+    /// @dev Returns if the signature is valid, along with its `keyHash`.
+    /// @dev If signed with the root private key the keyHash is 0.
+    function _unwrapAndValidateSignature(bytes32 digest, bytes calldata signature)
+        internal
+        view
+        returns (bool isValid, bytes32 keyHash)
+    {
+        // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
+        if (signature.length == 64 || signature.length == 65) {
+            return (ECDSA.recoverCalldata(digest, signature) == address(this), 0);
+        }
+        // not implemented
+        revert("Not implemented");
     }
 }
