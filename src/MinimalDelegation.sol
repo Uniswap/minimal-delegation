@@ -5,7 +5,8 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
-import {IERC7821, Calls} from "./interfaces/IERC7821.sol";
+import {IERC7821} from "./interfaces/IERC7821.sol";
+import {Call} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
@@ -27,11 +28,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
-            Calls[] memory calls = abi.decode(executionData, (Calls[]));
+            Call[] memory calls = abi.decode(executionData, (Call[]));
             _authorizeCaller();
             _execute(mode, calls);
         } else if (mode.supportsOpData()) {
-            (Calls[] memory calls, bytes memory opData) = abi.decode(executionData, (Calls[], bytes));
+            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
             _execute(mode, calls, opData);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
@@ -99,7 +100,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     }
 
     // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32, Calls[] memory, bytes memory) private pure {
+    function _execute(bytes32, Call[] memory, bytes memory) private pure {
         // TODO: unpack anything required from opData
         // verify signature from within opData
         // if signature is valid, execute the calls
@@ -108,7 +109,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
 
     // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
     // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
-    function _execute(bytes32 mode, Calls[] memory calls) private {
+    function _execute(bytes32 mode, Call[] memory calls) private {
         bool shouldRevert = mode.shouldRevert();
         for (uint256 i = 0; i < calls.length; i++) {
             (bool success, bytes memory output) = _execute(calls[i]);
@@ -118,7 +119,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     }
 
     // Execute a single call
-    function _execute(Calls memory _call) private returns (bool success, bytes memory output) {
+    function _execute(Call memory _call) private returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
         (success, output) = to.call{value: _call.value}(_call.data);
     }

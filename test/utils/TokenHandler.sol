@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {Calls} from "../../src/interfaces/IERC7821.sol";
+import {Call} from "../../src/libraries/CallLib.sol";
 
 contract TokenHandler {
     ERC20Mock tokenA;
@@ -14,7 +14,7 @@ contract TokenHandler {
         tokenB = new ERC20Mock();
     }
 
-    function buildTransferCall(address token, address to, uint256 amount) internal pure returns (Calls memory call) {
+    function buildTransferCall(address token, address to, uint256 amount) internal pure returns (Call memory call) {
         if (token == address(0)) {
             call.to = to;
             call.value = amount;
