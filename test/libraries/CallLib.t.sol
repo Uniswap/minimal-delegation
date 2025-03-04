@@ -14,13 +14,14 @@ contract CallLibTest is Test {
     function test_hash_single_fuzz(address to, uint256 value, bytes calldata data) public pure {
         Call memory call = Call({to: to, value: value, data: data});
         bytes32 actualHash = CallLib.hash(call);
+        
         bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_TYPEHASH, call.to, call.value, call.data));
         assertEq(actualHash, expectedHash);
     }
 
     function test_hash_multiple_fuzz(Call[] memory calls) public pure {
         bytes32 actualHash = CallLib.hash(calls);
-        // Manually calculate expected hash
+
         bytes memory packedHashes = new bytes(32 * calls.length);
         for (uint256 i = 0; i < calls.length; i++) {
             bytes32 callHash = CallLib.hash(calls[i]);
