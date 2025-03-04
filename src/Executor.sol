@@ -24,10 +24,9 @@ abstract contract Executor {
     function _setCanExecute(bytes32 keyHash, address target, bool can) internal {
         if (keyHash == EOA_KEYHASH) revert InvalidKeyHash();
         if (target == address(this)) revert InvalidTarget();
-        
+
         MinimalDelegationStorageLib.get().canExecute[_hash(target, keyHash)] = can;
     }
-
 
     function _hash(address target, bytes32 keyHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(keyHash, target));
