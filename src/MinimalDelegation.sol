@@ -38,6 +38,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, Executo
         _execute(mode, calls, opData);
     }
 
+    function setCanExecute(bytes32 keyHash, address target, bool can) public override {
+        _authorizeCaller();
+        _setCanExecute(keyHash, target, can);
+    }
+
     /// @inheritdoc IKeyManagement
     function authorize(Key memory key) external returns (bytes32 keyHash) {
         _authorizeCaller();

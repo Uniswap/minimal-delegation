@@ -6,6 +6,9 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 struct MinimalDelegationStorage {
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
+    /// @dev Mapping of `keccak256(abi.encodePacked(keyHash, target))`
+    /// to whether it can be executed.
+    mapping(bytes32 => bool) canExecute;
 }
 
 library MinimalDelegationStorageLib {

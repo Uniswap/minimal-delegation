@@ -4,15 +4,33 @@ pragma solidity ^0.8.23;
 import {Call} from "./libraries/CallLib.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
+import {MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 
 abstract contract Executor {
     using ModeDecoder for bytes32;
+
+    error InvalidTarget();
+    error InvalidKeyHash();
 
     bytes32 public constant EOA_KEYHASH = bytes32(0);
 
     function canExecute(Call memory call, bytes32 keyHash) public view returns (bool) {
         if (keyHash == EOA_KEYHASH) return true;
-        return false;
+        return MinimalDelegationStorageLib.get().canExecute[_hash(call.to, keyHash)];
+    }
+
+    function setCanExecute(bytes32 keyHash, address target, bool can) public virtual {}
+
+    function _setCanExecute(bytes32 keyHash, address target, bool can) internal {
+        if (keyHash == EOA_KEYHASH) revert InvalidKeyHash();
+        if (target == address(this)) revert InvalidTarget();
+        
+        MinimalDelegationStorageLib.get().canExecute[_hash(target, keyHash)] = can;
+    }
+
+
+    function _hash(address target, bytes32 keyHash) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(keyHash, target));
     }
 
     // Execute a list of calls as specified by a mode
