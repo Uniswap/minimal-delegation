@@ -3,14 +3,14 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
-import {Calls} from "../src/interfaces/IERC7821.sol";
+import {Call} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
-    using CallBuilder for Calls[];
+    using CallBuilder for Call[];
 
     bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
     bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
@@ -63,7 +63,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     }
 
     function test_execute() public {
-        Calls[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
@@ -83,7 +83,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     }
 
     function test_execute_native() public {
-        Calls[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
@@ -97,7 +97,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     }
 
     function test_execute_batch_reverts() public {
-        Calls[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         // this call should cause the entire batch to revert
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 101e18));
@@ -113,7 +113,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     }
 
     function test_execute_batch_canRevert_succeeds() public {
-        Calls[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         // this call reverts but the batch should succeed
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 101e18));
@@ -129,7 +129,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     }
 
     function test_execute_batch_opData_reverts_notImplemented() public {
-        Calls[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
