@@ -6,17 +6,21 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
-import {Call} from "./libraries/CallLib.sol";
+import {Call, CallLib} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
+import {CalldataLib} from "./libraries/CalldataLib.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
+import {Executor} from "./Executor.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, Executor {
+    using CallLib for Call[];
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using CalldataLib for bytes;
 
     function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
         if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
@@ -26,17 +30,12 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         return _1271_INVALID_VALUE;
     }
 
+    /// @inheritdoc IERC7821
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
-        if (mode.isBatchedCall()) {
-            Call[] memory calls = abi.decode(executionData, (Call[]));
-            _authorizeCaller();
-            _execute(mode, calls);
-        } else if (mode.supportsOpData()) {
-            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
-            _execute(mode, calls, opData);
-        } else {
-            revert IERC7821.UnsupportedExecutionMode();
-        }
+        if (!_supportsExecutionMode(mode)) revert IERC7821.UnsupportedExecutionMode();
+
+        (Call[] calldata calls, bytes calldata opData) = executionData.parseExecutionData();
+        _execute(mode, calls, opData);
     }
 
     /// @inheritdoc IKeyManagement
@@ -68,7 +67,12 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         return _getKey(keyHash);
     }
 
+    /// @inheritdoc IERC7821
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
+        return _supportsExecutionMode(mode);
+    }
+
+    function _supportsExecutionMode(bytes32 mode) private pure returns (bool result) {
         return mode.isBatchedCall() || mode.supportsOpData();
     }
 
@@ -100,31 +104,24 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     }
 
     // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32, Call[] memory, bytes memory) private pure {
-        // TODO: unpack anything required from opData
-        // verify signature from within opData
-        // if signature is valid, execute the calls
-        revert("Not implemented");
-    }
-
-    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
-    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
-    function _execute(bytes32 mode, Call[] memory calls) private {
-        bool shouldRevert = mode.shouldRevert();
-        for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+    function _execute(bytes32 mode, Call[] memory calls, bytes calldata opData) private {
+        // The caller must be address(this) if the mode is batchedCall or opData is empty
+        if (mode.isBatchedCall() || opData.length == 0) {
+            _authorizeCaller();
+            return _execute(mode, calls, bytes32(0));
         }
+
+        // Decode the opData
+        // ex. check the nonce
+
+        // Finally ensure the signature is valid and decode the keyHash
+        (bool isValid, bytes32 keyHash) = _unwrapAndValidateSignature(calls.hash(), opData);
+        if (!isValid) revert IERC7821.Unauthorized();
+
+        return _execute(mode, calls, keyHash);
     }
 
-    // Execute a single call
-    function _execute(Call memory _call) private returns (bool success, bytes memory output) {
-        address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
-    }
-
-    /// @dev Keyhash logic not implemented yet
+    /// @dev Keyhash logic not implemented yet for 1271
     function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
         (bool isValid,) = _unwrapAndValidateSignature(hash, signature);
         return isValid;

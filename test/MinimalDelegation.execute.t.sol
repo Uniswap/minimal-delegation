@@ -127,16 +127,4 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         // the second transfer failed
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
-
-    function test_execute_batch_opData_reverts_notImplemented() public {
-        Call[] memory calls = CallBuilder.init();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
-
-        bytes memory executionData = abi.encode(calls, "");
-
-        vm.startPrank(address(minimalDelegation));
-        vm.expectRevert();
-        minimalDelegation.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-    }
 }
