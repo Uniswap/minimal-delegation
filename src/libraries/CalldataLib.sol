@@ -14,8 +14,8 @@ library CalldataLib {
         }
     }
 
-    /// @notice Parse the execution data and return the calls
-    /// @dev performs abi.decode(executionData, (Call[], bytes))
+    /// @notice Parse the execution data and return the calls and opData, if present
+    /// @dev If opData is present it expects the executionData to have been encoded as (Call[], bytes)
     function parseExecutionData(bytes calldata executionData)
         internal
         pure
