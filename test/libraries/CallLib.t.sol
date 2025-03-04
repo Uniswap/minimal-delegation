@@ -14,7 +14,7 @@ contract CallLibTest is Test {
     function test_hash_single_fuzz(address to, uint256 value, bytes calldata data) public pure {
         Call memory call = Call({to: to, value: value, data: data});
         bytes32 actualHash = CallLib.hash(call);
-        
+
         bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_TYPEHASH, call.to, call.value, call.data));
         assertEq(actualHash, expectedHash);
     }
