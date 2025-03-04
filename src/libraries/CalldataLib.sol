@@ -33,14 +33,13 @@ library CalldataLib {
             calls.offset := add(o, 0x20)
             calls.length := calldataload(o)
 
-            // Validate calls length
-            if gt(add(calls.offset, calls.length), add(executionData.offset, executionData.length)) { revert(0, 0) } // Calls array exceeds calldata
+            // Validate calls length, revert if out of bounds
+            if gt(add(calls.offset, calls.length), add(executionData.offset, executionData.length)) { revert(0, 0) }
 
             if _hasOpData {
-                // Load opData offset
+                // Load opData offset and validate its length
                 let opDataOffset := calldataload(add(executionData.offset, 0x20))
-                // Validate opData offset
-                if gt(opDataOffset, sub(executionData.length, 32)) { revert(0, 0) } // OpData offset out of bounds
+                if gt(opDataOffset, sub(executionData.length, 32)) { revert(0, 0) }
 
                 let q := add(executionData.offset, opDataOffset)
                 opData.offset := add(q, 0x20)
@@ -48,7 +47,7 @@ library CalldataLib {
 
                 // Validate opData length
                 if gt(add(opData.offset, opData.length), add(executionData.offset, executionData.length)) {
-                    revert(0, 0) // OpData exceeds calldata
+                    revert(0, 0)
                 }
             }
         }
