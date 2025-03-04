@@ -8,8 +8,10 @@ import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 abstract contract Executor {
     using ModeDecoder for bytes32;
 
+    bytes32 public constant EOA_KEYHASH = bytes32(0);
+
     function canExecute(Call memory call, bytes32 keyHash) public view returns (bool) {
-        if (keyHash == bytes32(0)) return true;
+        if (keyHash == EOA_KEYHASH) return true;
         return false;
     }
 
