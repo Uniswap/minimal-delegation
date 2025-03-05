@@ -14,13 +14,14 @@ abstract contract Executor {
 
     bytes32 public constant EOA_KEYHASH = bytes32(0);
 
+    /// @notice Check if a call can be executed by a key hash
     function canExecute(Call memory call, bytes32 keyHash) public view returns (bool) {
         if (keyHash == EOA_KEYHASH) return true;
         return MinimalDelegationStorageLib.get().canExecute[_hash(call.to, keyHash)];
     }
 
-    function setCanExecute(bytes32 keyHash, address target, bool can) public virtual {}
-
+    /// @notice Set whether a call can be executed by a key hash
+    /// @dev override this in the implementation contract to restrict access
     function _setCanExecute(bytes32 keyHash, address target, bool can) internal {
         if (keyHash == EOA_KEYHASH) revert InvalidKeyHash();
         if (target == address(this)) revert InvalidTarget();
@@ -28,6 +29,7 @@ abstract contract Executor {
         MinimalDelegationStorageLib.get().canExecute[_hash(target, keyHash)] = can;
     }
 
+    /// @notice Hash a target and key hash
     function _hash(address target, bytes32 keyHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(keyHash, target));
     }
