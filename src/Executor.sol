@@ -21,7 +21,6 @@ abstract contract Executor {
     }
 
     /// @notice Set whether a call can be executed by a key hash
-    /// @dev override this in the implementation contract to restrict access
     function _setCanExecute(bytes32 keyHash, address target, bool can) internal {
         if (keyHash == EOA_KEYHASH) revert InvalidKeyHash();
         if (target == address(this)) revert InvalidTarget();
