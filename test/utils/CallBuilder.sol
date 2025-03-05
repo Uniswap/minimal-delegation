@@ -16,4 +16,10 @@ library CallBuilder {
         newCalls[calls.length] = call;
         return newCalls;
     }
+
+    function single(address to, uint256 value, bytes memory data) internal pure returns (Call memory call) {
+        call.to = to;
+        call.value = value;
+        call.data = data;
+    }
 }
