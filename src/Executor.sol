@@ -37,16 +37,13 @@ abstract contract Executor {
     function _execute(bytes32 mode, Call[] memory calls, bytes32 keyHash) internal {
         bool shouldRevert = mode.shouldRevert();
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i], keyHash);
+            Call memory call = calls[i];
+            if (!canExecute(call, keyHash)) revert IERC7821.Unauthorized();
+
+            (bool success, bytes memory output) = _execute(call);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
-    }
-
-    // Execute a single call
-    function _execute(Call memory _call, bytes32 keyHash) private returns (bool success, bytes memory output) {
-        if (!canExecute(_call, keyHash)) revert IERC7821.Unauthorized();
-        return _execute(_call);
     }
 
     // Low level call

@@ -16,6 +16,11 @@ library ModeDecoder {
     // Mode Masks
     bytes32 constant EXTRACT_EXEC_TYPE = 0x00ff000000000000000000000000000000000000000000000000000000000000;
 
+    /// @notice Returns true if the mode is supported by the executor.
+    function isSupported(bytes32 mode) internal pure returns (bool) {
+        return isBatchedCall(mode) || supportsOpData(mode);
+    }
+
     // Supported modes:
     // 0x01           | 0x00      | unused        | 0x00000000   | unused
     // 0x01           | 0x01      | unused        | 0x00000000   | unused

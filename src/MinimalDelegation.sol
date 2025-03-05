@@ -32,7 +32,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, Executo
 
     /// @inheritdoc IERC7821
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
-        if (!_supportsExecutionMode(mode)) revert IERC7821.UnsupportedExecutionMode();
+        if (!mode.isSupported()) revert IERC7821.UnsupportedExecutionMode();
 
         (Call[] calldata calls, bytes calldata opData) = executionData.parseExecutionData();
         _execute(mode, calls, opData);
@@ -110,8 +110,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, Executo
 
     // Execute a batch of calls according to the mode and any optionally provided opData
     function _execute(bytes32 mode, Call[] memory calls, bytes calldata opData) private {
-        // The caller must be address(this) if the mode is batchedCall or opData is empty
-        if (mode.isBatchedCall() || opData.length == 0) {
+        // The caller must be address(this) if the mode is batchedCall
+        if (mode.isBatchedCall()) {
             _authorizeCaller();
             return _execute(mode, calls, bytes32(0));
         }
