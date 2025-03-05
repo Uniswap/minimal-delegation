@@ -12,7 +12,7 @@ abstract contract Executor {
     error InvalidTarget();
     error InvalidKeyHash();
 
-    bytes32 public constant EOA_KEYHASH = bytes32(0);
+    bytes32 internal constant EOA_KEYHASH = bytes32(0);
 
     /// @notice Check if a call can be executed by a key hash
     function canExecute(Call memory call, bytes32 keyHash) public view returns (bool) {

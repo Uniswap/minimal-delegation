@@ -113,7 +113,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, Executo
         // The caller must be address(this) if the mode is batchedCall
         if (mode.isBatchedCall()) {
             _authorizeCaller();
-            return _execute(mode, calls, bytes32(0));
+            return _execute(mode, calls, EOA_KEYHASH);
         }
 
         // Decode the opData
