@@ -74,11 +74,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, Executo
 
     /// @inheritdoc IERC7821
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return _supportsExecutionMode(mode);
-    }
-
-    function _supportsExecutionMode(bytes32 mode) private pure returns (bool result) {
-        return mode.isBatchedCall() || mode.supportsOpData();
+        return mode.isSupported();
     }
 
     function _authorizeCaller() private view {
