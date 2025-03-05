@@ -22,14 +22,11 @@ contract CallLibTest is Test {
     function test_hash_multiple_fuzz(Call[] memory calls) public pure {
         bytes32 actualHash = CallLib.hash(calls);
 
-        bytes memory packedHashes = new bytes(32 * calls.length);
+        bytes32[] memory hashes = new bytes32[](calls.length);
         for (uint256 i = 0; i < calls.length; i++) {
-            bytes32 callHash = CallLib.hash(calls[i]);
-            assembly {
-                mstore(add(add(packedHashes, 0x20), mul(i, 0x20)), callHash)
-            }
+            hashes[i] = CallLib.hash(calls[i]);
         }
-        bytes32 expectedHash = keccak256(packedHashes);
+        bytes32 expectedHash = keccak256(abi.encodePacked(hashes));
         assertEq(actualHash, expectedHash);
     }
 }
