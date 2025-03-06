@@ -14,7 +14,7 @@ contract ERC1271Test is DelegationHandler {
         setUpDelegation();
     }
 
-    function test_domainSeparator() public {
+    function test_domainSeparator() public view {
         (
             ,
             string memory name,
@@ -42,7 +42,7 @@ contract ERC1271Test is DelegationHandler {
         assertEq(expected, signerAccount.domainSeparator());
     }
 
-    function test_hashTypedData() public {
+    function test_hashTypedData() public view {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash);
         // re-implement 712 hash
@@ -58,7 +58,7 @@ contract ERC1271Test is DelegationHandler {
         assertEq(expected, hashTypedData);
     }
 
-    function test_isValidSignature_sep256k1_succeeds() public {
+    function test_isValidSignature_sep256k1_succeeds() public view {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashTypedData);
@@ -67,7 +67,7 @@ contract ERC1271Test is DelegationHandler {
         assertEq(signerAccount.isValidSignature(hash, signature), _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_sep256k1_invalidSigner() public {
+    function test_isValidSignature_sep256k1_invalidSigner() public view {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash);
         // sign with a different private key
