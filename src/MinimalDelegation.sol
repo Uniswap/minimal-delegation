@@ -12,31 +12,70 @@ import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
+import {CallLib} from "./libraries/CallLib.sol";
+import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using CallLib for Call[];
+    using CalldataDecoder for bytes;
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
-        if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
-            return _1271_MAGIC_VALUE;
-        }
-
-        return _1271_INVALID_VALUE;
-    }
+    error NotImplemented();
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
-            Call[] memory calls = abi.decode(executionData, (Call[]));
+            Call[] calldata calls = executionData.decodeCalls();
             _authorizeCaller();
-            _execute(mode, calls);
+            _dispatch(mode, calls, bytes32(0));
         } else if (mode.supportsOpData()) {
-            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
-            _execute(mode, calls, opData);
+            // TODO: Decode in calldata
+            // executionData.decodeWithOpData();
+            (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
+            bytes32 keyHash = _authorizeOpData(mode, calls, opData);
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
+    }
+
+    /// @return keyHash The keyHash used to authorize the calls.
+    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData)
+        private
+        view
+        returns (bytes32 keyHash)
+    {
+        // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
+        // For now, we only support decoding necessary information needed to verify 1271 signatures.
+        (, bytes calldata signature) = opData.decodeOpdata();
+        // TODO: Nonce validation.
+        // Check signature.
+        bool isValid;
+        (isValid, keyHash) = _unwrapAndValidateSignature(_hashTypedData(calls.hash()), signature);
+        if (!isValid) revert IERC7821.InvalidSignature();
+    }
+
+    function _dispatch(bytes32 mode, Call[] calldata calls, bytes32 keyHash) private {
+        bool shouldRevert = mode.shouldRevert();
+        for (uint256 i = 0; i < calls.length; i++) {
+            (bool success, bytes memory output) = _execute(calls[i], keyHash);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+        }
+    }
+
+    // Execute a single call.
+    function _execute(Call calldata _call, bytes32 keyHash) private returns (bool success, bytes memory output) {
+        address to = _call.to == address(0) ? address(this) : _call.to;
+        if (keyHash == 0 || canExecute(_call, keyHash)) {
+            (success, output) = to.call{value: _call.value}(_call.data);
+        }
+    }
+
+    function canExecute(Call memory, bytes32) private pure returns (bool) {
+        revert NotImplemented();
     }
 
     /// @inheritdoc IKeyManagement
@@ -99,29 +138,20 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         return abi.decode(data, (Key));
     }
 
+    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
+        if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
+            return _1271_MAGIC_VALUE;
+        }
+
+        return _1271_INVALID_VALUE;
+    }
+
     // Execute a batch of calls according to the mode and any optionally provided opData
     function _execute(bytes32, Call[] memory, bytes memory) private pure {
         // TODO: unpack anything required from opData
         // verify signature from within opData
         // if signature is valid, execute the calls
         revert("Not implemented");
-    }
-
-    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
-    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
-    function _execute(bytes32 mode, Call[] memory calls) private {
-        bool shouldRevert = mode.shouldRevert();
-        for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
-        }
-    }
-
-    // Execute a single call
-    function _execute(Call memory _call) private returns (bool success, bytes memory output) {
-        address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
     }
 
     /// @dev Keyhash logic not implemented yet
