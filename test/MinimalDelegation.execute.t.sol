@@ -24,9 +24,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         setUpDelegation();
         setUpTokens();
 
-        vm.deal(address(minimalDelegation), 100e18);
-        tokenA.mint(address(minimalDelegation), 100e18);
-        tokenB.mint(address(minimalDelegation), 100e18);
+        vm.deal(address(signerAccount), 100e18);
+        tokenA.mint(address(signerAccount), 100e18);
+        tokenB.mint(address(signerAccount), 100e18);
     }
 
     function test_execute_reverts_withUnsupportedExecutionMode() public {
@@ -39,27 +39,27 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         modes[1] = invalid_mode_2;
         modes[2] = invalid_mode_3;
 
-        vm.startPrank(address(minimalDelegation));
+        vm.startPrank(address(signerAccount));
         for (uint256 i = 0; i < modes.length; i++) {
             bytes32 mode = modes[i];
             vm.expectRevert(IERC7821.UnsupportedExecutionMode.selector);
-            minimalDelegation.execute(mode, abi.encode(CallBuilder.init()));
+            signerAccount.execute(mode, abi.encode(CallBuilder.init()));
         }
     }
 
     function test_execute_fuzz_reverts(uint16 _mode) public {
         uint256 zeros = uint256(0);
         bytes32 mode = bytes32(uint256(_mode) << 240 | zeros);
-        vm.startPrank(address(minimalDelegation));
+        vm.startPrank(address(signerAccount));
         if (mode != BATCHED_CALL && mode != BATCHED_CAN_REVERT_CALL) {
             vm.expectRevert(IERC7821.UnsupportedExecutionMode.selector);
         }
-        minimalDelegation.execute(mode, abi.encode(CallBuilder.init()));
+        signerAccount.execute(mode, abi.encode(CallBuilder.init()));
     }
 
     function test_execute_auth_reverts() public {
         vm.expectRevert(IERC7821.Unauthorized.selector);
-        minimalDelegation.execute(BATCHED_CALL, abi.encode(CallBuilder.init()));
+        signerAccount.execute(BATCHED_CALL, abi.encode(CallBuilder.init()));
     }
 
     function test_execute() public {
@@ -69,17 +69,17 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         bytes memory executionData = abi.encode(calls);
 
-        assertEq(tokenA.balanceOf(address(minimalDelegation)), 100e18);
-        assertEq(tokenB.balanceOf(address(minimalDelegation)), 100e18);
+        assertEq(tokenA.balanceOf(address(signerAccount)), 100e18);
+        assertEq(tokenB.balanceOf(address(signerAccount)), 100e18);
 
-        vm.prank(address(minimalDelegation));
-        minimalDelegation.execute(BATCHED_CALL, executionData);
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, executionData);
 
-        uint256 nativeBalanceBefore = address(minimalDelegation).balance;
+        uint256 nativeBalanceBefore = address(signerAccount).balance;
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         assertEq(tokenB.balanceOf(address(receiver)), 1e18);
         // native balance should not change
-        assertEq(address(minimalDelegation).balance, nativeBalanceBefore);
+        assertEq(address(signerAccount).balance, nativeBalanceBefore);
     }
 
     function test_execute_native() public {
@@ -89,8 +89,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         bytes memory executionData = abi.encode(calls);
 
-        vm.prank(address(minimalDelegation));
-        minimalDelegation.execute(BATCHED_CALL, executionData);
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, executionData);
 
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         assertEq(address(receiver).balance, 1e18);
@@ -104,12 +104,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         bytes memory executionData = abi.encode(calls);
 
-        vm.startPrank(address(minimalDelegation));
+        vm.startPrank(address(signerAccount));
         bytes memory balanceError = abi.encodeWithSelector(
-            IERC20Errors.ERC20InsufficientBalance.selector, address(minimalDelegation), 100e18, 101e18
+            IERC20Errors.ERC20InsufficientBalance.selector, address(signerAccount), 100e18, 101e18
         );
         vm.expectRevert(abi.encodeWithSelector(IERC7821.CallFailed.selector, balanceError));
-        minimalDelegation.execute(BATCHED_CALL, executionData);
+        signerAccount.execute(BATCHED_CALL, executionData);
     }
 
     function test_execute_batch_canRevert_succeeds() public {
@@ -120,8 +120,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         bytes memory executionData = abi.encode(calls);
 
-        vm.startPrank(address(minimalDelegation));
-        minimalDelegation.execute(BATCHED_CAN_REVERT_CALL, executionData);
+        vm.startPrank(address(signerAccount));
+        signerAccount.execute(BATCHED_CAN_REVERT_CALL, executionData);
 
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         // the second transfer failed
@@ -135,8 +135,61 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         bytes memory executionData = abi.encode(calls, "");
 
-        vm.startPrank(address(minimalDelegation));
+        vm.startPrank(address(signerAccount));
         vm.expectRevert();
-        minimalDelegation.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+    }
+
+    /// GAS TESTS
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_reverts_withUnsupportedExecutionMode_gas() public {
+        bytes32 invalid_mode = 0x0101100000000000000000000000000000000000000000000000000000000000;
+        vm.startPrank(address(signerAccount));
+        try signerAccount.execute(invalid_mode, abi.encode(CallBuilder.init())) {}
+        catch {
+            vm.snapshotGasLastCall("execute_invalidMode_reverts");
+        }
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_single_batchedCall_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls);
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_twoCalls_batchedCall_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls);
+
+        assertEq(tokenA.balanceOf(address(signerAccount)), 100e18);
+        assertEq(tokenB.balanceOf(address(signerAccount)), 100e18);
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_twoCalls");
+    }
+
+    function test_execute_native_single_batchedCall_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls);
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_native_singleCall");
     }
 }
