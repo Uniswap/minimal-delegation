@@ -14,14 +14,6 @@ contract MinimalDelegationTest is DelegationHandler {
     event Authorized(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
 
-    struct Call {
-        address target;
-        uint256 value;
-        bytes data;
-    }
-
-    Call[] calls;
-
     function setUp() public {
         setUpDelegation();
     }
