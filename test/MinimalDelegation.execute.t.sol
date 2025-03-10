@@ -182,6 +182,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         vm.snapshotGasLastCall("execute_BATCHED_CALL_twoCalls");
     }
 
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
     function test_execute_native_single_batchedCall_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
