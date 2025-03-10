@@ -22,7 +22,7 @@ library TestKeyManager {
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     // 0 = never expires
-    uint40 internal constant DEFAULT_EXPIRY = 0;
+    uint40 internal constant DEFAULT_KEY_EXPIRY = 0;
     uint256 internal constant DEFAULT_SECP256R1_PK = 0xff;
     uint256 internal constant DEFAULT_SECP256K1_PK = 0xb0b;
 
@@ -31,7 +31,7 @@ library TestKeyManager {
         if (keyType == KeyType.P256) {
             (uint256 x, uint256 y) = vm.publicKeyP256(DEFAULT_SECP256R1_PK);
             return TestKey({
-                expiry: DEFAULT_EXPIRY,
+                expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
                 isSuperAdmin: false,
                 publicKey: abi.encodePacked(x, y),
@@ -40,7 +40,7 @@ library TestKeyManager {
         } else if (keyType == KeyType.Secp256k1) {
             address defaultAddress = vm.addr(DEFAULT_SECP256K1_PK);
             return TestKey({
-                expiry: DEFAULT_EXPIRY,
+                expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
                 isSuperAdmin: false,
                 publicKey: abi.encodePacked(defaultAddress),
@@ -51,12 +51,12 @@ library TestKeyManager {
         }
     }
 
-    // Create a public key derived froma seed.
+    // Create a public key derived from a seed.
     function withSeed(KeyType keyType, uint256 seed) internal pure returns (TestKey memory) {
         if (keyType == KeyType.P256) {
             (uint256 x, uint256 y) = vm.publicKeyP256(seed);
             return TestKey({
-                expiry: DEFAULT_EXPIRY,
+                expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
                 isSuperAdmin: false,
                 publicKey: abi.encodePacked(x, y),
@@ -65,7 +65,7 @@ library TestKeyManager {
         } else if (keyType == KeyType.Secp256k1) {
             address addr = vm.addr(seed);
             return TestKey({
-                expiry: DEFAULT_EXPIRY,
+                expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
                 isSuperAdmin: false,
                 publicKey: abi.encodePacked(addr),

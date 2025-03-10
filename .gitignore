@@ -12,6 +12,3 @@ docs/
 
 # Dotenv file
 .env
-
-# settings
-.vscode
