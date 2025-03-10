@@ -13,11 +13,18 @@ import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccount {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+
+    error NotEntryPoint();
+
+    /// @dev The entry point address for v0.7.
+    address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
         if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
@@ -71,6 +78,28 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
         return mode.isBatchedCall() || mode.supportsOpData();
+    }
+
+    /// @inheritdoc IAccount
+    function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
+        external
+        returns (uint256 validationData)
+    {
+        if (msg.sender != ENTRY_POINT) revert NotEntryPoint();
+
+        // https://github.com/coinbase/smart-wallet/blob/main/src/CoinbaseSmartWallet.sol#L100
+        assembly ("memory-safe") {
+            if missingAccountFunds {
+                // Ignore failure (it's EntryPoint's job to verify, not the account's).
+                pop(call(gas(), caller(), missingAccountFunds, codesize(), 0x00, codesize(), 0x00))
+            }
+        }
+
+        if (_isValidSignature(userOpHash, userOp.signature)) {
+            return 0;
+        }
+
+        return 1;
     }
 
     function _authorizeCaller() private view {
