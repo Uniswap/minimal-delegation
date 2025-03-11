@@ -199,7 +199,7 @@ contract MinimalDelegationTest is DelegationHandler {
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
-        vm.snapshotGasLastCall("validateUserOp with no missingAccountFunds");
+        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
         assertEq(valid, 0); // 0 is valid
     }
 
@@ -228,7 +228,7 @@ contract MinimalDelegationTest is DelegationHandler {
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, missingAccountFunds);
-        vm.snapshotGasLastCall("validateUserOp with missingAccountFunds");
+        vm.snapshotGasLastCall("validateUserOp_missingAccountFunds");
 
         assertEq(valid, 0); // 0 is valid
 
