@@ -46,7 +46,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         // TODO: Nonce validation.
         // Check signature.
         bool isValid;
-        (isValid,) = _unwrapAndValidateSignature(_hashTypedData(calls.hash()), signature);
+        (isValid,) = _isValidSignature(_hashTypedData(calls.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -127,10 +127,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
 
     /// @inheritdoc ERC1271
     function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
-        if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
-            return _1271_MAGIC_VALUE;
-        }
-
+        (bool isValid,) = _isValidSignature(_hashTypedData(hash), signature);
+        if (isValid) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
     }
 
@@ -142,34 +140,21 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         revert("Not implemented");
     }
 
-    /// @dev Keyhash logic not implemented yet
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool isValid) {
-        // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
-        if (signature.length == 64 || signature.length == 65) {
-            return ECDSA.recoverCalldata(hash, signature) == address(this);
-        }
-        // Otherwise, treat the signature as a wrapped signature, and unwrap it before validating.
-        (isValid,) = _unwrapAndValidateSignature(hash, signature);
-    }
-
-    /// @dev Returns if the wrapped signature is valid.
-    /// TODO: Implement WebAuthnP256 validation.
-    function _unwrapAndValidateSignature(bytes32 digest, bytes calldata wrappedSignature)
+    /// @dev The passed in hash must be wrapped with _hashTypedData to prevent against replays.
+    function _isValidSignature(bytes32 _hash, bytes calldata _signature)
         internal
         view
-        returns (bool isValid, Key memory key)
+        returns (bool isValid, bytes32 keyHash)
     {
-        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
-        key = _getKey(keyHash);
-
-        if (key.keyType == KeyType.P256) {
-            // Extract x,y from the public key
-            (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
-            // Split signature into r and s values.
-            (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
-            isValid = P256.verify(digest, r, s, x, y);
+        // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
+        if (_signature.length == 64 || _signature.length == 65) {
+            isValid = ECDSA.recoverCalldata(_hash, _signature) == address(this);
         } else {
-            isValid = false;
+            // The signature is wrapped.
+            bytes memory signature;
+            (keyHash, signature) = abi.decode(_signature, (bytes32, bytes));
+            Key memory key = _getKey(keyHash);
+            isValid = key.verify(_hash, signature);
         }
     }
 }
