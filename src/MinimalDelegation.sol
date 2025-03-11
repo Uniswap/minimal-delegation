@@ -23,8 +23,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     using CallLib for Call[];
     using CalldataDecoder for bytes;
 
-    error NotImplemented();
-
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
