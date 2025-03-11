@@ -81,7 +81,7 @@ contract ERC1271Test is DelegationHandler {
     function test_isValidSignature_invalidSignatureLength_reverts() public {
         bytes32 hash = keccak256("test");
         bytes memory signature = new bytes(63);
-        vm.expectRevert("Not implemented");
+        vm.expectRevert();
         signerAccount.isValidSignature(hash, signature);
     }
 }

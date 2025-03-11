@@ -8,12 +8,13 @@ import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {Call} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
 import {CallLib} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
+import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     using ModeDecoder for bytes32;
@@ -144,23 +145,33 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
     }
 
     /// @dev Keyhash logic not implemented yet
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
-        (bool isValid,) = _unwrapAndValidateSignature(hash, signature);
-        return isValid;
-    }
-
-    /// @dev Returns if the signature is valid, along with its `keyHash`.
-    /// @dev If signed with the root private key the keyHash is 0.
-    function _unwrapAndValidateSignature(bytes32 digest, bytes calldata signature)
-        internal
-        view
-        returns (bool isValid, bytes32 keyHash)
-    {
+    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool isValid) {
         // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
         if (signature.length == 64 || signature.length == 65) {
-            return (ECDSA.recoverCalldata(digest, signature) == address(this), 0);
+            return ECDSA.recoverCalldata(hash, signature) == address(this);
         }
-        // not implemented
-        revert("Not implemented");
+        // Otherwise, treat the signature as a wrapped signature, and unwrap it before validating.
+        (isValid,) = _unwrapAndValidateSignature(hash, signature);
+    }
+
+    /// @dev Returns if the wrapped signature is valid.
+    /// TODO: Implement WebAuthnP256 validation.
+    function _unwrapAndValidateSignature(bytes32 digest, bytes calldata wrappedSignature)
+        internal
+        view
+        returns (bool isValid, Key memory key)
+    {
+        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+        key = _getKey(keyHash);
+
+        if (key.keyType == KeyType.P256) {
+            // Extract x,y from the public key
+            (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
+            // Split signature into r and s values.
+            (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
+            isValid = P256.verify(digest, r, s, x, y);
+        } else {
+            isValid = false;
+        }
     }
 }
