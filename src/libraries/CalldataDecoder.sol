@@ -7,8 +7,6 @@ library CalldataDecoder {
     using CalldataDecoder for bytes;
     /// @notice equivalent to SliceOutOfBounds.selector, stored in least-significant bits
 
-    error SliceOutOfBounds();
-
     /// @notice mask used for offsets and lengths to ensure no overflow
     /// @dev no sane abi encoding will pass in an offset or length greater than type(uint32).max
     ///      (note that this does deviate from standard solidity behavior and offsets/lengths will
@@ -16,16 +14,17 @@ library CalldataDecoder {
     uint256 constant OFFSET_OR_LENGTH_MASK = 0xffffffff;
     uint256 constant OFFSET_OR_LENGTH_MASK_AND_WORD_ALIGN = 0xffffffe0;
 
+    /// error SliceOutOfBounds();
     uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
 
     /// @notice equivalent to abi.decode(data, (uint256, bytes)) in calldata
-    /// @return nonce The nonce value.
-    /// @return signature The signature to verify.
-    function decodeOpdata(bytes calldata data) internal pure returns (uint256 nonce, bytes calldata signature) {
+    /// @return _value A uint256 value
+    /// @return _data Bytes data following the uint256 value.
+    function decodeUint256Bytes(bytes calldata data) internal pure returns (uint256 _value, bytes calldata _data) {
         assembly {
-            nonce := calldataload(data.offset)
+            _value := calldataload(data.offset)
         }
-        signature = data.toBytes(1);
+        _data = data.toBytes(1);
     }
 
     // TODO length check
