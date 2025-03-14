@@ -46,7 +46,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         // TODO: Nonce validation.
         // Check signature.
         bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(calls.hash()), signature);
+        (isValid,) = _isValidSignature(calls.hash(), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -140,14 +140,13 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712 {
         revert("Not implemented");
     }
 
-    /// @dev The passed in hash must be wrapped with _hashTypedData to prevent against replays.
     function _isValidSignature(bytes32 _hash, bytes calldata _signature)
         internal
         view
         returns (bool isValid, bytes32 keyHash)
     {
-        // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
         if (_signature.length == 64 || _signature.length == 65) {
+            // The signature is not wrapped, so it can be verified against the root key.
             isValid = ECDSA.recoverCalldata(_hash, _signature) == address(this);
         } else {
             // The signature is wrapped.

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -27,10 +28,10 @@ library KeyLib {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
     }
 
-    /// @dev Currently only handles P256 keys.
-    /// @dev secp256k1 keys are verified in `isValidSignature`.
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
-        if (key.keyType == KeyType.P256) {
+        if (key.keyType == KeyType.Secp256k1) {
+            isValid = ECDSA.recover(_hash, signature) == abi.decode(key.publicKey, (address));
+        } else if (key.keyType == KeyType.P256) {
             // Extract x,y from the public key
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
             // Split signature into r and s values.
