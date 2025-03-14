@@ -5,6 +5,8 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {Key, KeyType, KeyLib} from "../src/libraries/KeyLib.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 
 contract MinimalDelegationTest is DelegationHandler {
     using KeyLib for Key;
@@ -181,5 +183,57 @@ contract MinimalDelegationTest is DelegationHandler {
 
         // only one key should be left
         assertEq(signerAccount.keyCount(), 1);
+    }
+
+    function test_validateUserOp_revertsWithNotEntryPoint() public {
+        PackedUserOperation memory userOp;
+        vm.expectRevert(MinimalDelegation.NotEntryPoint.selector);
+        signerAccount.validateUserOp(userOp, "", 0);
+    }
+
+    function test_validateUserOp_validSignature() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
+        userOp.signature = abi.encodePacked(r, s, v);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
+        assertEq(valid, 0); // 0 is valid
+    }
+
+    function test_validateUserOp_invalidSignature() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        // incorrect private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
+        userOp.signature = abi.encodePacked(r, s, v);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        assertEq(valid, 1); // 1 is invalid
+    }
+
+    function test_validateUserOp_missingAccountFunds() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        uint256 missingAccountFunds = 1e18;
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
+        userOp.signature = abi.encodePacked(r, s, v);
+
+        deal(address(signerAccount), 1e18);
+
+        uint256 beforeDeposit = entryPoint.getDepositInfo(address(signerAccount)).deposit;
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, missingAccountFunds);
+        vm.snapshotGasLastCall("validateUserOp_missingAccountFunds");
+
+        assertEq(valid, 0); // 0 is valid
+
+        // account sent in 1e18 to the entry point and their deposit was updated
+        assertEq(address(signerAccount).balance, 0);
+        assertEq(entryPoint.getDepositInfo(address(signerAccount)).deposit, beforeDeposit + 1e18);
     }
 }

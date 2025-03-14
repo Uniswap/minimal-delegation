@@ -1,6 +1,6 @@
 {
-  "execute_BATCHED_CALL_native_singleCall": "58687",
-  "execute_BATCHED_CALL_singleCall": "57609",
-  "execute_BATCHED_CALL_twoCalls": "92798",
+  "execute_BATCHED_CALL_native_singleCall": "58709",
+  "execute_BATCHED_CALL_singleCall": "57631",
+  "execute_BATCHED_CALL_twoCalls": "92820",
   "execute_invalidMode_reverts": "22940"
 }
