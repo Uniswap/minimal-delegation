@@ -12,6 +12,8 @@ import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
+import {CallLib} from "./libraries/CallLib.sol";
+import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
@@ -20,31 +22,55 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using CallLib for Call[];
+    using CalldataDecoder for bytes;
 
     error NotEntryPoint();
 
     /// @dev The entry point address for v0.7.
     address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
-        if (_isValidSignature({hash: _hashTypedData(hash), signature: signature})) {
-            return _1271_MAGIC_VALUE;
-        }
-
-        return _1271_INVALID_VALUE;
-    }
-
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
-            Call[] memory calls = abi.decode(executionData, (Call[]));
+            Call[] calldata calls = executionData.decodeCalls();
             _authorizeCaller();
-            _execute(mode, calls);
+            _dispatch(mode, calls);
         } else if (mode.supportsOpData()) {
-            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
-            _execute(mode, calls, opData);
+            // executionData.decodeWithOpData();
+            (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
+            _authorizeOpData(mode, calls, opData);
+            _dispatch(mode, calls);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
+    }
+
+    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+        // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
+        // For now, we only support decoding necessary information needed to verify 1271 signatures.
+        (, bytes calldata signature) = opData.decodeUint256Bytes();
+        // TODO: Nonce validation.
+        // Check signature.
+        bool isValid;
+        /// The calls are not safe hashed with _hashTypedData, as the domain separator is sufficient to prevent against replay attacks.
+        (isValid,) = _isValidSignature(calls.hash(), signature);
+        if (!isValid) revert IERC7821.InvalidSignature();
+    }
+
+    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+        bool shouldRevert = mode.shouldRevert();
+        for (uint256 i = 0; i < calls.length; i++) {
+            (bool success, bytes memory output) = _execute(calls[i]);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+        }
+    }
+
+    // Execute a single call.
+    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
+        address to = _call.to == address(0) ? address(this) : _call.to;
+        (success, output) = to.call{value: _call.value}(_call.data);
     }
 
     /// @inheritdoc IKeyManagement
@@ -95,7 +121,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
             }
         }
 
-        if (_isValidSignature(userOpHash, userOp.signature)) {
+        /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
+        /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
+        /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
+        (bool isValid,) = _isValidSignature(userOpHash, userOp.signature);
+        if (isValid) {
             return 0;
         }
 
@@ -129,6 +159,13 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
         return abi.decode(data, (Key));
     }
 
+    /// @inheritdoc ERC1271
+    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
+        (bool isValid,) = _isValidSignature(_hashTypedData(hash), signature);
+        if (isValid) return _1271_MAGIC_VALUE;
+        return _1271_INVALID_VALUE;
+    }
+
     // Execute a batch of calls according to the mode and any optionally provided opData
     function _execute(bytes32, Call[] memory, bytes memory) private pure {
         // TODO: unpack anything required from opData
@@ -137,47 +174,20 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
         revert("Not implemented");
     }
 
-    // We currently only support calls initiated by the contract itself which means there are no checks needed on the target contract.
-    // In the future, other keys can make calls according to their key permissions and those checks will need to be added.
-    function _execute(bytes32 mode, Call[] memory calls) private {
-        bool shouldRevert = mode.shouldRevert();
-        for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+    function _isValidSignature(bytes32 _hash, bytes calldata _signature)
+        internal
+        view
+        returns (bool isValid, bytes32 keyHash)
+    {
+        if (_signature.length == 64 || _signature.length == 65) {
+            // The signature is not wrapped, so it can be verified against the root key.
+            isValid = ECDSA.recoverCalldata(_hash, _signature) == address(this);
+        } else {
+            // The signature is wrapped.
+            bytes memory signature;
+            (keyHash, signature) = abi.decode(_signature, (bytes32, bytes));
+            Key memory key = _getKey(keyHash);
+            isValid = key.verify(_hash, signature);
         }
-    }
-
-    // Execute a single call
-    function _execute(Call memory _call) private returns (bool success, bytes memory output) {
-        address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
-    }
-
-    /// @dev Keyhash logic not implemented yet
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view override returns (bool) {
-        // If the signature's length is 64 or 65, treat it like an secp256k1 signature.
-        if (signature.length == 64 || signature.length == 65) {
-            return ECDSA.recoverCalldata(hash, signature) == address(this);
-        }
-        // Otherwise, treat the signature as a wrapped signature, and unwrap it before validating.
-        return _unwrapAndValidate(hash, signature);
-    }
-
-    /// @dev Returns if the wrapped signature is valid.
-    /// TODO: Implement WebAuthnP256 validation.
-    function _unwrapAndValidate(bytes32 digest, bytes calldata wrappedSignature) internal view returns (bool) {
-        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
-        Key memory key = _getKey(keyHash);
-
-        if (key.keyType == KeyType.P256) {
-            // Extract x,y from the public key
-            (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
-            // Split signature into r and s values.
-            (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
-            return P256.verify(digest, r, s, x, y);
-        }
-
-        return false;
     }
 }

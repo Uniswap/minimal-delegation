@@ -18,8 +18,4 @@ abstract contract ERC1271 is IERC1271 {
 
     /// @inheritdoc IERC1271
     function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4);
-
-    /// @notice Validates the `signature` against the given `hash`.
-    /// @return `true` is the signature is valid, else `false`.
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view virtual returns (bool);
 }

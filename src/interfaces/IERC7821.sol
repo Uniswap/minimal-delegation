@@ -5,6 +5,7 @@ interface IERC7821 {
     error UnsupportedExecutionMode();
     error Unauthorized();
     error CallFailed(bytes reason);
+    error InvalidSignature();
 
     function execute(bytes32 mode, bytes calldata executionData) external payable;
 
