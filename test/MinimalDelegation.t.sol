@@ -6,7 +6,7 @@ import {Key, KeyType, KeyLib} from "../src/libraries/KeyLib.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {MinimalDelegation} from "../src/MinimalDelegation.sol";
+import {IERC4337Account} from "../src/ERC4337Account.sol";
 
 contract MinimalDelegationTest is DelegationHandler {
     using KeyLib for Key;
@@ -185,13 +185,22 @@ contract MinimalDelegationTest is DelegationHandler {
         assertEq(signerAccount.keyCount(), 1);
     }
 
+    function test_updateEntryPoint_revertsWithUnauthorized() public {
+        vm.expectRevert(IERC7821.Unauthorized.selector);
+        signerAccount.updateEntryPoint(address(entryPoint));
+    }
+
     function test_validateUserOp_revertsWithNotEntryPoint() public {
+        // Even with a prank, this should revert if not enabled on the account.
+        vm.startPrank(address(entryPoint));
         PackedUserOperation memory userOp;
-        vm.expectRevert(MinimalDelegation.NotEntryPoint.selector);
+        vm.expectRevert(IERC4337Account.NotEntryPoint.selector);
         signerAccount.validateUserOp(userOp, "", 0);
     }
 
     function test_validateUserOp_validSignature() public {
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
@@ -204,6 +213,8 @@ contract MinimalDelegationTest is DelegationHandler {
     }
 
     function test_validateUserOp_invalidSignature() public {
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         // incorrect private key
@@ -216,6 +227,8 @@ contract MinimalDelegationTest is DelegationHandler {
     }
 
     function test_validateUserOp_missingAccountFunds() public {
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 missingAccountFunds = 1e18;
