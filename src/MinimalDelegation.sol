@@ -188,4 +188,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             isValid = key.verify(_hash, signature);
         }
     }
+
+    /// @dev Allow the contract to receive ETH.
+    receive() external payable {}
 }

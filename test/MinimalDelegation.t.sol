@@ -18,6 +18,14 @@ contract MinimalDelegationTest is DelegationHandler {
         setUpDelegation();
     }
 
+    function test_receive() public {
+        vm.deal(address(this), 1e18);
+        uint256 beforeBalance = address(signerAccount).balance;
+        (bool success,) = address(signerAccount).call{value: 1e18}("");
+        assertEq(success, true);
+        assertEq(address(signerAccount).balance, beforeBalance + 1e18);
+    }
+
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_authorize_gas() public {
