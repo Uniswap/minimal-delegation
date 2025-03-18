@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import {Locker} from "../../src/libraries/Locker.sol";
 
+/// @author copied from https://github.com/Uniswap/universal-router/blob/main/test/foundry-tests/Locker.t.sol
 contract LockerTest is Test {
     function test_fuzz_set_get(address locker1, address locker2, address locker3) public {
         assertEq(Locker.get(), address(0));
