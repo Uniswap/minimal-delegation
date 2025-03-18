@@ -212,6 +212,21 @@ contract MinimalDelegationTest is DelegationHandler {
         assertEq(valid, 0); // 0 is valid
     }
 
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_validSignature_gas() public {
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(address(entryPoint));
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
+        userOp.signature = abi.encodePacked(r, s, v);
+
+        vm.prank(address(entryPoint));
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
+    }
+
     function test_validateUserOp_invalidSignature() public {
         vm.prank(address(signerAccount));
         signerAccount.updateEntryPoint(address(entryPoint));
@@ -241,12 +256,29 @@ contract MinimalDelegationTest is DelegationHandler {
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, missingAccountFunds);
-        vm.snapshotGasLastCall("validateUserOp_missingAccountFunds");
 
         assertEq(valid, 0); // 0 is valid
 
         // account sent in 1e18 to the entry point and their deposit was updated
         assertEq(address(signerAccount).balance, 0);
         assertEq(entryPoint.getDepositInfo(address(signerAccount)).deposit, beforeDeposit + 1e18);
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_missingAccountFunds_gas() public {
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(address(entryPoint));
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        uint256 missingAccountFunds = 1e18;
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
+        userOp.signature = abi.encodePacked(r, s, v);
+
+        deal(address(signerAccount), 1e18);
+
+        vm.prank(address(entryPoint));
+        signerAccount.validateUserOp(userOp, userOpHash, missingAccountFunds);
+        vm.snapshotGasLastCall("validateUserOp_missingAccountFunds");
     }
 }
