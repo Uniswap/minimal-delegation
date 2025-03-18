@@ -51,6 +51,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         // Check signature.
         bool isValid;
         /// The calls are not safe hashed with _hashTypedData, as the domain separator is sufficient to prevent against replay attacks.
+        (isValid,) = _isValidSignature(calls.hash(), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
