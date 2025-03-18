@@ -104,6 +104,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     function updateEntryPoint(address entryPoint) external {
         _authorizeCaller();
         MinimalDelegationStorageLib.get().entryPoint = entryPoint;
+        emit EntryPointUpdated(entryPoint);
     }
 
     /// @inheritdoc IAccount
@@ -164,8 +165,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     function ENTRY_POINT() public view override returns (address) {
-        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
-        return minimalDelegationStorage.entryPoint;
+        return MinimalDelegationStorageLib.get().entryPoint;
     }
 
     function _isValidSignature(bytes32 _hash, bytes calldata _signature)
