@@ -19,15 +19,22 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
+import {Lock} from "./Lock.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Lock {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CallLib for Call[];
     using CalldataDecoder for bytes;
 
-    function execute(bytes32 mode, bytes calldata executionData) external payable override {
+    /// @notice Public view function to be used instead of msg.sender, as the contract performs self-reentrancy and at
+    /// times msg.sender == address(this). Instead msgSender() returns the initiator of the lock
+    function msgSender() public view returns (address) {
+        return _getLocker();
+    }
+
+    function execute(bytes32 mode, bytes calldata executionData) external payable override isNotLocked {
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _authorizeCaller();
@@ -71,14 +78,14 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @inheritdoc IKeyManagement
-    function authorize(Key memory key) external returns (bytes32 keyHash) {
+    function authorize(Key memory key) external isNotLocked returns (bytes32 keyHash) {
         _authorizeCaller();
         keyHash = _authorize(key);
         emit Authorized(keyHash, key);
     }
 
     /// @inheritdoc IKeyManagement
-    function revoke(bytes32 keyHash) external {
+    function revoke(bytes32 keyHash) external isNotLocked {
         _authorizeCaller();
         _revoke(keyHash);
         emit Revoked(keyHash);
@@ -104,7 +111,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @inheritdoc IERC4337Account
-    function updateEntryPoint(address entryPoint) external {
+    function updateEntryPoint(address entryPoint) external isNotLocked {
         _authorizeCaller();
         MinimalDelegationStorageLib.get().entryPoint = entryPoint;
         emit EntryPointUpdated(entryPoint);
@@ -126,7 +133,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     function _authorizeCaller() private view {
-        if (msg.sender != address(this)) revert IERC7821.Unauthorized();
+        if (msgSender() != address(this)) revert IERC7821.Unauthorized();
     }
 
     // Execute a batch of calls according to the mode
