@@ -18,6 +18,7 @@ import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
+import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account {
     using ModeDecoder for bytes32;
@@ -101,6 +102,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         return mode.isBatchedCall() || mode.supportsOpData();
     }
 
+    /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _authorizeCaller();
         MinimalDelegationStorageLib.get().entryPoint = entryPoint;
@@ -164,6 +166,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         revert("Not implemented");
     }
 
+    /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
         return MinimalDelegationStorageLib.get().entryPoint;
     }
