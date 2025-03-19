@@ -26,8 +26,7 @@ contract MinimalDelegationTest is DelegationHandler {
         assertEq(address(signerAccount).balance, beforeBalance + 1e18);
     }
 
-    function test_receive_onERC721Received() public {
-    }
+    function test_receive_onERC721Received() public {}
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
