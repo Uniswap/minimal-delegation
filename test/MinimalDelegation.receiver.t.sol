@@ -31,12 +31,14 @@ contract MinimalDelegationReceiverTest is DelegationHandler {
         erc721.mint(alice, 1);
         vm.prank(alice);
         erc721.safeTransferFrom(alice, address(signerAccount), 1);
+        assertEq(erc721.balanceOf(address(signerAccount)), 1);
     }
 
     function test_receive_onERC1155Received() public {
         erc1155.mint(alice, 1, 1, "");
         vm.prank(alice);
         erc1155.safeTransferFrom(alice, address(signerAccount), 1, 1, "");
+        assertEq(erc1155.balanceOf(address(signerAccount), 1), 1);
     }
 
     function test_receive_onERC1155BatchReceived() public {
@@ -47,5 +49,6 @@ contract MinimalDelegationReceiverTest is DelegationHandler {
         amts[0] = 1;
         vm.prank(alice);
         erc1155.safeBatchTransferFrom(alice, address(signerAccount), ids, amts, "");
+        assertEq(erc1155.balanceOf(address(signerAccount), 1), 1);
     }
 }
