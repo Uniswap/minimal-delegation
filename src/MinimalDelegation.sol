@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
+import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
@@ -20,7 +21,7 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -188,7 +189,4 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             isValid = key.verify(_hash, signature);
         }
     }
-
-    /// @dev Allow the contract to receive ETH.
-    receive() external payable {}
 }
