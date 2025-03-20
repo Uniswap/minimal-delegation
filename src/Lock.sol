@@ -13,20 +13,17 @@ contract Lock {
     /// @notice Modifier enforcing a reentrancy lock that allows self-reentrancy
     /// @dev If the contract is not locked, use msg.sender as the locker
     modifier isNotLocked() {
-        // Apply a reentrancy lock for all external callers
-        if (msg.sender != address(this)) {
-            if (Locker.isLocked()) revert ContractLocked();
-            Locker.set(msg.sender);
+        address locker = _getLocker();
+        // Set the lock if not set already
+        if (locker != address(0)) {
+            // Only allow self re-entracy within a lock
+            if (msg.sender != address(this)) revert ContractLocked();
             _;
-            Locker.set(address(0));
-        } else if (!Locker.isLocked()) {
-            /// @dev For 7702 accounts the msg.sender is address(this) but we still need to set the lock if unset
-            Locker.set(msg.sender);
-            _;
-            Locker.set(address(0));
         } else {
-            // The contract is allowed to reenter itself
+            // Top level call, set the lock to the sender
+            Locker.set(msg.sender);
             _;
+            Locker.set(address(0));
         }
     }
 

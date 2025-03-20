@@ -133,6 +133,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         else return SIG_VALIDATION_FAILED;
     }
 
+    /// @dev This function must only be called within a lock
     function _authorizeCaller() private view {
         if (msgSender() != address(this)) revert IERC7821.Unauthorized();
     }
