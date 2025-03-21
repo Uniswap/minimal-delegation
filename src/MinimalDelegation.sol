@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
+import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
@@ -16,20 +17,17 @@ import {CallLib} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {NonceManager} from "./NonceManager.sol";
+import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
+import {ERC4337Account} from "./ERC4337Account.sol";
+import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccount, NonceManager {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, NonceManager {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CallLib for Call[];
     using CalldataDecoder for bytes;
-
-    error NotEntryPoint();
-
-    /// @dev The entry point address for v0.7.
-    address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -106,30 +104,26 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
         return mode.isBatchedCall() || mode.supportsOpData();
     }
 
+    /// @inheritdoc IERC4337Account
+    function updateEntryPoint(address entryPoint) external {
+        _authorizeCaller();
+        MinimalDelegationStorageLib.get().entryPoint = entryPoint;
+        emit EntryPointUpdated(entryPoint);
+    }
+
     /// @inheritdoc IAccount
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
+        onlyEntryPoint
         returns (uint256 validationData)
     {
-        if (msg.sender != ENTRY_POINT) revert NotEntryPoint();
-
-        // https://github.com/coinbase/smart-wallet/blob/main/src/CoinbaseSmartWallet.sol#L100
-        assembly ("memory-safe") {
-            if missingAccountFunds {
-                // Ignore failure (it's EntryPoint's job to verify, not the account's).
-                pop(call(gas(), caller(), missingAccountFunds, codesize(), 0x00, codesize(), 0x00))
-            }
-        }
-
+        _payEntryPoint(missingAccountFunds);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
         (bool isValid,) = _isValidSignature(userOpHash, userOp.signature);
-        if (isValid) {
-            return 0;
-        }
-
-        return 1;
+        if (isValid) return SIG_VALIDATION_SUCCEEDED;
+        else return SIG_VALIDATION_FAILED;
     }
 
     function _authorizeCaller() private view {
@@ -172,6 +166,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
         // verify signature from within opData
         // if signature is valid, execute the calls
         revert("Not implemented");
+    }
+
+    /// @inheritdoc IERC4337Account
+    function ENTRY_POINT() public view override returns (address) {
+        return MinimalDelegationStorageLib.get().entryPoint;
     }
 
     function _isValidSignature(bytes32 _hash, bytes calldata _signature)
