@@ -17,8 +17,9 @@ import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
+import {NonceManager} from "./NonceManager.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccount {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccount, NonceManager {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -46,16 +47,15 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, IAccoun
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         // For now, we only support decoding necessary information needed to verify 1271 signatures.
-        (, bytes calldata signature) = opData.decodeUint256Bytes();
-        // TODO: Nonce validation.
+        (uint256 nonce, bytes calldata signature) = opData.decodeUint256Bytes();
+        validateAndUpdateNonce(nonce);
         // Check signature.
-        bool isValid;
-        /// The calls are not safe hashed with _hashTypedData, as the domain separator is sufficient to prevent against replay attacks.
-        (isValid,) = _isValidSignature(calls.hash(), signature);
+        (bool isValid,) = _isValidSignature(_hashTypedData(calls.hash(nonce)), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
+        // TODO: Store keyHash in storage.
     }
 
     function _dispatch(bytes32 mode, Call[] calldata calls) private {

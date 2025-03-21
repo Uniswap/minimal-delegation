@@ -20,7 +20,7 @@ library CallLib {
     }
 
     /// @notice Hash a series of calls
-    function hash(Call[] memory calls) internal pure returns (bytes32) {
+    function hash(Call[] memory calls, uint256 nonce) internal pure returns (bytes32) {
         unchecked {
             bytes memory packedHashes = new bytes(32 * calls.length);
 
@@ -31,7 +31,7 @@ library CallLib {
                 }
             }
 
-            return keccak256(packedHashes);
+            return keccak256(abi.encodePacked(packedHashes, nonce));
         }
     }
 }

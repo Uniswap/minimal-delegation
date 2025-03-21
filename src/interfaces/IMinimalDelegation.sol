@@ -7,6 +7,7 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol";
 import {IERC7821} from "./IERC7821.sol";
 import {IEIP712} from "./IEIP712.sol";
+import {INonceManager} from "./INonceManager.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
 /// This implementation supports:
@@ -16,4 +17,6 @@ import {IEIP712} from "./IEIP712.sol";
 /// ERC-7201 compliant storage use
 /// ERC-1271 compliant signature verification
 /// Alternative key management and verification
-interface IMinimalDelegation is IKeyManagement, IAccount, IERC7821, IERC1271, IEIP712, IERC5267 {}
+interface IMinimalDelegation is IKeyManagement, IAccount, IERC7821, IERC1271, IEIP712, IERC5267, INonceManager {
+    function getNonce(uint192 key) external view returns (uint256 nonce);
+}
