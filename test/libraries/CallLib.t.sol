@@ -19,14 +19,23 @@ contract CallLibTest is Test {
         assertEq(actualHash, expectedHash);
     }
 
-    function test_hash_multiple_fuzz(Call[] memory calls) public pure {
-        bytes32 actualHash = CallLib.hash(calls);
+    function test_hash_multiple_fuzz(Call[] memory calls, uint256 nonce) public pure {
+        bytes32 actualHash = CallLib.hash(calls, nonce);
 
-        bytes32[] memory hashes = new bytes32[](calls.length);
+        // Create bytes array for packing
+        bytes memory packedHashes = new bytes(32 * calls.length);
+
+        // Pack hashes into bytes array
         for (uint256 i = 0; i < calls.length; i++) {
-            hashes[i] = CallLib.hash(calls[i]);
+            bytes32 callHash = CallLib.hash(calls[i]);
+            assembly {
+                mstore(add(add(packedHashes, 0x20), mul(i, 0x20)), callHash)
+            }
         }
-        bytes32 expectedHash = keccak256(abi.encodePacked(hashes));
+
+        // Hash packed bytes array with nonce
+        bytes32 expectedHash = keccak256(abi.encodePacked(packedHashes, nonce));
+
         assertEq(actualHash, expectedHash);
     }
 }
