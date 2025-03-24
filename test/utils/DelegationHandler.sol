@@ -7,13 +7,22 @@ import {MinimalDelegation} from "../../src/MinimalDelegation.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 
 contract DelegationHandler is Test {
     using KeyLib for Key;
+    using TestKeyManager for TestKey;
 
     MinimalDelegation public minimalDelegation;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
+    TestKey signerTestKey = TestKey(
+        uint40(block.timestamp + 3600),
+        KeyType.Secp256k1,
+        true,
+        abi.encodePacked(signer),
+        signerPrivateKey
+    );
     IMinimalDelegation public signerAccount;
     uint256 DEFAULT_KEY_EXPIRY = 10 days;
 
@@ -40,17 +49,5 @@ contract DelegationHandler is Test {
     function _delegate(address _signer, address _implementation) internal {
         vm.etch(_signer, bytes.concat(hex"ef0100", abi.encodePacked(_implementation)));
         require(_signer.code.length > 0, "signer not delegated");
-    }
-
-    /// @dev Solady packs the signature as (r, s, v)
-    function _signAndPackSignature(bytes32 hash) internal view returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hash);
-        return abi.encodePacked(r, s, v);
-    }
-
-    /// @dev Helper function to pack the signature with a nonce
-    function _signAndPackSignature(bytes32 hash, uint256 nonce) internal view returns (bytes memory) {
-        bytes memory innerSignature = _signAndPackSignature(hash);
-        return abi.encode(nonce, innerSignature);
     }
 }
