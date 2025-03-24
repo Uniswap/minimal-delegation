@@ -5,8 +5,11 @@ import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC1271} from "../src/interfaces/IERC1271.sol";
 import {IEIP712} from "../src/interfaces/IEIP712.sol";
+import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 
 contract ERC1271Test is DelegationHandler {
+    using WrappedDataHash for bytes32;
+
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
 
@@ -46,25 +49,24 @@ contract ERC1271Test is DelegationHandler {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash);
         // re-implement 712 hash
-        bytes32 _MESSAGE_TYPEHASH = keccak256("UniswapMinimalDelegationMessage(bytes32 hash)");
         bytes32 expected = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 signerAccount.domainSeparator(),
                 // _hashStruct(bytes32)
-                keccak256(abi.encode(_MESSAGE_TYPEHASH, hash))
+                hash
             )
         );
         assertEq(expected, hashTypedData);
     }
 
     function test_isValidSignature_sep256k1_succeeds() public view {
-        bytes32 hash = keccak256("test");
-        bytes32 hashTypedData = signerAccount.hashTypedData(hash);
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashTypedData);
         bytes memory signature = abi.encodePacked(r, s, v);
         // ensure the call returns the ERC1271 magic value
-        assertEq(signerAccount.isValidSignature(hash, signature), _1271_MAGIC_VALUE);
+        assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
     }
 
     function test_isValidSignature_sep256k1_invalidSigner() public view {

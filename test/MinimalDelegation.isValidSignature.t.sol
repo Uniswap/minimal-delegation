@@ -5,9 +5,11 @@ import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
     using TestKeyManager for TestKey;
+    using WrappedDataHash for bytes32;
 
     bytes4 internal constant _1271_MAGIC_VALUE = 0x1626ba7e;
 
@@ -19,7 +21,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         bytes32 testDigest = keccak256("Test");
-        bytes32 testDigestToSign = signerAccount.hashTypedData(keccak256("Test"));
+        bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
         bytes memory signature = p256Key.sign(testDigestToSign);
 
         vm.startPrank(address(signer));
