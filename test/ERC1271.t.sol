@@ -6,12 +6,13 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC1271} from "../src/interfaces/IERC1271.sol";
 import {IEIP712} from "../src/interfaces/IEIP712.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
+import {CallBuilder} from "./utils/CallBuilder.sol";
+import {Call} from "../src/libraries/CallLib.sol";
+import {CallLib} from "../src/libraries/CallLib.sol";
 
-contract ERC1271Test is DelegationHandler {
+contract ERC712Test is DelegationHandler {
     using WrappedDataHash for bytes32;
-
-    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
-    bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
+    using CallLib for Call[];
 
     function setUp() public {
         setUpDelegation();
@@ -46,44 +47,17 @@ contract ERC1271Test is DelegationHandler {
     }
 
     function test_hashTypedData() public view {
-        bytes32 hash = keccak256("test");
-        bytes32 hashTypedData = signerAccount.hashTypedData(hash);
+        Call[] memory calls = CallBuilder.init();
+        bytes32 hashTypedData = signerAccount.hashTypedData(calls.hash());
         // re-implement 712 hash
         bytes32 expected = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 signerAccount.domainSeparator(),
                 // _hashStruct(bytes32)
-                hash
+                calls.hash()
             )
         );
         assertEq(expected, hashTypedData);
-    }
-
-    function test_isValidSignature_sep256k1_succeeds() public view {
-        bytes32 data = keccak256("test");
-        bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashTypedData);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        // ensure the call returns the ERC1271 magic value
-        assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
-    }
-
-    function test_isValidSignature_sep256k1_invalidSigner() public view {
-        bytes32 hash = keccak256("test");
-        bytes32 hashTypedData = signerAccount.hashTypedData(hash);
-        // sign with a different private key
-        uint256 invalidPrivateKey = 0xdeadbeef;
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(invalidPrivateKey, hashTypedData);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        // ensure the call returns the ERC1271 invalid magic value
-        assertEq(signerAccount.isValidSignature(hash, signature), _1271_INVALID_VALUE);
-    }
-
-    function test_isValidSignature_invalidSignatureLength_reverts() public {
-        bytes32 hash = keccak256("test");
-        bytes memory signature = new bytes(63);
-        vm.expectRevert();
-        signerAccount.isValidSignature(hash, signature);
     }
 }

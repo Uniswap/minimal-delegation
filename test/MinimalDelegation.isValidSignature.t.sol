@@ -11,7 +11,8 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
     using TestKeyManager for TestKey;
     using WrappedDataHash for bytes32;
 
-    bytes4 internal constant _1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
 
     function setUp() public {
         setUpDelegation();
@@ -28,5 +29,32 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
         signerAccount.authorize(p256Key.toKey());
         bytes4 result = signerAccount.isValidSignature(testDigest, abi.encode(p256Key.toKeyHash(), signature));
         assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_succeeds() public view {
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashTypedData);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        // ensure the call returns the ERC1271 magic value
+        assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_invalidSigner() public view {
+        bytes32 hash = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(hash.hashWithWrappedType());
+        // sign with a different private key
+        uint256 invalidPrivateKey = 0xdeadbeef;
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(invalidPrivateKey, hashTypedData);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        // ensure the call returns the ERC1271 invalid magic value
+        assertEq(signerAccount.isValidSignature(hash, signature), _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_invalidSignatureLength_reverts() public {
+        bytes32 hash = keccak256("test");
+        bytes memory signature = new bytes(63);
+        vm.expectRevert();
+        signerAccount.isValidSignature(hash, signature);
     }
 }
