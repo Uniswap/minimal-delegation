@@ -182,9 +182,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_native_singleCall");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_singleCall_native");
     }
 
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
     function test_execute_single_batchedCall_opData_eoaSigner_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
@@ -198,6 +200,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
     }
 
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
     function test_execute_twoCalls_batchedCall_opData_eoaSigner_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
@@ -210,5 +214,20 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_twoCalls");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_native_single_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
+
+        bytes memory signature = _signAndPackSignature(calls.hash(), 0);
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
     }
 }
