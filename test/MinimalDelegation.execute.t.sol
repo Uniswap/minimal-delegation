@@ -203,6 +203,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
     }
 
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
     function test_execute_single_batchedCall_opData_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 

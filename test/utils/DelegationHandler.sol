@@ -16,13 +16,8 @@ contract DelegationHandler is Test {
     MinimalDelegation public minimalDelegation;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
-    TestKey signerTestKey = TestKey(
-        uint40(block.timestamp + 3600),
-        KeyType.Secp256k1,
-        true,
-        abi.encodePacked(signer),
-        signerPrivateKey
-    );
+    TestKey signerTestKey =
+        TestKey(uint40(block.timestamp + 3600), KeyType.Secp256k1, true, abi.encodePacked(signer), signerPrivateKey);
     IMinimalDelegation public signerAccount;
     uint256 DEFAULT_KEY_EXPIRY = 10 days;
 
