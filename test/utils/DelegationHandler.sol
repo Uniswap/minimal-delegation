@@ -41,4 +41,16 @@ contract DelegationHandler is Test {
         vm.etch(_signer, bytes.concat(hex"ef0100", abi.encodePacked(_implementation)));
         require(_signer.code.length > 0, "signer not delegated");
     }
+
+    /// @dev Solady packs the signature as (r, s, v)
+    function _signAndPackSignature(bytes32 hash) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hash);
+        return abi.encodePacked(r, s, v);
+    }
+
+    /// @dev Helper function to pack the signature with a nonce
+    function _signAndPackSignature(bytes32 hash, uint256 nonce) internal view returns (bytes memory) {
+        bytes memory innerSignature = _signAndPackSignature(hash);
+        return abi.encode(nonce, innerSignature);
+    }
 }
