@@ -104,7 +104,7 @@ library TestKeyManager {
             return abi.encodePacked(r, s);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);
-            return abi.encodePacked(v, r, s);
+            return abi.encodePacked(r, s, v);
         } else {
             revert KeyNotSupported();
         }
