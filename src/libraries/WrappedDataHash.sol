@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.23;
+
 /// @title WrappedDataHash
 /// @notice A library to produce EIP-712 compliant typed data hash over arbitrary data. This is meant to be used in the ERC-1271 callback to wrap arbitrary data with a wallet specific typehash.
 /// The typehash should then be hashed with the wallet specific domain separator to prevent replay attacks that can occur with ERC-1271 compliant wallets.
