@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {console2} from "forge-std/console2.sol";
 
 /// @dev The type of key.
 enum KeyType {
