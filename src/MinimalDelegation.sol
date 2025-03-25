@@ -20,6 +20,7 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
+import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
     using ModeDecoder for bytes32;
@@ -27,6 +28,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CallLib for Call[];
     using CalldataDecoder for bytes;
+    using WrappedDataHash for bytes32;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -46,13 +48,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Nonce validation.
         // Check signature.
         bool isValid;
-        /// The calls are not safe hashed with _hashTypedData, as the domain separator is sufficient to prevent against replay attacks.
-        (isValid,) = _isValidSignature(calls.hash(), signature);
+        (isValid,) = _isValidSignature(_hashTypedData(calls.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -154,8 +154,9 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @inheritdoc ERC1271
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
-        (bool isValid,) = _isValidSignature(_hashTypedData(hash), signature);
+    function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
+        /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
+        (bool isValid,) = _isValidSignature(_hashTypedData(data.hashWithWrappedType()), signature);
         if (isValid) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
     }
