@@ -48,7 +48,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Nonce validation.
         // Check signature.

@@ -8,7 +8,6 @@ import {IEIP712} from "./interfaces/IEIP712.sol";
 /// @dev This contract does not cache the domain separator and calculates it on the fly since it will change when delegated to.
 /// @notice It is not compatible with use by proxy contracts since the domain name and version are cached on deployment.
 /// @author Uniswap
-/// @author Modified from Coinbase (https://github.com/coinbase/smart-wallet)
 contract EIP712 is IEIP712, IERC5267 {
     /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
     bytes32 internal constant _DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
@@ -66,12 +65,14 @@ contract EIP712 is IEIP712, IERC5267 {
     }
 
     /// @notice Public getter for `_hashTypedData()` to produce a replay-safe hash from the given `hash`.
+    /// @param hash The nested typed data hash as defined by EIP-712. Assumes the hash is already compliant with EIP-712.
     /// @return The corresponding replay-safe hash.
     function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
         return _hashTypedData(hash);
     }
 
     /// @notice Returns the EIP-712 typed data hash
+    /// @param hash The nested typed data hash as defined by EIP-712.  Assumes the hash is already compliant with EIP-712.
     /// @return The resulting EIP-712 hash.
     function _hashTypedData(bytes32 hash) internal view returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), hash));

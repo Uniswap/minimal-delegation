@@ -6,6 +6,7 @@ pragma solidity ^0.8.23;
 /// The typehash should then be hashed with the wallet specific domain separator to prevent replay attacks that can occur with ERC-1271 compliant wallets.
 /// Note that verifying the hash with only the typed wrapper will not prevent replay attacks. The data must be signed over with the domain separator to prevent replay attacks.
 /// @dev See https://mirror.xyz/curiousapple.eth/pFqAdW2LiJ-6S4sg_u1z08k4vK6BCJ33LcyXpnNb8yU
+/// @author Modified from Coinbase (https://github.com/coinbase/smart-wallet)
 library WrappedDataHash {
     /// @dev Precomputed `typeHash` used to produce EIP-712 compliant typed datahash that wraps the underlying data.
     bytes32 private constant _UNISWAP_WALLET_MESSAGE_TYPEHASH = keccak256("UniswapWalletMessage(bytes32 data)");
