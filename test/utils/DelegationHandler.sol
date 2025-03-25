@@ -7,13 +7,17 @@ import {MinimalDelegation} from "../../src/MinimalDelegation.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 
 contract DelegationHandler is Test {
     using KeyLib for Key;
+    using TestKeyManager for TestKey;
 
     MinimalDelegation public minimalDelegation;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
+    TestKey signerTestKey =
+        TestKey(uint40(block.timestamp + 3600), KeyType.Secp256k1, true, abi.encodePacked(signer), signerPrivateKey);
     IMinimalDelegation public signerAccount;
     uint256 DEFAULT_KEY_EXPIRY = 10 days;
 

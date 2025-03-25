@@ -4,13 +4,18 @@ pragma solidity ^0.8.23;
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {Call} from "../src/libraries/CallLib.sol";
+import {CallLib} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
+import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {KeyType} from "../src/libraries/KeyLib.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
+    using TestKeyManager for TestKey;
     using CallBuilder for Call[];
+    using CallLib for Call[];
 
     bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
     bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
@@ -128,18 +133,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
 
-    function test_execute_batch_opData_reverts_notImplemented() public {
-        Call[] memory calls = CallBuilder.init();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
-
-        bytes memory executionData = abi.encode(calls, "");
-
-        vm.startPrank(address(signerAccount));
-        vm.expectRevert();
-        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-    }
-
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
@@ -192,6 +185,75 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_native_singleCall");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_singleCall_native");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_single_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_single_batchedCall_opData_P256_gas() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        vm.startPrank(address(signer));
+        signerAccount.authorize(p256Key.toKey());
+
+        // TODO: remove 0 nonce
+        bytes memory packedSignature =
+            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(calls.hash()))));
+
+        bytes memory executionData = abi.encode(calls, packedSignature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_P256_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_twoCalls_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
+
+        // sign via EOA
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_twoCalls");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_native_single_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
+
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
     }
 }

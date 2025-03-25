@@ -161,14 +161,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         return _1271_INVALID_VALUE;
     }
 
-    // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32, Call[] memory, bytes memory) private pure {
-        // TODO: unpack anything required from opData
-        // verify signature from within opData
-        // if signature is valid, execute the calls
-        revert("Not implemented");
-    }
-
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
         return MinimalDelegationStorageLib.get().entryPoint;
