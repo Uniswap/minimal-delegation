@@ -23,8 +23,13 @@ library TestKeyManager {
 
     // 0 = never expires
     uint40 internal constant DEFAULT_KEY_EXPIRY = 0;
-    uint256 internal constant DEFAULT_SECP256R1_PK = 0xff;
-    uint256 internal constant DEFAULT_SECP256K1_PK = 0xb0b;
+    uint256 internal constant DEFAULT_SECP256R1_PK = uint256(keccak256("DEFAULT_SECP256R1_PK"));
+    uint256 internal constant DEFAULT_SECP256K1_PK = uint256(keccak256("DEFAULT_SECP256K1_PK"));
+
+    // N (order of G) from P256 curve
+    uint256 constant N = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551;
+    // N/2 for excluding higher order `s` values
+    uint256 constant HALF_N = 0x7fffffff800000007fffffffffffffffde737d56d38bcf4279dce5617e3192a8;
 
     // Return a Key initialized from the default constants based on the key type.
     function initDefault(KeyType keyType) internal pure returns (TestKey memory) {
@@ -101,6 +106,7 @@ library TestKeyManager {
     function sign(TestKey memory key, bytes32 hash) internal pure returns (bytes memory) {
         if (key.keyType == KeyType.P256) {
             (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, hash);
+            s = toNonMalleable(s);
             return abi.encodePacked(r, s);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);
@@ -116,5 +122,13 @@ library TestKeyManager {
 
     function toKeyHash(TestKey memory key) internal pure returns (bytes32) {
         return toKey(key).hash();
+    }
+
+    function toNonMalleable(bytes32 s) internal pure returns (bytes32) {
+        // If s > N/2, transform it to the lower value
+        if (uint256(s) > HALF_N) {
+            s = bytes32(N - uint256(s));
+        }
+        return s;
     }
 }

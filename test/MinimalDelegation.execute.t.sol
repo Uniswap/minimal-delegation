@@ -162,15 +162,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         Call[] memory calls = CallBuilder.init();
         Call memory authorizeCall =
-            Call(address(12345), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, secp256k1Key.toKey()));
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, secp256k1Key.toKey()));
         calls = calls.push(authorizeCall);
 
         // Sign using the registered P256 key
         // TODO: remove 0 nonce
-        bytes memory innerSignature = abi.encode(p256Key.toKeyHash(), p256Key.sign(calls.hash()));
-        bytes memory packedSignature = abi.encode(0, innerSignature);
-        console2.log("innerSignature");
-        console2.logBytes(innerSignature);
+        bytes memory packedSignature = abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(calls.hash())));
         bytes memory executionData = abi.encode(calls, packedSignature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
