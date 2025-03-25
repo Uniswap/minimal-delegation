@@ -50,14 +50,7 @@ contract ERC712Test is DelegationHandler {
         Call[] memory calls = CallBuilder.init();
         bytes32 hashTypedData = signerAccount.hashTypedData(calls.hash());
         // re-implement 712 hash
-        bytes32 expected = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                signerAccount.domainSeparator(),
-                // _hashStruct(bytes32)
-                calls.hash()
-            )
-        );
+        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), calls.hash()));
         assertEq(expected, hashTypedData);
     }
 }

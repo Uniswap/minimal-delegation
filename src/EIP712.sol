@@ -65,7 +65,7 @@ contract EIP712 is IEIP712, IERC5267 {
     }
 
     /// @notice Public getter for `_hashTypedData()` to produce a replay-safe hash from the given `hash`.
-    /// @param hash The nested typed data hash as defined by EIP-712. Assumes the hash is already compliant with EIP-712.
+    /// @param hash The nested typed data hash as defined by EIP-712. Assumes the hash is the result of applying EIP-712 hashStruct.
     /// @return The corresponding replay-safe hash.
     function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
         return _hashTypedData(hash);
