@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {console2} from "forge-std/console2.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -33,9 +34,18 @@ library KeyLib {
             isValid = ECDSA.recover(_hash, signature) == abi.decode(key.publicKey, (address));
         } else if (key.keyType == KeyType.P256) {
             // Extract x,y from the public key
+            console2.log("key.publicKey");
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
+            console2.log("x");
+            console2.logBytes32(x);
+            console2.log("y");
+            console2.logBytes32(y);
             // Split signature into r and s values.
             (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
+            console2.log("r");
+            console2.logBytes32(r);
+            console2.log("s");
+            console2.logBytes32(s);
             isValid = P256.verify(_hash, r, s, x, y);
         } else {
             isValid = false;

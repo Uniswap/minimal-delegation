@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
@@ -48,11 +49,16 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
+        console2.log("signature");
+        console2.logBytes(signature);
         // TODO: Nonce validation.
         // Check signature.
         bool isValid;
         /// The calls are not safe hashed with _hashTypedData, as the domain separator is sufficient to prevent against replay attacks.
+        console2.log("calls.hash()");
+        console2.logBytes32(calls.hash());
         (isValid,) = _isValidSignature(calls.hash(), signature);
+        console2.logBool(isValid);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -177,6 +183,12 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             // The signature is wrapped.
             bytes memory signature;
             (keyHash, signature) = abi.decode(_signature, (bytes32, bytes));
+            console2.log("_isValidSignature hash");
+            console2.logBytes32(_hash);
+            console2.log("_isValidSignature keyHash");
+            console2.logBytes32(keyHash);
+            console2.log("_isValidSignature signature");
+            console2.logBytes(signature);
             Key memory key = _getKey(keyHash);
             isValid = key.verify(_hash, signature);
         }
