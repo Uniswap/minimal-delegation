@@ -16,11 +16,4 @@ interface INonceManager {
     ///               - Upper 192 bits: the provided key
     ///               - Lower 64 bits: the expected sequence number for this key
     function getNonce(uint192 key) external view returns (uint256 nonce);
-
-    /// @notice Validates that the provided nonce is valid and increments the sequence number
-    /// @param nonce A 256-bit value where:
-    ///             - Upper 192 bits: the sequence key
-    ///             - Lower 64 bits: must match the expected sequence number for the key
-    /// @dev If valid, increments the sequence number for future nonce validations
-    function validateAndUpdateNonce(uint256 nonce) external;
 }

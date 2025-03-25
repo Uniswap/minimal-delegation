@@ -49,7 +49,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (uint256 nonce, bytes calldata signature) = opData.decodeUint256Bytes();
-        validateAndUpdateNonce(nonce);
+        _useNonce(nonce);
         // Check signature.
         (bool isValid,) = _isValidSignature(_hashTypedData(calls.hash(nonce)), signature);
         if (!isValid) revert IERC7821.InvalidSignature();

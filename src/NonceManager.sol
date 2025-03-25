@@ -12,8 +12,12 @@ abstract contract NonceManager is INonceManager {
         return MinimalDelegationStorageLib.get().nonceSequenceNumber[key] | (uint256(key) << 64);
     }
 
-    /// @inheritdoc INonceManager
-    function validateAndUpdateNonce(uint256 nonce) public {
+    /// @notice Validates that the provided nonce is valid and increments the sequence number
+    /// @param nonce A 256-bit value where:
+    ///             - Upper 192 bits: the sequence key
+    ///             - Lower 64 bits: must match the expected sequence number for the key
+    /// @dev If valid, increments the sequence number for future nonce validations
+    function _useNonce(uint256 nonce) internal {
         uint192 key = uint192(nonce >> 64);
         uint64 seq = uint64(nonce);
         if (!(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]++ == seq)) {
