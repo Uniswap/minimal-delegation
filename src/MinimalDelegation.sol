@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
