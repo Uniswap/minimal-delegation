@@ -124,6 +124,7 @@ library TestKeyManager {
         return toKey(key).hash();
     }
 
+    /// @dev This is unaudited and may not be secure.
     function toNonMalleable(bytes32 s) internal pure returns (bytes32) {
         // If s > N/2, transform it to the lower value
         if (uint256(s) > HALF_N) {
