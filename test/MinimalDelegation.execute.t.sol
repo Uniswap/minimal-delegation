@@ -146,7 +146,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         calls = calls.push(authorizeCall);
 
         // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(calls.hash()));
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
         bytes memory executionData = abi.encode(calls, signature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -167,7 +167,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         // Sign using the registered P256 key
         // TODO: remove 0 nonce
-        bytes memory packedSignature = abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(calls.hash())));
+        bytes memory packedSignature = abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(calls.hash()))));
         bytes memory executionData = abi.encode(calls, packedSignature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -236,7 +236,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(calls.hash()));
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -256,7 +256,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         signerAccount.authorize(p256Key.toKey());
 
         // TODO: remove 0 nonce
-        bytes memory packedSignature = abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(calls.hash())));
+        bytes memory packedSignature =
+            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(calls.hash()))));
+
         bytes memory executionData = abi.encode(calls, packedSignature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -272,7 +274,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         // sign via EOA
         // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(calls.hash()));
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -287,7 +289,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
         // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(calls.hash()));
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
