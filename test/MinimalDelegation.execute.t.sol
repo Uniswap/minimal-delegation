@@ -145,7 +145,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
     }
 
-    function test_execute_batch_opData_oneCall_succeeds() public {
+    function test_execute_batch_opData_twoCalls_succeeds() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
@@ -180,7 +180,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         assertEq(signerAccount.getNonce(key), expectedNextNonce);
     }
 
-    function test_execute_batch_opData_twoCalls_succeeds() public {
+    function test_execute_batch_opData_singeCall_succeeds() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
@@ -203,7 +203,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         // Execute the batch of calls with the signature
         vm.startPrank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_oneCall");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall");
 
         // Verify the transfers succeeded
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
