@@ -34,39 +34,43 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _authorizeCaller();
-            _dispatch(mode, calls);
+            _dispatch(mode, calls, bytes32(0));
         } else if (mode.supportsOpData()) {
             // executionData.decodeWithOpData();
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
-            _authorizeOpData(mode, calls, opData);
-            _dispatch(mode, calls);
+            bytes32 keyHash = _authorizeOpData(mode, calls, opData);
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData)
+        private
+        view
+        returns (bytes32 keyHash)
+    {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Nonce validation.
         // Check signature.
         bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(calls.hash()), signature);
+        (isValid, keyHash) = _isValidSignature(_hashTypedData(calls.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
-    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+    function _dispatch(bytes32 mode, Call[] calldata calls, bytes32 keyHash) private {
         bool shouldRevert = mode.shouldRevert();
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
+            (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
     }
 
     // Execute a single call.
-    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
+    function _execute(Call calldata _call, bytes32 keyHash) private returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
         (success, output) = to.call{value: _call.value}(_call.data);
     }
@@ -151,6 +155,13 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
+    }
+
+    /// @dev Returns a bytes32 value that contains `to` and `selector`.
+    function _packCanExecute(address to, bytes4 selector) internal pure returns (bytes32 result) {
+        assembly ("memory-safe") {
+            result := or(shl(96, to), shr(224, selector))
+        }
     }
 
     /// @inheritdoc ERC1271

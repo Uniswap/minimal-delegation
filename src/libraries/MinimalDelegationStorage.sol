@@ -7,6 +7,7 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 struct MinimalDelegationStorage {
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
+    mapping(bytes32 keyHash => EnumerableSetLib.Bytes32Set canExecute) canExecute;
     address entryPoint;
 }
 
