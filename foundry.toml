@@ -7,6 +7,10 @@ optimizer_runs = 1000000
 bytecode_hash = "none"
 odyssey = true
 
+remappings = [
+    "webauthn-sol/=lib/webauthn-sol/src/"
+]
+
 [profile.default.fuzz]
 runs = 1000
 
