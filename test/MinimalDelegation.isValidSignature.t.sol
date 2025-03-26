@@ -6,6 +6,7 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
+import {TestKeyManager} from "./utils/TestKeyManager.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
     using TestKeyManager for TestKey;
@@ -34,19 +35,34 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
     function test_isValidSignature_sep256k1_succeeds() public view {
         bytes32 data = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashTypedData);
-        bytes memory signature = abi.encodePacked(r, s, v);
+
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        bytes memory signature = key.sign(hashTypedData);
+
         // ensure the call returns the ERC1271 magic value
         assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_noWrappedData_invalidSigner() public view {
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data);
+
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        bytes memory signature = key.sign(hashTypedData);
+
+        // ensure the call returns the ERC1271 invalid magic value
+        assertEq(signerAccount.isValidSignature(data, signature), _1271_INVALID_VALUE);
     }
 
     function test_isValidSignature_sep256k1_invalidSigner() public view {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash.hashWithWrappedType());
+
         // sign with a different private key
         uint256 invalidPrivateKey = 0xdeadbeef;
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(invalidPrivateKey, hashTypedData);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
+        bytes memory signature = invalidSigner.sign(hashTypedData);
+
         // ensure the call returns the ERC1271 invalid magic value
         assertEq(signerAccount.isValidSignature(hash, signature), _1271_INVALID_VALUE);
     }

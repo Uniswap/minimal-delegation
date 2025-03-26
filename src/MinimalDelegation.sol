@@ -50,7 +50,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Decode as an execute struct with the nonce. This is temporary!
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
@@ -163,14 +162,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         (bool isValid,) = _isValidSignature(_hashTypedData(data.hashWithWrappedType()), signature);
         if (isValid) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
-    }
-
-    // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32, Call[] memory, bytes memory) private pure {
-        // TODO: unpack anything required from opData
-        // verify signature from within opData
-        // if signature is valid, execute the calls
-        revert("Not implemented");
     }
 
     /// @inheritdoc IERC4337Account
