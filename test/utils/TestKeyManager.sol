@@ -26,11 +26,6 @@ library TestKeyManager {
     uint256 internal constant DEFAULT_SECP256R1_PK = uint256(keccak256("DEFAULT_SECP256R1_PK"));
     uint256 internal constant DEFAULT_SECP256K1_PK = uint256(keccak256("DEFAULT_SECP256K1_PK"));
 
-    // N (order of G) from P256 curve
-    uint256 constant N = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551;
-    // N/2 for excluding higher order `s` values
-    uint256 constant HALF_N = 0x7fffffff800000007fffffffffffffffde737d56d38bcf4279dce5617e3192a8;
-
     // Return a Key initialized from the default constants based on the key type.
     function initDefault(KeyType keyType) internal pure returns (TestKey memory) {
         if (keyType == KeyType.P256) {
