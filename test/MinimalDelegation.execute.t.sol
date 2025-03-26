@@ -10,10 +10,12 @@ import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
-import {KeyType} from "../src/libraries/KeyLib.sol";
+import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
+import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     using TestKeyManager for TestKey;
+    using KeyLib for Key;
     using CallBuilder for Call[];
     using CallLib for Call[];
 
@@ -131,6 +133,45 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         // the second transfer failed
         assertEq(tokenB.balanceOf(address(receiver)), 0);
+    }
+
+    // Execute can contain a self call which authorizes a new key even if the caller is untrusted as long as the signature is valid
+    function test_execute_opData_eoaSigner_selfCall_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        Call[] memory calls = CallBuilder.init();
+        Call memory authorizeCall =
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, p256Key.toKey()));
+        calls = calls.push(authorizeCall);
+
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(calls.hash())));
+        bytes memory executionData = abi.encode(calls, signature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
+    }
+
+    function test_execute_opData_P256_selfCall_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
+
+        vm.prank(address(signerAccount));
+        signerAccount.authorize(p256Key.toKey());
+
+        Call[] memory calls = CallBuilder.init();
+        Call memory authorizeCall =
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, secp256k1Key.toKey()));
+        calls = calls.push(authorizeCall);
+
+        // Sign using the registered P256 key
+        // TODO: remove 0 nonce
+        bytes memory packedSignature =
+            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(calls.hash()))));
+        bytes memory executionData = abi.encode(calls, packedSignature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(signerAccount.getKey(secp256k1Key.toKeyHash()).hash(), secp256k1Key.toKeyHash());
     }
 
     /// GAS TESTS
