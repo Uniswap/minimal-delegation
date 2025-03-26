@@ -106,7 +106,6 @@ library TestKeyManager {
     function sign(TestKey memory key, bytes32 hash) internal pure returns (bytes memory) {
         if (key.keyType == KeyType.P256) {
             (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, hash);
-            s = toNonMalleable(s);
             return abi.encodePacked(r, s);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);
@@ -122,14 +121,5 @@ library TestKeyManager {
 
     function toKeyHash(TestKey memory key) internal pure returns (bytes32) {
         return toKey(key).hash();
-    }
-
-    /// @dev This is unaudited and may not be secure.
-    function toNonMalleable(bytes32 s) internal pure returns (bytes32) {
-        // If s > N/2, transform it to the lower value
-        if (uint256(s) > HALF_N) {
-            s = bytes32(N - uint256(s));
-        }
-        return s;
     }
 }
