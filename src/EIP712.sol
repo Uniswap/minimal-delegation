@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol";
+import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {IEIP712} from "./interfaces/IEIP712.sol";
 
 /// @title EIP712
