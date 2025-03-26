@@ -11,6 +11,7 @@ import {UserOpBuilder} from "./utils/UserOpBuilder.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {KeyType} from "../src/libraries/KeyLib.sol";
 
 contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHandler {
     using CallBuilder for Call[];
@@ -34,7 +35,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_handleOps_single_gas() public {
+    function test_handleOps_single_eoaSigner_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
@@ -56,7 +57,42 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         uint256 tokenBalanceBefore = tokenA.balanceOf(address(receiver));
 
         entryPoint.handleOps(userOps, bundler);
-        vm.snapshotGasLastCall("hanldeOps_BATCHED_CALL_singleCall");
+        vm.snapshotGasLastCall("hanldeOps_BATCHED_CALL_singleCall_eoaSigner");
+
+        uint256 tokenBalanceAfter = tokenA.balanceOf(address(receiver));
+        assertEq(tokenBalanceAfter, tokenBalanceBefore + 1e18);
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_handleOps_single_P256_gas() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.prank(address(signerAccount));
+        signerAccount.authorize(p256Key.toKey());
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        bytes memory opData = bytes("");
+        bytes memory executionData = abi.encode(calls, opData);
+        bytes memory callData =
+            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+
+        PackedUserOperation memory userOp =
+            UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
+
+        bytes32 digest = entryPoint.getUserOpHash(userOp);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), p256Key.sign(digest));
+        userOp.withSignature(wrappedSignature);
+
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+
+        uint256 tokenBalanceBefore = tokenA.balanceOf(address(receiver));
+
+        entryPoint.handleOps(userOps, bundler);
+        vm.snapshotGasLastCall("hanldeOps_BATCHED_CALL_singleCall_P256");
 
         uint256 tokenBalanceAfter = tokenA.balanceOf(address(receiver));
         assertEq(tokenBalanceAfter, tokenBalanceBefore + 1e18);
