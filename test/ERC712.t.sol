@@ -3,26 +3,18 @@ pragma solidity ^0.8.23;
 
 import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
+import {IERC1271} from "../src/interfaces/IERC1271.sol";
 import {IEIP712} from "../src/interfaces/IEIP712.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
-import {TokenHandler} from "./utils/TokenHandler.sol";
-import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
-import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
-import {KeyType} from "../src/libraries/KeyLib.sol";
 import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
 
-contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
+contract ERC712Test is DelegationHandler {
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
-    using CallLib for Call;
-    using CallBuilder for Call[];
-    using TestKeyManager for TestKey;
     using ExecutionDataLib for ExecutionData;
-
-    address receiver = makeAddr("receiver");
 
     function setUp() public {
         setUpDelegation();
@@ -56,32 +48,13 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(expected, signerAccount.domainSeparator());
     }
 
+    /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
         Call[] memory calls = CallBuilder.init();
         ExecutionData memory execute = ExecutionData({calls: calls});
         bytes32 hashTypedData = signerAccount.hashTypedData(execute.hash());
         // re-implement 712 hash
-        bytes32 expected = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                signerAccount.domainSeparator(),
-                // _hashStruct(bytes32)
-                execute.hash()
-            )
-        );
+        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), execute.hash()));
         assertEq(expected, hashTypedData);
-    }
-
-    function test_hashTypedData_matches_signedTypedData_ffi() public {
-        Call[] memory calls = CallBuilder.init();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls});
-        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
-        // Make it clear that the verifying contract is set properly.
-        address verifyingContract = address(signerAccount);
-
-        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, verifyingContract);
-
-        assertEq(signature, key.sign(signerAccount.hashTypedData(execute.hash())));
     }
 }

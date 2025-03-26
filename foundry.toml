@@ -6,6 +6,7 @@ optimizer = true
 optimizer_runs = 1000000
 bytecode_hash = "none"
 odyssey = true
+ffi = true
 
 [profile.default.fuzz]
 runs = 1000
