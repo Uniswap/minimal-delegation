@@ -9,10 +9,20 @@ import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
+import {KeyType} from "../src/libraries/KeyLib.sol";
+import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {TokenHandler} from "./utils/TokenHandler.sol";
+import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
+import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
 
-contract ERC712Test is DelegationHandler {
+contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
+    using CallBuilder for Call[];
+    using TestKeyManager for TestKey;
+    using ExecutionDataLib for ExecutionData;
+
+    address receiver = makeAddr("receiver");
 
     function setUp() public {
         setUpDelegation();
@@ -29,7 +39,7 @@ contract ERC712Test is DelegationHandler {
             uint256[] memory extensions
         ) = signerAccount.eip712Domain();
         // Ensure that verifying contract is the signer
-        assertEq(verifyingContract, address(signer));
+        assertEq(verifyingContract, address(signerAccount));
         assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
         assertEq(salt, bytes32(0));
         assertEq(name, "Uniswap Minimal Delegation");
@@ -46,11 +56,26 @@ contract ERC712Test is DelegationHandler {
         assertEq(expected, signerAccount.domainSeparator());
     }
 
+    /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
         Call[] memory calls = CallBuilder.init();
-        bytes32 hashTypedData = signerAccount.hashTypedData(calls.hash());
+        ExecutionData memory execute = ExecutionData({calls: calls});
+        bytes32 hashTypedData = signerAccount.hashTypedData(execute.hash());
         // re-implement 712 hash
-        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), calls.hash()));
+        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), execute.hash()));
         assertEq(expected, hashTypedData);
+    }
+
+    function test_hashTypedData_matches_signedTypedData_ffi() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        ExecutionData memory execute = ExecutionData({calls: calls});
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        // Make it clear that the verifying contract is set properly.
+        address verifyingContract = address(signerAccount);
+
+        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, verifyingContract);
+
+        assertEq(signature, key.sign(signerAccount.hashTypedData(execute.hash())));
     }
 }
