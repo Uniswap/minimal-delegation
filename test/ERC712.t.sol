@@ -69,12 +69,13 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     function test_hashTypedData_matches_signedTypedData_ffi() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
+        uint256 nonce = 0;
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
 
-        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, verifyingContract);
+        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, nonce, verifyingContract);
 
         assertEq(signature, key.sign(signerAccount.hashTypedData(execute.hash())));
     }

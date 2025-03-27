@@ -8,6 +8,7 @@ import {ExecutionData, ExecutionDataLib} from "../../src/libraries/ExecuteLib.so
 contract CallLibTest is Test {
     using CallLib for Call[];
     /// @notice Test to catch accidental changes to the typehash
+
     function test_constant_typehash() public pure {
         bytes32 expectedTypeHash = keccak256("Call(address to,uint256 value,bytes data)");
         assertEq(CallLib.CALL_TYPEHASH, expectedTypeHash);

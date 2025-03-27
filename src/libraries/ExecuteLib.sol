@@ -13,7 +13,8 @@ library ExecutionDataLib {
     using CallLib for Call[];
     /// TODO: Sign add nonce.
 
-    bytes internal constant EXECUTE_TYPE = "Execute(Call[] calls)Call(address to,uint256 value,bytes data)";
+    bytes internal constant EXECUTE_TYPE =
+        "Execute(Call[] calls,uint256 nonce)Call(address to,uint256 value,bytes data)";
 
     /// @dev The typehash for the Execute struct
     bytes32 internal constant EXECUTE_TYPEHASH = keccak256(EXECUTE_TYPE);
