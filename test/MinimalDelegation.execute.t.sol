@@ -9,13 +9,13 @@ import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 import {EIP712} from "../src/EIP712.sol";
-import {CallLib} from "../src/libraries/CallLib.sol";
+import {CallLib, CallWithNonce} from "../src/libraries/CallLib.sol";
 import {NonceManager} from "../src/NonceManager.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
     using CallBuilder for Call[];
-    using CallLib for Call[];
+    using CallLib for CallWithNonce;
 
     bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
     bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
@@ -156,7 +156,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
 
         // Create hash of the calls + nonce and sign it
-        bytes32 hashToSign = signerAccount.hashTypedData(calls.hash(nonce));
+        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(callWithNonce.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -190,7 +191,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
 
         // Create hash of the calls + nonce and sign it
-        bytes32 hashToSign = signerAccount.hashTypedData(calls.hash(nonce));
+        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(callWithNonce.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -224,7 +226,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
 
         // Create hash of the calls + nonce and sign it
-        bytes32 hashToSign = signerAccount.hashTypedData(calls.hash(nonce));
+        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(callWithNonce.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 

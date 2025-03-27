@@ -8,9 +8,10 @@ import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries
 /// @notice A contract that manages nonces to prevent replay attacks
 abstract contract NonceManager is INonceManager {
     /// @inheritdoc INonceManager
-    function getNonce(uint192 key) public view returns (uint256 nonce) {
-        return MinimalDelegationStorageLib.get().nonceSequenceNumber[key] | (uint256(key) << 64);
-    }
+    function getNonce(uint192 key) public view virtual returns (uint256 nonce);
+
+    /// @inheritdoc INonceManager
+    function invalidateNonce(uint256 nonce) public virtual;
 
     /// @notice Validates that the provided nonce is valid and increments the sequence number
     /// @param nonce A 256-bit value where:
@@ -23,5 +24,16 @@ abstract contract NonceManager is INonceManager {
         if (!(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]++ == seq)) {
             revert InvalidNonce();
         }
+    }
+
+    /// @dev Increments the sequence for the key in nonce (i.e. upper 192 bits).
+    /// This invalidates the nonces for the key, up to (inclusive) `uint64(nonce)`.
+    function _invalidateNonce(uint256 nonce) internal {
+        uint192 key = uint192(nonce >> 64);
+        uint256 currentSeq = MinimalDelegationStorageLib.get().nonceSequenceNumber[key];
+        uint64 targetSeq = uint64(nonce);
+        if (targetSeq < currentSeq) revert InvalidNonce();
+        MinimalDelegationStorageLib.get().nonceSequenceNumber[key] =
+            targetSeq < type(uint64).max - 1 ? targetSeq + 1 : type(uint64).max;
     }
 }

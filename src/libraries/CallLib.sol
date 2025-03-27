@@ -7,12 +7,23 @@ struct Call {
     bytes data;
 }
 
+struct CallWithNonce {
+    Call[] calls;
+    uint256 nonce;
+}
+
 library CallLib {
     /// @dev The type string for the Call struct
     bytes internal constant CALL_TYPE = "Call(address to,uint256 value,bytes data)";
 
+    /// @dev The type string for the CallWithNonce struct
+    bytes internal constant CALL_WITH_NONCE_TYPE = "CallWithNonce(Call[] calls,uint256 nonce)";
+
     /// @dev The typehash for the Call struct
     bytes32 internal constant CALL_TYPEHASH = keccak256(CALL_TYPE);
+
+    /// @dev The typehash for the CallWithNonce struct
+    bytes32 internal constant CALL_WITH_NONCE_TYPEHASH = keccak256(CALL_WITH_NONCE_TYPE);
 
     /// @notice Hash a single call
     function hash(Call memory call) internal pure returns (bytes32) {
@@ -20,7 +31,7 @@ library CallLib {
     }
 
     /// @notice Hash a series of calls
-    function hash(Call[] memory calls, uint256 nonce) internal pure returns (bytes32) {
+    function hash(Call[] memory calls) internal pure returns (bytes32) {
         unchecked {
             bytes memory packedHashes = new bytes(32 * calls.length);
 
@@ -31,7 +42,12 @@ library CallLib {
                 }
             }
 
-            return keccak256(abi.encodePacked(packedHashes, nonce));
+            return keccak256(packedHashes);
         }
+    }
+
+    /// @notice Hash a series of calls with a nonce
+    function hash(CallWithNonce memory callWithNonce) internal pure returns (bytes32) {
+        return keccak256(abi.encode(CALL_WITH_NONCE_TYPEHASH, callWithNonce.calls, callWithNonce.nonce));
     }
 }

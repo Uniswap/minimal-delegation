@@ -7,17 +7,17 @@ import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
-import {Call} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
-import {CallLib} from "./libraries/CallLib.sol";
+import {CallLib, Call, CallWithNonce} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {NonceManager} from "./NonceManager.sol";
+import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
@@ -26,7 +26,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CallLib for Call[];
+    using CallLib for CallWithNonce;
     using CalldataDecoder for bytes;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
@@ -44,6 +44,18 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         }
     }
 
+    /// @inheritdoc INonceManager
+    function getNonce(uint192 key) public view override returns (uint256 nonce) {
+        return MinimalDelegationStorageLib.get().nonceSequenceNumber[key] | (uint256(key) << 64);
+    }
+
+    /// @inheritdoc INonceManager
+    function invalidateNonce(uint256 nonce) public override {
+        _authorizeCaller();
+        _invalidateNonce(nonce);
+        emit NonceInvalidated(nonce);
+    }
+
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
@@ -51,7 +63,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         (uint256 nonce, bytes calldata signature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
         // Check signature.
-        (bool isValid,) = _isValidSignature(_hashTypedData(calls.hash(nonce)), signature);
+        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
+        (bool isValid,) = _isValidSignature(_hashTypedData(callWithNonce.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 

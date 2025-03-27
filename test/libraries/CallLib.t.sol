@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
-import {Call, CallLib} from "../../src/libraries/CallLib.sol";
+import {Call, CallLib, CallWithNonce} from "../../src/libraries/CallLib.sol";
 
 contract CallLibTest is Test {
     /// @notice Test to catch accidental changes to the typehash
@@ -19,23 +19,26 @@ contract CallLibTest is Test {
         assertEq(actualHash, expectedHash);
     }
 
-    function test_hash_multiple_fuzz(Call[] memory calls, uint256 nonce) public pure {
-        bytes32 actualHash = CallLib.hash(calls, nonce);
+    function test_hash_multiple_fuzz(Call[] memory calls) public pure {
+        bytes32 actualHash = CallLib.hash(calls);
 
-        // Create bytes array for packing
-        bytes memory packedHashes = new bytes(32 * calls.length);
+        bytes32[] memory hashes = new bytes32[](calls.length);
 
         // Pack hashes into bytes array
         for (uint256 i = 0; i < calls.length; i++) {
-            bytes32 callHash = CallLib.hash(calls[i]);
-            assembly {
-                mstore(add(add(packedHashes, 0x20), mul(i, 0x20)), callHash)
-            }
+            hashes[i] = CallLib.hash(calls[i]);
         }
 
-        // Hash packed bytes array with nonce
-        bytes32 expectedHash = keccak256(abi.encodePacked(packedHashes, nonce));
+        bytes32 expectedHash = keccak256(abi.encodePacked(hashes));
 
+        assertEq(actualHash, expectedHash);
+    }
+
+    function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce) public pure {
+        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
+        bytes32 actualHash = CallLib.hash(callWithNonce);
+
+        bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_WITH_NONCE_TYPEHASH, calls, nonce));
         assertEq(actualHash, expectedHash);
     }
 }
