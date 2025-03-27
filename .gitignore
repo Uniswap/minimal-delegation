@@ -14,4 +14,5 @@ docs/
 .env
 
 # js script builds
+test/js-scripts/node_modules/**/*
 test/js-scripts/dist/
