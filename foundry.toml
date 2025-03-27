@@ -8,7 +8,7 @@ bytecode_hash = "none"
 odyssey = true
 
 remappings = [
-    "webauthn-sol/=lib/webauthn-sol/src/"
+    "webauthn-sol/=lib/webauthn-sol/"
 ]
 
 [profile.default.fuzz]
