@@ -37,7 +37,7 @@ library ModeDecoder {
 
     // Supported modes:
     // 0x01           | 0x00      | unused        | 0x78214337   | unused
-    // - A batched call that is sent as part of an ERC-4337 user operation
+    // - A batched call that is sent as part of an ERC-4337 user operation 
     function isUserOpBatchedCall(bytes32 mode) internal pure returns (bool) {
         return mode == BATCHED_CALL_USER_OP;
     }

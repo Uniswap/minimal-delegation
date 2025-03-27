@@ -42,7 +42,8 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         // TODO: encode nonce into opData
         bytes memory opData = bytes("");
         bytes memory executionData = abi.encode(calls, opData);
-        bytes memory callData = abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_USER_OP, executionData);
+        bytes memory callData =
+            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_USER_OP, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -75,7 +76,8 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
 
         bytes memory opData = bytes("");
         bytes memory executionData = abi.encode(calls, opData);
-        bytes memory callData = abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_USER_OP, executionData);
+        bytes memory callData =
+            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_USER_OP, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
