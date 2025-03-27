@@ -53,9 +53,6 @@ contract FFISignTypedData is JavascriptFfi {
 
         callsJson = string.concat(callsJson, "]");
 
-        console2.log("PK");
-        console2.log(privateKey);
-
         string memory jsonObj = string.concat(
             "{",
             '"privateKey":"',
