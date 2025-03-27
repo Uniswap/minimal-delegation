@@ -3,9 +3,12 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {Call, CallLib} from "../../src/libraries/CallLib.sol";
+import {ExecutionData, ExecutionDataLib} from "../../src/libraries/ExecuteLib.sol";
 
 contract CallLibTest is Test {
+    using CallLib for Call[];
     /// @notice Test to catch accidental changes to the typehash
+
     function test_constant_typehash() public pure {
         bytes32 expectedTypeHash = keccak256("Call(address to,uint256 value,bytes data)");
         assertEq(CallLib.CALL_TYPEHASH, expectedTypeHash);
@@ -23,10 +26,22 @@ contract CallLibTest is Test {
         bytes32 actualHash = CallLib.hash(calls);
 
         bytes32[] memory hashes = new bytes32[](calls.length);
+
+        // Pack hashes into bytes array
         for (uint256 i = 0; i < calls.length; i++) {
             hashes[i] = CallLib.hash(calls[i]);
         }
+
         bytes32 expectedHash = keccak256(abi.encodePacked(hashes));
+
+        assertEq(actualHash, expectedHash);
+    }
+
+    function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce) public pure {
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        bytes32 actualHash = ExecutionDataLib.hash(execute);
+
+        bytes32 expectedHash = keccak256(abi.encode(ExecutionDataLib.EXECUTE_TYPEHASH, calls.hash(), nonce));
         assertEq(actualHash, expectedHash);
     }
 }

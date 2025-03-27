@@ -20,6 +20,7 @@ interface InputData {
   privateKey: string;
   verifyingContract: Address;
   calls: Call[];
+  nonce: number;
 }
 
 // Read command line arguments
@@ -31,7 +32,7 @@ if (args.length < 1) {
 
 // Parse the JSON input
 const jsonInput = JSON.parse(args[0]) as InputData;
-const { privateKey, verifyingContract, calls } = jsonInput;
+const { privateKey, verifyingContract, calls, nonce } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 
@@ -59,7 +60,8 @@ async function signTypedData(): Promise<void> {
       types,
       primaryType: 'Execute',
       message: {
-        calls : calls
+        calls: calls,
+        nonce: nonce,
       }
     });
     // Return the signature

@@ -7,27 +7,27 @@ import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
-import {Call} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
-import {CallLib} from "./libraries/CallLib.sol";
+import {CallLib, Call} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {NonceManager} from "./NonceManager.sol";
+import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, NonceManager {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CallLib for Call[];
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
     using ExecutionDataLib for ExecutionData;
@@ -47,12 +47,24 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         }
     }
 
+    /// @inheritdoc INonceManager
+    function getNonce(uint192 key) public view override returns (uint256 nonce) {
+        return MinimalDelegationStorageLib.get().nonceSequenceNumber[key] | (uint256(key) << 64);
+    }
+
+    /// @inheritdoc INonceManager
+    function invalidateNonce(uint256 nonce) public override {
+        _authorizeCaller();
+        _invalidateNonce(nonce);
+        emit NonceInvalidated(nonce);
+    }
+
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        (, bytes calldata signature) = opData.decodeUint256Bytes();
-        // TODO: Decode as an execute struct with the nonce. This is temporary!
-        ExecutionData memory executeStruct = ExecutionData({calls: calls});
+        (uint256 nonce, bytes calldata signature) = opData.decodeUint256Bytes();
+        _useNonce(nonce);
+        ExecutionData memory executeStruct = ExecutionData({calls: calls, nonce: nonce});
         // Check signature.
         bool isValid;
         (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);

@@ -59,7 +59,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
         Call[] memory calls = CallBuilder.init();
-        ExecutionData memory execute = ExecutionData({calls: calls});
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
         bytes32 hashTypedData = signerAccount.hashTypedData(execute.hash());
         // re-implement 712 hash
         bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), execute.hash()));
@@ -69,12 +69,13 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     function test_hashTypedData_matches_signedTypedData_ffi() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls});
+        uint256 nonce = 0;
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
 
-        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, verifyingContract);
+        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, nonce, verifyingContract);
 
         assertEq(signature, key.sign(signerAccount.hashTypedData(execute.hash())));
     }
