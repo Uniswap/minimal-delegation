@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
@@ -180,8 +179,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             bytes memory signature;
             (keyHash, signature) = abi.decode(_signature, (bytes32, bytes));
             Key memory key = _getKey(keyHash);
-            console2.logBytes32(keyHash);
-            console2.logBytes(signature);
             isValid = key.verify(_hash, signature);
         }
     }
