@@ -40,13 +40,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
             _authorizeOpData(mode, calls, opData);
             _dispatch(mode, calls);
-        } else if (mode.isUserOpBatchedCall()) {
-            _onlyEntrypoint();
-            // OpData includes:
-            // - nonce
-            (Call[] calldata calls,) = executionData.decodeCallsBytes();
-            // TODO: Check nonce
-            _dispatch(mode, calls);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -54,6 +47,12 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+        if (msg.sender == ENTRY_POINT()) {
+            // TODO: check nonce and parse out key hash from opData if desired to usein future
+            // short circuit because entrypoint is already verified using validateUserOp
+            return;
+        }
+
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Nonce validation.
@@ -135,10 +134,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
 
     function _authorizeCaller() private view {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
-    }
-
-    function _onlyEntrypoint() private view {
-        if (msg.sender != ENTRY_POINT()) revert IERC7821.Unauthorized();
     }
 
     // Execute a batch of calls according to the mode
