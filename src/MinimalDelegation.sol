@@ -12,7 +12,7 @@ import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
-import {CallLib, Call, CallWithNonce} from "./libraries/CallLib.sol";
+import {CallLib, Call} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -21,13 +21,16 @@ import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
+import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
+import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, NonceManager {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CallLib for CallWithNonce;
     using CalldataDecoder for bytes;
+    using WrappedDataHash for bytes32;
+    using ExecutionDataLib for ExecutionData;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -59,12 +62,12 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (uint256 nonce, bytes calldata signature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
+        ExecutionData memory executeStruct = ExecutionData({calls: calls, nonce: nonce});
         // Check signature.
-        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
-        (bool isValid,) = _isValidSignature(_hashTypedData(callWithNonce.hash()), signature);
+        bool isValid;
+        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -166,18 +169,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @inheritdoc ERC1271
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
-        (bool isValid,) = _isValidSignature(_hashTypedData(hash), signature);
+    function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
+        /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
+        (bool isValid,) = _isValidSignature(_hashTypedData(data.hashWithWrappedType()), signature);
         if (isValid) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
-    }
-
-    // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32, Call[] memory, bytes memory) private pure {
-        // TODO: unpack anything required from opData
-        // verify signature from within opData
-        // if signature is valid, execute the calls
-        revert("Not implemented");
     }
 
     /// @inheritdoc IERC4337Account

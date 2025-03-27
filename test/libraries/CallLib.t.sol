@@ -2,9 +2,11 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
-import {Call, CallLib, CallWithNonce} from "../../src/libraries/CallLib.sol";
+import {Call, CallLib} from "../../src/libraries/CallLib.sol";
+import {ExecutionData, ExecutionDataLib} from "../../src/libraries/ExecuteLib.sol";
 
 contract CallLibTest is Test {
+    using CallLib for Call[];
     /// @notice Test to catch accidental changes to the typehash
     function test_constant_typehash() public pure {
         bytes32 expectedTypeHash = keccak256("Call(address to,uint256 value,bytes data)");
@@ -15,7 +17,7 @@ contract CallLibTest is Test {
         Call memory call = Call({to: to, value: value, data: data});
         bytes32 actualHash = CallLib.hash(call);
 
-        bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_TYPEHASH, call.to, call.value, call.data));
+        bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_TYPEHASH, call.to, call.value, keccak256(call.data)));
         assertEq(actualHash, expectedHash);
     }
 
@@ -35,10 +37,10 @@ contract CallLibTest is Test {
     }
 
     function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce) public pure {
-        CallWithNonce memory callWithNonce = CallWithNonce({calls: calls, nonce: nonce});
-        bytes32 actualHash = CallLib.hash(callWithNonce);
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        bytes32 actualHash = ExecutionDataLib.hash(execute);
 
-        bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_WITH_NONCE_TYPEHASH, calls, nonce));
+        bytes32 expectedHash = keccak256(abi.encode(ExecutionDataLib.EXECUTE_TYPEHASH, calls.hash(), nonce));
         assertEq(actualHash, expectedHash);
     }
 }

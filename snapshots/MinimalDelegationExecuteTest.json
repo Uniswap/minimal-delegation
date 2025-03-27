@@ -1,8 +1,12 @@
 {
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "61070",
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "95762",
-  "execute_BATCHED_CALL_native_singleCall": "35969",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "61538",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "96560",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "68978",
+  "execute_BATCHED_CALL_opData_singleCall": "63538",
+  "execute_BATCHED_CALL_opData_singleCall_native": "65278",
+  "execute_BATCHED_CALL_opData_twoCalls": "98560",
   "execute_BATCHED_CALL_singleCall": "34195",
+  "execute_BATCHED_CALL_singleCall_native": "35969",
   "execute_BATCHED_CALL_twoCalls": "58712",
   "execute_invalidMode_reverts": "626"
 }

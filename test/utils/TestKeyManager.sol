@@ -23,8 +23,8 @@ library TestKeyManager {
 
     // 0 = never expires
     uint40 internal constant DEFAULT_KEY_EXPIRY = 0;
-    uint256 internal constant DEFAULT_SECP256R1_PK = 0xff;
-    uint256 internal constant DEFAULT_SECP256K1_PK = 0xb0b;
+    uint256 internal constant DEFAULT_SECP256R1_PK = uint256(keccak256("DEFAULT_SECP256R1_PK"));
+    uint256 internal constant DEFAULT_SECP256K1_PK = uint256(keccak256("DEFAULT_SECP256K1_PK"));
 
     // Return a Key initialized from the default constants based on the key type.
     function initDefault(KeyType keyType) internal pure returns (TestKey memory) {
@@ -104,7 +104,7 @@ library TestKeyManager {
             return abi.encodePacked(r, s);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);
-            return abi.encodePacked(v, r, s);
+            return abi.encodePacked(r, s, v);
         } else {
             revert KeyNotSupported();
         }

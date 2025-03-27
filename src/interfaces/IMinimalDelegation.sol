@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IKeyManagement} from "./IKeyManagement.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol";
+import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {IERC7821} from "./IERC7821.sol";
 import {IEIP712} from "./IEIP712.sol";
 import {INonceManager} from "./INonceManager.sol";
