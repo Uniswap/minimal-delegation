@@ -23,8 +23,8 @@ library TestKeyManager {
 
     // 0 = never expires
     uint40 internal constant DEFAULT_KEY_EXPIRY = 0;
-    uint256 internal constant DEFAULT_SECP256R1_PK = 0xff;
-    uint256 internal constant DEFAULT_SECP256K1_PK = 0xb0b;
+    uint256 internal constant DEFAULT_SECP256R1_PK = uint256(keccak256("DEFAULT_SECP256R1_PK"));
+    uint256 internal constant DEFAULT_SECP256K1_PK = uint256(keccak256("DEFAULT_SECP256K1_PK"));
 
     // Return a Key initialized from the default constants based on the key type.
     function initDefault(KeyType keyType) internal pure returns (TestKey memory) {
