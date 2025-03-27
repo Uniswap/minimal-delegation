@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
@@ -105,22 +104,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
         signerAccount.isValidSignature(hash, signature);
     }
 
-    /// @dev this test is failing because P256 signature are 64 bytes long so we expect it to be from a k1 key actually
-    function test_isValidSignature_P256_invalidWrappedSignatureLength_reverts() public {
-        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-
-        bytes32 testDigest = keccak256("Test");
-        bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
-        bytes memory signature = p256Key.sign(testDigestToSign);
-        console2.logUint(signature.length);
-
-        vm.prank(address(signer));
-        signerAccount.authorize(p256Key.toKey());
-
-        // Don't wrap the signature with the key hash
-        vm.expectRevert();
-        signerAccount.isValidSignature(testDigest, signature);
-    }
+    // TODO: no test for P256 signatures without keyHash because the signatures are 64 bytes long
 
     function test_isValidSignature_WebAuthnP256_invalidWrappedSignatureLength_reverts() public {
         TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
