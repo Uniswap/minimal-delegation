@@ -22,8 +22,9 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {GuardedExecutor} from "./GuardedExecutor.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, GuardedExecutor {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -36,42 +37,45 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _authorizeCaller();
-            _dispatch(mode, calls);
+            _dispatch(mode, calls, bytes32(0));
         } else if (mode.supportsOpData()) {
             // executionData.decodeWithOpData();
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
-            _authorizeOpData(mode, calls, opData);
-            _dispatch(mode, calls);
+            bytes32 keyHash = _authorizeOpData(mode, calls, opData);
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData)
+        private
+        view
+        returns (bytes32 keyHash)
+    {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Decode as an execute struct with the nonce. This is temporary!
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
         // Check signature.
         bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
+        (isValid, keyHash) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
-    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+    function _dispatch(bytes32 mode, Call[] calldata calls, bytes32 keyHash) private {
         bool shouldRevert = mode.shouldRevert();
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
+            (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
     }
 
-    // Execute a single call.
-    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
-        address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
+    function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external override {
+        _authorizeCaller();
+        _setCanExecute(keyHash, to, selector, can);
     }
 
     /// @inheritdoc IKeyManagement
