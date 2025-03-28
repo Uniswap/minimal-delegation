@@ -6,10 +6,11 @@ import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries
 import {Call} from "./libraries/CallLib.sol";
 import {LibBytes} from "solady/utils/LibBytes.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {IGuardedExecutor} from "./interfaces/IGuardedExecutor.sol";
 
 /// @title GuardedExecutor
 /// @author modified from https://github.com/ithacaxyz/account/blob/main/src/GuardedExecutor.sol
-abstract contract GuardedExecutor {
+abstract contract GuardedExecutor is IGuardedExecutor {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     ////////////////////////////////////////////////////////////////////////
@@ -81,16 +82,11 @@ abstract contract GuardedExecutor {
         }
     }
 
-    /// @dev Execute a call, checking if the key has the required permissions and performing any additional pre/post execution logic.
+    /// @dev Execute a call following 7821, checking if the key has the required permissions and performing any additional pre/post execution logic.
     function _execute(Call calldata _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
-        if (!canExecute(keyHash, _call.to, _call.data)) revert IERC7821.Unauthorized();
-
-        return _execute(_call);
-    }
-
-    /// @dev Execute a call following ERC7821
-    function _execute(Call calldata _call) internal returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
+        if (!canExecute(keyHash, to, _call.data)) revert IERC7821.Unauthorized();
+
         (success, output) = to.call{value: _call.value}(_call.data);
     }
 }
