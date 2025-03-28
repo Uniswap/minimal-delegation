@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
+import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
@@ -14,18 +15,12 @@ import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
 
-contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
+contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, ExecuteHandler {
     using TestKeyManager for TestKey;
     using KeyLib for Key;
     using CallBuilder for Call[];
     using CallLib for Call[];
     using ExecutionDataLib for ExecutionData;
-
-    bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
-    bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
-    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA = 0x0100000000007821000100000000000000000000000000000000000000000000;
-    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT =
-        0x0101000000007821000100000000000000000000000000000000000000000000;
 
     address receiver = makeAddr("receiver");
 
