@@ -21,6 +21,7 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
+import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
     using ModeDecoder for bytes32;
@@ -29,6 +30,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     using CallLib for Call[];
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
+    using ExecutionDataLib for ExecutionData;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -55,10 +57,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
 
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
-        // TODO: Nonce validation.
+        // TODO: Decode as an execute struct with the nonce. This is temporary!
+        ExecutionData memory executeStruct = ExecutionData({calls: calls});
         // Check signature.
         bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(calls.hash()), signature);
+        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
