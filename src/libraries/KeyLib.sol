@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -37,6 +38,12 @@ library KeyLib {
             // Split signature into r and s values.
             (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
             isValid = P256.verify(_hash, r, s, x, y);
+        } else if (key.keyType == KeyType.WebAuthnP256) {
+            (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));
+            // Expect signature to be a wrapper of the WebAuthn signature.
+            WebAuthn.WebAuthnAuth memory auth = abi.decode(signature, (WebAuthn.WebAuthnAuth));
+
+            isValid = WebAuthn.verify({challenge: abi.encode(_hash), requireUV: false, webAuthnAuth: auth, x: x, y: y});
         } else {
             isValid = false;
         }
