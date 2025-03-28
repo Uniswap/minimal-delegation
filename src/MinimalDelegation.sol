@@ -22,8 +22,9 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {GuardedExecutor} from "./GuardedExecutor.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, GuardedExecutor {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -59,7 +60,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
         // Check signature.
         bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
+        (isValid, keyHash) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -70,12 +71,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
-    }
-
-    // Execute a single call.
-    function _execute(Call calldata _call, bytes32 keyHash) private returns (bool success, bytes memory output) {
-        address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
     }
 
     /// @inheritdoc IKeyManagement
@@ -159,14 +154,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
     }
-
-    /// @dev Returns a bytes32 value that contains `to` and `selector`.
-    function _packCanExecute(address to, bytes4 selector) internal pure returns (bytes32 result) {
-        assembly ("memory-safe") {
-            result := or(shl(96, to), shr(224, selector))
-        }
-    }
-
+    
     /// @inheritdoc ERC1271
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
