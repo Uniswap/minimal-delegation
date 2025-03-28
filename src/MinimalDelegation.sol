@@ -154,7 +154,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
     }
-    
+
     /// @inheritdoc ERC1271
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!

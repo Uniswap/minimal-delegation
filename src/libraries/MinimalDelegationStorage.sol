@@ -2,14 +2,17 @@
 pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {KeyPermissionsStroage} from "../GuardedExecutor.sol";
 
 /// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
 struct MinimalDelegationStorage {
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-    mapping(bytes32 keyHash => KeyPermissionsStroage) keyExtraStorage;
+    mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
     address entryPoint;
+}
+
+struct KeyExtraStorage {
+    EnumerableSetLib.Bytes32Set canExecute;
 }
 
 library MinimalDelegationStorageLib {
