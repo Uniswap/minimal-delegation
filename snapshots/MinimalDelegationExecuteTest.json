@@ -1,8 +1,8 @@
 {
-  "execute_BATCHED_CALL_opData_P256_singleCall": "90036",
-  "execute_BATCHED_CALL_opData_singleCall": "65957",
-  "execute_BATCHED_CALL_opData_singleCall_native": "66983",
-  "execute_BATCHED_CALL_opData_twoCalls": "102678",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "90534",
+  "execute_BATCHED_CALL_opData_singleCall": "66466",
+  "execute_BATCHED_CALL_opData_singleCall_native": "67511",
+  "execute_BATCHED_CALL_opData_twoCalls": "103161",
   "execute_BATCHED_CALL_singleCall": "57631",
   "execute_BATCHED_CALL_singleCall_native": "58709",
   "execute_BATCHED_CALL_twoCalls": "92820",

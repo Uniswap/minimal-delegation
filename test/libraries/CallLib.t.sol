@@ -15,7 +15,7 @@ contract CallLibTest is Test {
         Call memory call = Call({to: to, value: value, data: data});
         bytes32 actualHash = CallLib.hash(call);
 
-        bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_TYPEHASH, call.to, call.value, call.data));
+        bytes32 expectedHash = keccak256(abi.encode(CallLib.CALL_TYPEHASH, call.to, call.value, keccak256(call.data)));
         assertEq(actualHash, expectedHash);
     }
 
