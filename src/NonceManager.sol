@@ -8,7 +8,7 @@ import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries
 /// @notice A contract that manages nonces to prevent replay attacks
 abstract contract NonceManager is INonceManager {
     /// @inheritdoc INonceManager
-    function getNonce(uint192 key) public view virtual returns (uint256 nonce);
+    function getNonce(uint256 key) public view virtual returns (uint256 nonce);
 
     /// @inheritdoc INonceManager
     function invalidateNonce(uint256 nonce) public virtual;

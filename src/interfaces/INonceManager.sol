@@ -14,11 +14,11 @@ interface INonceManager {
     error InvalidNonce();
 
     /// @notice Returns the next valid nonce for a given sequence key
-    /// @param key The sequence key (upper 192 bits of the nonce)
+    /// @param key The sequence key (passed as uint256 but only upper 192 bits are used)
     /// @return nonce A 256-bit nonce composed of:
-    ///               - Upper 192 bits: the provided key
+    ///               - Upper 192 bits: the provided key (truncated to 192 bits)
     ///               - Lower 64 bits: the expected sequence number for this key
-    function getNonce(uint192 key) external view returns (uint256 nonce);
+    function getNonce(uint256 key) external view returns (uint256 nonce);
 
     /// @notice Invalidates all nonces for a given sequence key up to and including the provided nonce
     /// @param nonce The nonce to invalidate

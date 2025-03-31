@@ -48,8 +48,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @inheritdoc INonceManager
-    function getNonce(uint192 key) public view override returns (uint256 nonce) {
-        return MinimalDelegationStorageLib.get().nonceSequenceNumber[key] | (uint256(key) << 64);
+    function getNonce(uint256 key) public view override returns (uint256 nonce) {
+        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
     }
 
     /// @inheritdoc INonceManager
@@ -70,10 +70,10 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (uint256 nonce, bytes calldata signature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
-        ExecutionData memory executeStruct = ExecutionData({calls: calls, nonce: nonce});
+        ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
         // Check signature.
         bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
+        (isValid,) = _isValidSignature(_hashTypedData(executionData.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
