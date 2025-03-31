@@ -8,6 +8,7 @@ import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
+import {Constants} from "./Constants.sol";
 
 contract DelegationHandler is Test {
     using KeyLib for Key;
@@ -30,15 +31,16 @@ contract DelegationHandler is Test {
         Key(uint40(block.timestamp + 3600), KeyType.Secp256k1, false, abi.encodePacked(mockSecp256k1PublicKey2));
 
     EntryPoint public entryPoint;
-    address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     function setUpDelegation() public {
         minimalDelegation = new MinimalDelegation();
         _delegate(signer, address(minimalDelegation));
         signerAccount = IMinimalDelegation(signer);
-        entryPoint = new EntryPoint();
-        vm.etch(ENTRY_POINT, address(entryPoint).code);
-        entryPoint = EntryPoint(payable(ENTRY_POINT));
+
+        vm.etch(Constants.ENTRY_POINT_V_0_8, Constants.ENTRY_POINT_V_0_8_CODE);
+        vm.label(Constants.ENTRY_POINT_V_0_8, "EntryPoint");
+
+        entryPoint = EntryPoint(payable(Constants.ENTRY_POINT_V_0_8));
     }
 
     function _delegate(address _signer, address _implementation) internal {
