@@ -6,6 +6,7 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
 import {UserOpBuilder} from "./utils/UserOpBuilder.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
@@ -35,15 +36,13 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_handleOps_single_eoaSigner_gas() public {
+    function test_handleOps_executeUserOp_single_eoaSigner_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         // TODO: encode nonce into opData
-        bytes memory opData = bytes("");
-        bytes memory executionData = abi.encode(calls, opData);
-        bytes memory callData =
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        bytes memory executionData = abi.encode(BATCHED_CALL, abi.encode(calls));
+        bytes memory callData = abi.encodePacked(IAccountExecute.executeUserOp.selector, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -65,7 +64,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_handleOps_single_P256_gas() public {
+    function test_handleOps_executeUserOp_single_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
@@ -74,10 +73,8 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        bytes memory opData = bytes("");
-        bytes memory executionData = abi.encode(calls, opData);
-        bytes memory callData =
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        bytes memory executionData = abi.encode(BATCHED_CALL, abi.encode(calls));
+        bytes memory callData = abi.encodePacked(IAccountExecute.executeUserOp.selector, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);

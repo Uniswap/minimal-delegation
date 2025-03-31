@@ -2,11 +2,12 @@
 pragma solidity ^0.8.23;
 
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
+import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
 
 /// @title IERC4337Account Interface
 /// @notice Interface for contracts that support updating the EntryPoint contract
 /// @dev Extends the IAccount interface from the ERC4337 specification
-interface IERC4337Account is IAccount {
+interface IERC4337Account is IAccount, IAccountExecute {
     /// Thrown when the caller to validateUserOp is not the EntryPoint contract
     error NotEntryPoint();
 

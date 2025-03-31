@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
@@ -47,14 +48,37 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         }
     }
 
-    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
-        if (msg.sender == ENTRY_POINT()) {
-            // TODO: check nonce and parse out key hash from opData if desired to usein future
-            // short circuit because entrypoint is already verified using validateUserOp
-            return;
+    /// @dev userOp.calldata is encode(mode, executionData)
+    function executeUserOp(PackedUserOperation calldata userOp, bytes32) external override {
+        if (msg.sender != ENTRY_POINT()) revert NotEntryPoint();
+
+        // TODO: useNonce
+
+        // slice selector off of userOp.callData
+        bytes calldata userOpCallData = userOp.callData;
+        assembly {
+            let len := userOpCallData.length
+            if lt(len, 4) {
+                // Revert if calldata is too short to contain a selector
+                revert(0, 0)
+            }
+
+            // Skip the selector
+            userOpCallData.offset := add(userOpCallData.offset, 4)
+            userOpCallData.length := sub(userOpCallData.length, 4)
         }
 
+        (bytes32 mode, bytes calldata executionData) = userOpCallData.decodeBytes32Bytes();
+
+        if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
+        // Decode the calls from the userOp.callData, opData is not supported yet
+        Call[] calldata calls = executionData.decodeCalls();
+        // dispatch the calls
+        _dispatch(mode, calls);
+    }
+
+    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Decode as an execute struct with the nonce. This is temporary!
