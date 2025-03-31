@@ -11,7 +11,7 @@ contract DeployMinimalDelegation is Script {
     function run() public returns (MinimalDelegation delegation) {
         vm.startBroadcast();
 
-        delegation = new MinimalDelegation();
+        delegation = new MinimalDelegation{salt: bytes32(0)}();
         console2.log("MinimalDelegation", address(delegation));
 
         vm.stopBroadcast();
