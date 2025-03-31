@@ -27,6 +27,13 @@ library CalldataDecoder {
         _data = data.toBytes(1);
     }
 
+    function decodeBytes32Bytes(bytes calldata data) internal pure returns (bytes32 _value, bytes calldata _data) {
+        assembly {
+            _value := calldataload(data.offset)
+        }
+        _data = data.toBytes(1);
+    }
+
     // TODO length check
     function decodeCalls(bytes calldata data) internal pure returns (Call[] calldata calls) {
         assembly {
