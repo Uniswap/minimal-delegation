@@ -22,6 +22,7 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {TopLevelAuthorizedCallerLib} from "./libraries/TopLevelAuthorizedCallerLib.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
     using ModeDecoder for bytes32;
@@ -48,7 +49,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         if (msg.sender == ENTRY_POINT()) {
             // TODO: check nonce and parse out key hash from opData if desired to usein future
             // short circuit because entrypoint is already verified using validateUserOp
@@ -60,9 +61,10 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         // TODO: Decode as an execute struct with the nonce. This is temporary!
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
         // Check signature.
-        bool isValid;
-        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
+        (bool isValid, bytes32 keyHash) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
+        
+        TopLevelAuthorizedCallerLib.set(keyHash);
     }
 
     function _dispatch(bytes32 mode, Call[] calldata calls) private {
@@ -130,9 +132,12 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
-        (bool isValid,) = _isValidSignature(userOpHash, userOp.signature);
-        if (isValid) return SIG_VALIDATION_SUCCEEDED;
-        else return SIG_VALIDATION_FAILED;
+        (bool isValid, bytes32 keyHash) = _isValidSignature(userOpHash, userOp.signature);
+
+        if(!isValid) return SIG_VALIDATION_FAILED;
+
+        TopLevelAuthorizedCallerLib.set(keyHash);
+        return SIG_VALIDATION_SUCCEEDED;
     }
 
     function _authorizeCaller() private view {
