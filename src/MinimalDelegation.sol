@@ -49,11 +49,13 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData)
-        private
-        view
-        returns (bytes32 keyHash)
-    {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view returns (bytes32 keyHash) {
+        if (msg.sender == ENTRY_POINT()) {
+            // TODO: check nonce and parse out key hash from opData if desired to usein future
+            // short circuit because entrypoint is already verified using validateUserOp
+            return;
+        }
+
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
         // TODO: Decode as an execute struct with the nonce. This is temporary!

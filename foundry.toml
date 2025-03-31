@@ -8,6 +8,10 @@ bytecode_hash = "none"
 odyssey = true
 ffi = true
 
+remappings = [
+    "webauthn-sol/=lib/webauthn-sol/"
+]
+
 [profile.default.fuzz]
 runs = 1000
 
