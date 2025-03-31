@@ -24,6 +24,17 @@ contract MultiSignerValidationVerifier {
     error InvalidSignatureCount();
     error MissingSignature();
 
+    /// @notice Initialize module data for the modular account.
+    /// @dev Called by the modular account during `installExecution`.
+    /// @param data Optional bytes array to be decoded and used by the module to setup initial module data for the
+    /// modular account.
+    function onInstall(bytes calldata data) external {
+        (CallHash[] memory callHashes, bytes32[] memory keyHashes) = abi.decode(data, (CallHash[], bytes32[]));
+        for (uint256 i = 0; i < callHashes.length; i++) {
+            requiredSigners[callHashes[i]].add(keyHashes[i]);
+        }
+    }
+
     /// @notice Add a required signer for a call.
     /// @dev uses msg.sender
     function addRequiredSigner(Call calldata call, bytes32 keyHash) external {
@@ -32,14 +43,22 @@ contract MultiSignerValidationVerifier {
 
     /// @notice Cache a signature for a call.
     /// @dev uses msg.sender
-    function cacheSignature(Call calldata call, bytes calldata wrappedSignature) external {
+    function cacheRuntimeValidationData(Call calldata call, bytes calldata data) external {
         CallHash callHash = _callHash(call);
-        (bytes32 keyHash,) = abi.decode(wrappedSignature, (bytes32, bytes));
-        cachedSignatures[callHash][keyHash] = wrappedSignature;
+        (bytes32 keyHash,) = abi.decode(data, (bytes32, bytes));
+        cachedSignatures[callHash][keyHash] = data;
     }
 
+    /**
+     * PRE VALIDATION HOOKS
+     */
+
     /// @notice Verify a call using transiently cached signatures.
-    function verify(Call calldata call) external view returns (bool isValid) {
+    function preRuntimeValidationHook(Call calldata call, bytes calldata wrappedSignature)
+        external
+        view
+        returns (bool isValid)
+    {
         CallHash callHash = _callHash(call);
 
         // iterate over requiredSigners

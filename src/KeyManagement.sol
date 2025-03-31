@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
-import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 
-abstract contract BaseValidation is IKeyManagement {
+abstract contract KeyManagement is IKeyManagement {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
 
@@ -63,28 +61,5 @@ abstract contract BaseValidation is IKeyManagement {
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
-    }
-
-    function _unwrapSignature(bytes calldata wrappedSignature)
-        internal
-        pure
-        returns (bytes32 keyHash, bytes calldata signature)
-    {
-        (keyHash, signature) = CalldataDecoder.decodeBytes32Bytes(wrappedSignature);
-    }
-
-    function verifySignature(bytes32 digest, bytes32 keyHash, bytes calldata signature)
-        public
-        view
-        returns (bool isValid)
-    {
-        if (signature.length == 64 || signature.length == 65) {
-            // The signature is not wrapped, so it can be verified against the root key.
-            isValid = ECDSA.recoverCalldata(digest, signature) == address(this);
-        } else {
-            // The signature is wrapped.
-            Key memory key = _getKey(keyHash);
-            isValid = key.verify(digest, signature);
-        }
     }
 }
