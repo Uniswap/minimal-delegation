@@ -5,11 +5,15 @@ import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
+import {TestKeyManager} from "./utils/TestKeyManager.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
     using TestKeyManager for TestKey;
+    using WrappedDataHash for bytes32;
 
-    bytes4 internal constant _1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
 
     function setUp() public {
         setUpDelegation();
@@ -19,12 +23,101 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         bytes32 testDigest = keccak256("Test");
-        bytes32 testDigestToSign = signerAccount.hashTypedData(keccak256("Test"));
+        bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
         bytes memory signature = p256Key.sign(testDigestToSign);
 
-        vm.startPrank(address(signer));
+        vm.prank(address(signer));
         signerAccount.authorize(p256Key.toKey());
+
         bytes4 result = signerAccount.isValidSignature(testDigest, abi.encode(p256Key.toKeyHash(), signature));
         assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_WebAuthnP256_isValid() public {
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+
+        bytes32 testDigest = keccak256("Test");
+        bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
+        bytes memory signature = webAuthnP256Key.sign(testDigestToSign);
+
+        vm.prank(address(signer));
+        signerAccount.authorize(webAuthnP256Key.toKey());
+
+        bytes4 result = signerAccount.isValidSignature(testDigest, abi.encode(webAuthnP256Key.toKeyHash(), signature));
+        assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_isValid() public view {
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
+
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        bytes memory signature = key.sign(hashTypedData);
+
+        // ensure the call returns the ERC1271 magic value
+        assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_noWrappedData_invalidSigner() public view {
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data);
+
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        bytes memory signature = key.sign(hashTypedData);
+
+        // ensure the call returns the ERC1271 invalid magic value
+        assertEq(signerAccount.isValidSignature(data, signature), _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_WebAuthnP256_noWrappedData_invalidSigner() public {
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+        vm.prank(address(signer));
+        signerAccount.authorize(webAuthnP256Key.toKey());
+
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data);
+
+        bytes memory signature = webAuthnP256Key.sign(hashTypedData);
+        bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), signature);
+
+        // ensure the call returns the ERC1271 invalid magic value
+        assertEq(signerAccount.isValidSignature(data, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_invalidSigner() public view {
+        bytes32 hash = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(hash.hashWithWrappedType());
+
+        // sign with a different private key
+        uint256 invalidPrivateKey = 0xdeadbeef;
+        TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
+        bytes memory signature = invalidSigner.sign(hashTypedData);
+
+        // ensure the call returns the ERC1271 invalid magic value
+        assertEq(signerAccount.isValidSignature(hash, signature), _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_invalidSignatureLength_reverts() public {
+        bytes32 hash = keccak256("test");
+        bytes memory signature = new bytes(63);
+        vm.expectRevert();
+        signerAccount.isValidSignature(hash, signature);
+    }
+
+    // TODO: no test for P256 signatures without keyHash because the signatures are 64 bytes long
+
+    function test_isValidSignature_WebAuthnP256_invalidWrappedSignatureLength_reverts() public {
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+
+        bytes32 testDigest = keccak256("Test");
+        bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
+        bytes memory signature = webAuthnP256Key.sign(testDigestToSign);
+
+        vm.prank(address(signer));
+        signerAccount.authorize(webAuthnP256Key.toKey());
+
+        // Don't wrap the signature with the key hash
+        vm.expectRevert();
+        signerAccount.isValidSignature(testDigest, signature);
     }
 }

@@ -3,20 +3,24 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
+import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
 import {Call} from "../src/libraries/CallLib.sol";
+import {CallLib} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
+import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
+import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
+import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
 
-contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
+contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, ExecuteHandler {
+    using TestKeyManager for TestKey;
+    using KeyLib for Key;
     using CallBuilder for Call[];
-
-    bytes32 constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;
-    bytes32 constant BATCHED_CAN_REVERT_CALL = 0x0101000000000000000000000000000000000000000000000000000000000000;
-    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA = 0x0100000000007821000100000000000000000000000000000000000000000000;
-    bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT =
-        0x0101000000007821000100000000000000000000000000000000000000000000;
+    using CallLib for Call[];
+    using ExecutionDataLib for ExecutionData;
 
     address receiver = makeAddr("receiver");
 
@@ -128,16 +132,45 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
 
-    function test_execute_batch_opData_reverts_notImplemented() public {
+    // Execute can contain a self call which authorizes a new key even if the caller is untrusted as long as the signature is valid
+    function test_execute_opData_eoaSigner_selfCall_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
         Call[] memory calls = CallBuilder.init();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
+        Call memory authorizeCall =
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, p256Key.toKey()));
+        calls = calls.push(authorizeCall);
+        ExecutionData memory execute = ExecutionData({calls: calls});
 
-        bytes memory executionData = abi.encode(calls, "");
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        bytes memory executionData = abi.encode(calls, signature);
 
-        vm.startPrank(address(signerAccount));
-        vm.expectRevert();
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
+    }
+
+    function test_execute_opData_P256_selfCall_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
+
+        vm.prank(address(signerAccount));
+        signerAccount.authorize(p256Key.toKey());
+
+        Call[] memory calls = CallBuilder.init();
+        Call memory authorizeCall =
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, secp256k1Key.toKey()));
+        calls = calls.push(authorizeCall);
+        ExecutionData memory execute = ExecutionData({calls: calls});
+
+        // Sign using the registered P256 key
+        // TODO: remove 0 nonce
+        bytes memory packedSignature =
+            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(execute.hash()))));
+        bytes memory executionData = abi.encode(calls, packedSignature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(signerAccount.getKey(secp256k1Key.toKeyHash()).hash(), secp256k1Key.toKeyHash());
     }
 
     /// GAS TESTS
@@ -192,6 +225,77 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler {
 
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_native_singleCall");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_singleCall_native");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_single_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        ExecutionData memory execute = ExecutionData({calls: calls});
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_single_batchedCall_opData_P256_gas() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        ExecutionData memory execute = ExecutionData({calls: calls});
+
+        vm.startPrank(address(signer));
+        signerAccount.authorize(p256Key.toKey());
+
+        // TODO: remove 0 nonce
+        bytes memory packedSignature =
+            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(execute.hash()))));
+
+        bytes memory executionData = abi.encode(calls, packedSignature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_P256_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_twoCalls_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
+        ExecutionData memory execute = ExecutionData({calls: calls});
+        // sign via EOA
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_twoCalls");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_native_single_batchedCall_opData_eoaSigner_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
+        ExecutionData memory execute = ExecutionData({calls: calls});
+
+        // TODO: remove 0 nonce
+        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+
+        bytes memory executionData = abi.encode(calls, signature);
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
     }
 }

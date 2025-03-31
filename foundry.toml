@@ -6,11 +6,17 @@ optimizer = true
 optimizer_runs = 1000000
 bytecode_hash = "none"
 odyssey = true
+ffi = true
+
+remappings = [
+    "webauthn-sol/=lib/webauthn-sol/"
+]
 
 [profile.default.fuzz]
 runs = 1000
 
 [profile.ci.fuzz]
 runs = 100000
+ffi = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

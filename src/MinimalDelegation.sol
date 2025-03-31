@@ -21,6 +21,8 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {Lock} from "./Lock.sol";
+import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
+import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Lock, Receiver {
     using ModeDecoder for bytes32;
@@ -28,6 +30,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CallLib for Call[];
     using CalldataDecoder for bytes;
+    using WrappedDataHash for bytes32;
+    using ExecutionDataLib for ExecutionData;
 
     /// @notice Public view function to be used instead of msg.sender, as the contract performs self-reentrancy and at
     /// times msg.sender == address(this). Instead msgSender() returns the initiator of the lock
@@ -52,14 +56,19 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+        if (msg.sender == ENTRY_POINT()) {
+            // TODO: check nonce and parse out key hash from opData if desired to usein future
+            // short circuit because entrypoint is already verified using validateUserOp
+            return;
+        }
+
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        // For now, we only support decoding necessary information needed to verify 1271 signatures.
         (, bytes calldata signature) = opData.decodeUint256Bytes();
-        // TODO: Nonce validation.
+        // TODO: Decode as an execute struct with the nonce. This is temporary!
+        ExecutionData memory executeStruct = ExecutionData({calls: calls});
         // Check signature.
         bool isValid;
-        /// The calls are not safe hashed with _hashTypedData, as the domain separator is sufficient to prevent against replay attacks.
-        (isValid,) = _isValidSignature(calls.hash(), signature);
+        (isValid,) = _isValidSignature(_hashTypedData(executeStruct.hash()), signature);
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
@@ -162,18 +171,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @inheritdoc ERC1271
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view override returns (bytes4 result) {
-        (bool isValid,) = _isValidSignature(_hashTypedData(hash), signature);
+    function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
+        /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
+        (bool isValid,) = _isValidSignature(_hashTypedData(data.hashWithWrappedType()), signature);
         if (isValid) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
-    }
-
-    // Execute a batch of calls according to the mode and any optionally provided opData
-    function _execute(bytes32, Call[] memory, bytes memory) private pure {
-        // TODO: unpack anything required from opData
-        // verify signature from within opData
-        // if signature is valid, execute the calls
-        revert("Not implemented");
     }
 
     /// @inheritdoc IERC4337Account
