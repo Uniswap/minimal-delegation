@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
@@ -22,6 +21,7 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
     using ModeDecoder for bytes32;
@@ -30,6 +30,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     using CallLib for Call[];
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
+    using SignatureUnwrapper for bytes;
     using ExecutionDataLib for ExecutionData;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
@@ -157,6 +158,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     function _getKey(bytes32 keyHash) private view returns (Key memory) {
+        if (keyHash == bytes32(0)) return KeyLib.toRootKey();
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
@@ -175,20 +177,14 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         return MinimalDelegationStorageLib.get().entryPoint;
     }
 
-    function _isValidSignature(bytes32 _hash, bytes calldata _signature)
+    function _isValidSignature(bytes32 dataHash, bytes calldata wrappedSignature)
         internal
         view
         returns (bool isValid, bytes32 keyHash)
     {
-        if (_signature.length == 64 || _signature.length == 65) {
-            // The signature is not wrapped, so it can be verified against the root key.
-            isValid = ECDSA.recoverCalldata(_hash, _signature) == address(this);
-        } else {
-            // The signature is wrapped.
-            bytes memory signature;
-            (keyHash, signature) = abi.decode(_signature, (bytes32, bytes));
-            Key memory key = _getKey(keyHash);
-            isValid = key.verify(_hash, signature);
-        }
+        bytes calldata signature;
+        (keyHash, signature) = wrappedSignature.unwrap();
+        Key memory key = _getKey(keyHash);
+        isValid = key.verify(dataHash, signature);
     }
 }

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.23;
 
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -29,9 +29,14 @@ library KeyLib {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
     }
 
-    function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
+    /// @notice A helper function to get the root key object.
+    function toRootKey() internal view returns (Key memory) {
+        return Key({expiry: 0, keyType: KeyType.Secp256k1, isSuperAdmin: true, publicKey: abi.encode(address(this))});
+    }
+
+    function verify(Key memory key, bytes32 _hash, bytes calldata signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
-            isValid = ECDSA.recover(_hash, signature) == abi.decode(key.publicKey, (address));
+            isValid = ECDSA.recoverCalldata(_hash, signature) == abi.decode(key.publicKey, (address));
         } else if (key.keyType == KeyType.P256) {
             // Extract x,y from the public key
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));

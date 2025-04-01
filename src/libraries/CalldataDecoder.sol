@@ -27,6 +27,16 @@ library CalldataDecoder {
         _data = data.toBytes(1);
     }
 
+    /// @notice equivalent to abi.decode(data, (bytes32, bytes)) in calldata
+    /// @return _value A bytes32 value
+    /// @return _data Bytes data following the bytes32 value.
+    function decodeBytes32Bytes(bytes calldata data) internal pure returns (bytes32 _value, bytes calldata _data) {
+        assembly {
+            _value := calldataload(data.offset)
+        }
+        _data = data.toBytes(1);
+    }
+
     // TODO length check
     function decodeCalls(bytes calldata data) internal pure returns (Call[] calldata calls) {
         assembly {
