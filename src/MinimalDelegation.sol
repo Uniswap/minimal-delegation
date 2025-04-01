@@ -92,11 +92,11 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     function _validateSignature(bytes32 digest, bytes32 keyHash, bytes calldata signature) private view {
-        IHook validator = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
+        IHook hook = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
 
         bool isValid;
-        if (address(validator) != address(0)) {
-            isValid = validator.verifySignature(digest, abi.encodePacked(keyHash, signature));
+        if (address(hook) != address(0)) {
+            isValid = hook.verifySignature(digest, abi.encodePacked(keyHash, signature));
         } else {
             // Use default signature verification.
             isValid = _verifySignature(digest, keyHash, signature);
@@ -125,9 +125,9 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook validator = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
-        if (address(validator) != address(0)) {
-            return validator.validateUserOp(userOp, userOpHash);
+        IHook hook = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
+        if (address(hook) != address(0)) {
+            return hook.validateUserOp(userOp, userOpHash);
         }
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
@@ -144,9 +144,9 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
 
-        IHook validator = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
-        if (address(validator) != address(0)) {
-            return validator.isValidSignature(data, signature);
+        IHook hook = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
+        if (address(hook) != address(0)) {
+            return hook.isValidSignature(data, signature);
         }
 
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
