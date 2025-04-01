@@ -26,13 +26,21 @@ abstract contract NonceManager is INonceManager {
         }
     }
 
-    /// @dev Increments the sequence for the key in nonce (i.e. upper 192 bits).
-    /// This invalidates the nonces for the key, up to (inclusive) `uint64(nonce)`.
+    /// @notice Increments the sequence for the key in nonce (i.e. upper 192 bits).
+    /// @param nonce A 256-bit value where:
+    ///             - Upper 192 bits: the sequence key
+    ///             - Lower 64 bits: the sequence number to be invalidated
+    /// @dev Can't invalidate >= 2**16 nonces per transaction.
     function _invalidateNonce(uint256 nonce) internal {
         uint192 key = uint192(nonce >> 64);
-        uint256 currentSeq = MinimalDelegationStorageLib.get().nonceSequenceNumber[key];
+        uint64 currentSeq = uint64(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]);
         uint64 targetSeq = uint64(nonce);
         if (targetSeq < currentSeq) revert InvalidNonce();
+        // Limit the amount of nonces that can be invalidated in one transaction.
+        unchecked {
+            uint64 delta = targetSeq - currentSeq;
+            if (delta >= type(uint16).max) revert ExcessiveInvalidation();
+        }
         MinimalDelegationStorageLib.get().nonceSequenceNumber[key] =
             targetSeq < type(uint64).max - 1 ? targetSeq + 1 : type(uint64).max;
     }

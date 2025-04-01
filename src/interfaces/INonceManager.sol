@@ -13,6 +13,9 @@ interface INonceManager {
     /// @notice The error emitted when a nonce is invalid
     error InvalidNonce();
 
+    /// @notice The error emitted when too many nonces are invalidated in one transaction
+    error ExcessiveInvalidation();
+
     /// @notice Returns the next valid nonce for a given sequence key
     /// @param key The sequence key (passed as uint256 but only upper 192 bits are used)
     /// @return nonce A 256-bit nonce composed of:
