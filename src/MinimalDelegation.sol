@@ -52,23 +52,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         }
     }
 
-    /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] calldata calls) private {
-        bool shouldRevert = mode.shouldRevert();
-
-        for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
-        }
-    }
-
-    // Execute a single call.
-    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
-        address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
-    }
-
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
         if (msg.sender == ENTRY_POINT()) {
@@ -94,6 +77,23 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         }
 
         if (!isValid) revert IERC7821.InvalidSignature();
+    }
+
+    /// @dev Dispatches a batch of calls.
+    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+        bool shouldRevert = mode.shouldRevert();
+
+        for (uint256 i = 0; i < calls.length; i++) {
+            (bool success, bytes memory output) = _execute(calls[i]);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+        }
+    }
+
+    // Execute a single call.
+    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
+        address to = _call.to == address(0) ? address(this) : _call.to;
+        (success, output) = to.call{value: _call.value}(_call.data);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
