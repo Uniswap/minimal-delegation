@@ -6,10 +6,12 @@ import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 
+/// @dev A base contract for managing keys.
 abstract contract KeyManagement is IKeyManagement {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
 
+    /// @dev Must be overridden by the implementation
     function _onlyThis() internal view virtual {}
 
     /// @inheritdoc IKeyManagement

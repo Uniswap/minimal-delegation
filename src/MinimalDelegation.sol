@@ -22,7 +22,6 @@ import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
-import {BaseExecutor} from "./BaseExecutor.sol";
 import {BaseValidator} from "./BaseValidator.sol";
 import {ValidationModuleManager} from "./ValidationModuleManager.sol";
 import {IValidator} from "./interfaces/IValidator.sol";
@@ -35,7 +34,6 @@ contract MinimalDelegation is
     ERC4337Account,
     Receiver,
     KeyManagement,
-    BaseExecutor,
     BaseValidator,
     ValidationModuleManager
 {
@@ -60,6 +58,23 @@ contract MinimalDelegation is
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
+    }
+
+    /// @dev Dispatches a batch of calls.
+    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+        bool shouldRevert = mode.shouldRevert();
+
+        for (uint256 i = 0; i < calls.length; i++) {
+            (bool success, bytes memory output) = _execute(calls[i]);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+        }
+    }
+
+    // Execute a single call.
+    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
+        address to = _call.to == address(0) ? address(this) : _call.to;
+        (success, output) = to.call{value: _call.value}(_call.data);
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
@@ -134,9 +149,11 @@ contract MinimalDelegation is
         view
         returns (bool isValid)
     {
-        if (_isRawSignature(signatureOrWrapped)) {
+        if (_isUnwrapped(signatureOrWrapped)) {
+            // Use ecrecover
             isValid = _verifySignature(digest, signatureOrWrapped);
         } else {
+            // Otherwise, decode the wrapped signature
             (bytes32 keyHash, bytes calldata signature) = CalldataDecoder.decodeBytes32Bytes(signatureOrWrapped);
             IValidator validator = _getValidator(keyHash);
             if (address(validator) != address(0)) {

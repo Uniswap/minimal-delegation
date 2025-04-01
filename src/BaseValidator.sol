@@ -11,7 +11,7 @@ contract BaseValidator {
     bytes32 public constant ROOT_KEY_HASH = bytes32(0);
 
     /// @notice Checks if the signature is not in wrapped form
-    function _isRawSignature(bytes calldata signature) internal pure returns (bool) {
+    function _isUnwrapped(bytes calldata signature) internal pure returns (bool) {
         return signature.length == 64 || signature.length == 65;
     }
 
