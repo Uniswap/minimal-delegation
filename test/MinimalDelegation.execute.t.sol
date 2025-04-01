@@ -157,8 +157,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         vm.startPrank(address(signerAccount));
         signerAccount.authorize(p256Key.toKey());
-        // Explicitly allow the self call
-        signerAccount.setCanExecute(p256Key.toKeyHash(), address(signerAccount), IERC7821.execute.selector, true);
         vm.stopPrank();
 
         Call[] memory calls = CallBuilder.init();
@@ -258,7 +256,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         vm.startPrank(address(signerAccount));
         signerAccount.authorize(p256Key.toKey());
-        signerAccount.setCanExecute(p256Key.toKeyHash(), address(tokenA), ERC20.transfer.selector, true);
         vm.stopPrank();
 
         // TODO: remove 0 nonce

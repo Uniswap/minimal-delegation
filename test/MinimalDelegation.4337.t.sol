@@ -72,8 +72,6 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
 
         vm.startPrank(address(signerAccount));
         signerAccount.authorize(p256Key.toKey());
-        /// The key CANNOT execute the transfer
-        signerAccount.setCanExecute(keyHash, address(tokenA), ERC20.transfer.selector, false);
         vm.stopPrank();
 
         Call[] memory calls = CallBuilder.init();
