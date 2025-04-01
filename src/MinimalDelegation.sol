@@ -140,7 +140,8 @@ contract MinimalDelegation is
             (bytes32 keyHash, bytes calldata signature) = CalldataDecoder.decodeBytes32Bytes(signatureOrWrapped);
             IValidator validator = _getValidator(keyHash);
             if (address(validator) != address(0)) {
-                return validator.verifySignature(digest, signature);
+                // pass the wrapped signature to the validator, containing the keyHash and signature
+                return validator.verifySignature(digest, signatureOrWrapped);
             }
 
             Key memory key = _getKey(keyHash);
