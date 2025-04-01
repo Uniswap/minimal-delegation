@@ -10,6 +10,7 @@ enum HookFlags {
     IS_VALID_SIGNATURE, // 1 << 2
     BEFORE_EXECUTE, // 1 << 3
     AFTER_EXECUTE // 1 << 4
+
 }
 
 // HookId combines an address with flags: address << 160 | flags

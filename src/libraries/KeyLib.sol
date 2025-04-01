@@ -29,6 +29,11 @@ library KeyLib {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
     }
 
+    /// @notice A helper function to get the root key object.
+    function toRootKey() internal view returns (Key memory) {
+        return Key({expiry: 0, keyType: KeyType.Secp256k1, isSuperAdmin: true, publicKey: abi.encode(address(this))});
+    }
+
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
             isValid = ECDSA.recover(_hash, signature) == abi.decode(key.publicKey, (address));
