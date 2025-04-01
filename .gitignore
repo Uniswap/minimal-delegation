@@ -14,5 +14,5 @@ docs/
 # Dotenv file
 .env
 
-# js script builds
-test/js-scripts/dist/
+# node_modules
+node_modules/
