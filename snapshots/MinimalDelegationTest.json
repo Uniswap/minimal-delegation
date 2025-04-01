@@ -1,4 +1,6 @@
 {
   "authorize": "210114",
-  "revoke": "58220"
+  "revoke": "58220",
+  "validateUserOp_missingAccountFunds": "61803",
+  "validateUserOp_no_missingAccountFunds": "31184"
 }
