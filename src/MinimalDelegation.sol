@@ -22,8 +22,9 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {KeyManagement} from "./KeyManagement.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver {
+contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, KeyManagement, Receiver {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -80,35 +81,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         (success, output) = to.call{value: _call.value}(_call.data);
     }
 
-    /// @inheritdoc IKeyManagement
-    function authorize(Key memory key) external returns (bytes32 keyHash) {
-        _authorizeCaller();
-        keyHash = _authorize(key);
-        emit Authorized(keyHash, key);
-    }
-
-    /// @inheritdoc IKeyManagement
-    function revoke(bytes32 keyHash) external {
-        _authorizeCaller();
-        _revoke(keyHash);
-        emit Revoked(keyHash);
-    }
-
-    /// @inheritdoc IKeyManagement
-    function keyCount() external view returns (uint256) {
-        return MinimalDelegationStorageLib.get().keyHashes.length();
-    }
-
-    /// @inheritdoc IKeyManagement
-    function keyAt(uint256 i) external view returns (Key memory) {
-        return _getKey(MinimalDelegationStorageLib.get().keyHashes.at(i));
-    }
-
-    /// @inheritdoc IKeyManagement
-    function getKey(bytes32 keyHash) external view returns (Key memory) {
-        return _getKey(keyHash);
-    }
-
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
         return mode.isBatchedCall() || mode.supportsOpData();
     }
@@ -135,31 +107,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         else return SIG_VALIDATION_FAILED;
     }
 
-    function _authorizeCaller() private view {
+    function _authorizeCaller() internal view override {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
-    }
-
-    // Execute a batch of calls according to the mode
-    function _authorize(Key memory key) private returns (bytes32 keyHash) {
-        keyHash = key.hash();
-        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
-        // If the keyHash already exists, it does not revert and updates the key instead.
-        minimalDelegationStorage.keyStorage[keyHash] = abi.encode(key);
-        minimalDelegationStorage.keyHashes.add(keyHash);
-    }
-
-    function _revoke(bytes32 keyHash) private {
-        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
-        delete minimalDelegationStorage.keyStorage[keyHash];
-        if (!minimalDelegationStorage.keyHashes.remove(keyHash)) {
-            revert KeyDoesNotExist();
-        }
-    }
-
-    function _getKey(bytes32 keyHash) private view returns (Key memory) {
-        bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
-        if (data.length == 0) revert KeyDoesNotExist();
-        return abi.decode(data, (Key));
     }
 
     /// @inheritdoc ERC1271
