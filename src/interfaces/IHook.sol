@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
-interface IValidator {
+interface IHook {
     /// @notice From ERC1271
     function isValidSignature(bytes32 digest, bytes calldata signature) external view returns (bytes4);
 

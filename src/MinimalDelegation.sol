@@ -22,9 +22,9 @@ import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
-import {IValidator} from "./interfaces/IValidator.sol";
+import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
-import {ValidatorId, ValidatorFlags, ValidatorLib} from "./libraries/ValidatorLib.sol";
+import {HookId, HookFlags, HookLib} from "./libraries/HookLib.sol";
 
 contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement {
     using ModeDecoder for bytes32;
@@ -35,7 +35,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     using WrappedDataHash for bytes32;
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
-    using ValidatorLib for uint256;
+    using HookLib for uint256;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -83,7 +83,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-        IValidator validator = ValidatorLib.get(keyHash, ValidatorFlags.VERIFY_SIGNATURE);
+        IHook validator = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
 
         bool isValid;
         if (address(validator) != address(0)) {
@@ -116,7 +116,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IValidator validator = ValidatorLib.get(keyHash, ValidatorFlags.VALIDATE_USER_OP);
+        IHook validator = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
         if (address(validator) != address(0)) {
             return validator.validateUserOp(userOp, userOpHash);
         }
@@ -135,7 +135,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
 
-        IValidator validator = ValidatorLib.get(keyHash, ValidatorFlags.VALIDATE_USER_OP);
+        IHook validator = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
         if (address(validator) != address(0)) {
             return validator.isValidSignature(data, signature);
         }
@@ -151,9 +151,9 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
     }
 
     /// @notice Sets a validator for a key
-    function setValidator(bytes32 keyHash, ValidatorId id) external {
+    function setValidator(bytes32 keyHash, HookId id) external {
         _onlyThis();
-        ValidatorLib.set(keyHash, id);
+        HookLib.set(keyHash, id);
     }
 
     /// @notice Verifies that the key signed over the digest

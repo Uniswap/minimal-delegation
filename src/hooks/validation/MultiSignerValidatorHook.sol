@@ -5,14 +5,14 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {Key, KeyLib} from "../../libraries/KeyLib.sol";
 import {Call, CallLib} from "../../libraries/CallLib.sol";
-import {IValidator} from "../../interfaces/IValidator.sol";
+import {IHook} from "../../interfaces/IHook.sol";
 
 type AccountKeyHash is bytes32;
 
-/// @title MultiSignerValidator
+/// @title MultiSignerValidatorHook
 /// Require signatures from additional, arbitary signers for a key
 /// TODO: add threshold signature verification
-contract MultiSignerValidator is IValidator {
+contract MultiSignerValidatorHook is IHook {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallLib for Call;
