@@ -151,7 +151,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     }
 
     /// @notice Verifies that the key signed over the digest
-    /// Handles signatures from the root ECDSA key and wrapped signatures
     function _verifySignature(bytes32 digest, bytes32 keyHash, bytes calldata signature)
         internal
         view
