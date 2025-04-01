@@ -164,7 +164,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         returns (bool isValid)
     {
         if (keyHash == bytes32(0)) {
-            // Use ecrecover
+            // Recover to the root EOA key
             isValid = ECDSA.recoverCalldata(digest, signature) == address(this);
         } else {
             Key memory key = _getKey(keyHash);
