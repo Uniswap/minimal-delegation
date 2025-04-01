@@ -6,17 +6,18 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 import {Key, KeyLib} from "../../libraries/KeyLib.sol";
 import {Call, CallLib} from "../../libraries/CallLib.sol";
 import {IHook} from "../../interfaces/IHook.sol";
-
-type AccountKeyHash is bytes32;
+import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
+import {BaseNoopHook} from "../shared/BaseNoopHook.sol";
 
 /// @title MultiSignerValidatorHook
 /// Require signatures from additional, arbitary signers for a key
 /// TODO: add threshold signature verification
-contract MultiSignerValidatorHook is IHook {
+contract MultiSignerValidatorHook is BaseNoopHook {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallLib for Call;
     using CallLib for Call[];
+    using AccountKeyHashLib for bytes32;
 
     mapping(AccountKeyHash => EnumerableSetLib.Bytes32Set requiredSigners) private requiredSigners;
     mapping(bytes32 => bytes encodedKey) private keyStorage;
@@ -31,20 +32,12 @@ contract MultiSignerValidatorHook is IHook {
         bytes32 signerKeyHash = signerKey.hash();
 
         keyStorage[signerKeyHash] = encodedKey;
-        requiredSigners[_accountKeyHash(keyHash)].add(signerKeyHash);
+        requiredSigners[keyHash.wrap()].add(signerKeyHash);
     }
 
-    function validateUserOp(PackedUserOperation calldata, bytes32) external view returns (uint256) {
-        revert("Not implemented");
-    }
-
-    function isValidSignature(bytes32, bytes calldata) external view returns (bytes4) {
-        revert("Not implemented");
-    }
-
-    function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view returns (bool isValid) {
+    function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view override returns (bool isValid) {
         (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes32, bytes[]));
-        AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
+        AccountKeyHash accountKeyHash = keyHash.wrap();
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 
@@ -63,10 +56,5 @@ contract MultiSignerValidatorHook is IHook {
                 return false;
             }
         }
-    }
-
-    /// @notice Hash a call with the sender's account address
-    function _accountKeyHash(bytes32 keyHash) internal view returns (AccountKeyHash) {
-        return AccountKeyHash.wrap(keccak256(abi.encode(msg.sender, keyHash)));
     }
 }

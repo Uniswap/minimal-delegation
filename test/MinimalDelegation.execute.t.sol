@@ -9,6 +9,7 @@ import {CallLib} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
@@ -154,8 +155,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
 
-        vm.prank(address(signerAccount));
+        vm.startPrank(address(signerAccount));
         signerAccount.authorize(p256Key.toKey());
+        // Explicitly allow the self call
+        signerAccount.setCanExecute(p256Key.toKeyHash(), address(signerAccount), IERC7821.execute.selector, true);
+        vm.stopPrank();
 
         Call[] memory calls = CallBuilder.init();
         Call memory authorizeCall =
@@ -252,8 +256,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         ExecutionData memory execute = ExecutionData({calls: calls});
 
-        vm.startPrank(address(signer));
+        vm.startPrank(address(signerAccount));
         signerAccount.authorize(p256Key.toKey());
+        signerAccount.setCanExecute(p256Key.toKeyHash(), address(tokenA), ERC20.transfer.selector, true);
+        vm.stopPrank();
 
         // TODO: remove 0 nonce
         bytes memory packedSignature =

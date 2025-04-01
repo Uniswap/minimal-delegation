@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
@@ -67,14 +68,20 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
     /// forge-config: ci.isolate = true
     function test_handleOps_single_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes32 keyHash = p256Key.toKeyHash();
 
-        vm.prank(address(signerAccount));
+        vm.startPrank(address(signerAccount));
         signerAccount.authorize(p256Key.toKey());
+        /// The key CANNOT execute the transfer
+        signerAccount.setCanExecute(keyHash, address(tokenA), ERC20.transfer.selector, false);
+        vm.stopPrank();
 
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        bytes memory opData = bytes("");
+        /// Pass keyHash in opData
+        /// This can be spoofed! Set it to 0 to bypass the permissions check set above
+        bytes memory opData = abi.encode(bytes32(0));
         bytes memory executionData = abi.encode(calls, opData);
         bytes memory callData =
             abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -83,7 +90,8 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), p256Key.sign(digest));
+        /// Add the keyHash to the signature for verification within validateUserOp
+        bytes memory wrappedSignature = abi.encode(keyHash, p256Key.sign(digest));
         userOp.withSignature(wrappedSignature);
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);

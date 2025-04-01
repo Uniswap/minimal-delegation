@@ -41,56 +41,65 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _onlyThis();
-            _dispatch(mode, calls);
+            _dispatch(mode, calls, bytes32(0));
         } else if (mode.supportsOpData()) {
-            // executionData.decodeWithOpData();
+            require(msg.sender != ENTRY_POINT(), "Entrypoint cannot call execute");
+
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
-            _authorizeOpData(mode, calls, opData);
-            _dispatch(mode, calls);
+            // Create temporary struct
+            ExecutionData memory executeStruct = ExecutionData({calls: calls});
+            // Decode the nonce and signature
+            (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
+            // TODO: useNonce
+
+            // Unwrap the signature
+            (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+
+            _validateSignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
+
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
     }
 
     /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+    function _dispatch(bytes32 mode, Call[] calldata calls, bytes32 keyHash) private {
         bool shouldRevert = mode.shouldRevert();
 
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
+            (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
     }
 
-    // Execute a single call.
-    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
+    function _execute(Call calldata _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
-        (success, output) = to.call{value: _call.value}(_call.data);
-    }
 
-    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
-        if (msg.sender == ENTRY_POINT()) {
-            // TODO: check nonce and parse out key hash from opData if desired to usein future
-            // short circuit because entrypoint is already verified using validateUserOp
-            return;
+        IHook hook = HookLib.get(keyHash, HookFlags.BEFORE_EXECUTE);
+        bytes memory hookData;
+        if (address(hook) != address(0)) {
+            hookData = hook.preExecutionHook(keyHash, to, _call.data);
         }
 
-        // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        (, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-        // TODO: Decode as an execute struct with the nonce. This is temporary!
-        ExecutionData memory executeStruct = ExecutionData({calls: calls});
+        (success, output) = to.call{value: _call.value}(_call.data);
 
-        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+        hook = HookLib.get(keyHash, HookFlags.AFTER_EXECUTE);
+        if (address(hook) != address(0)) {
+            hook.postExecutionHook(keyHash, hookData);
+        }
+    }
+
+    function _validateSignature(bytes32 digest, bytes32 keyHash, bytes calldata signature) private view {
         IHook validator = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
 
         bool isValid;
         if (address(validator) != address(0)) {
-            isValid = validator.verifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature);
+            isValid = validator.verifySignature(digest, abi.encodePacked(keyHash, signature));
         } else {
             // Use default signature verification.
-            isValid = _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
+            isValid = _verifySignature(digest, keyHash, signature);
         }
 
         if (!isValid) revert IERC7821.InvalidSignature();
@@ -150,8 +159,8 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         return MinimalDelegationStorageLib.get().entryPoint;
     }
 
-    /// @notice Sets a validator for a key
-    function setValidator(bytes32 keyHash, HookId id) external {
+    /// @notice Sets a hook for a key
+    function setHook(bytes32 keyHash, HookId id) external {
         _onlyThis();
         HookLib.set(keyHash, id);
     }
