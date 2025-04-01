@@ -23,7 +23,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     using TestKeyManager for TestKey;
     using KeyLib for Key;
     using CallBuilder for Call[];
-    using CallLib for *;
+    using CallLib for Call[];
     using ExecutionDataLib for ExecutionData;
 
     address receiver = makeAddr("receiver");
