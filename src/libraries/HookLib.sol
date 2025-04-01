@@ -5,12 +5,10 @@ import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./MinimalDe
 import {IHook} from "../interfaces/IHook.sol";
 
 enum HookFlags {
-    VERIFY_SIGNATURE, // 1 << 0
-    VALIDATE_USER_OP, // 1 << 1
-    IS_VALID_SIGNATURE, // 1 << 2
-    BEFORE_EXECUTE, // 1 << 3
-    AFTER_EXECUTE // 1 << 4
-
+    VALIDATE_USER_OP, // 1 << 0
+    IS_VALID_SIGNATURE, // 1 << 1
+    BEFORE_EXECUTE, // 1 << 2
+    AFTER_EXECUTE // 1 << 3
 }
 
 // HookId combines an address with flags: address << 160 | flags
