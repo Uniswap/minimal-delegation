@@ -66,11 +66,11 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-        IHook validator = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
+        IHook hook = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
 
         bool isValid;
-        if (address(validator) != address(0)) {
-            isValid = validator.verifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature);
+        if (address(hook) != address(0)) {
+            isValid = hook.verifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature);
         } else {
             // Use default signature verification.
             isValid = _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
@@ -116,9 +116,9 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook validator = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
-        if (address(validator) != address(0)) {
-            return validator.validateUserOp(userOp, userOpHash);
+        IHook hook = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
+        if (address(hook) != address(0)) {
+            return hook.validateUserOp(userOp, userOpHash);
         }
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
@@ -135,9 +135,9 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
 
-        IHook validator = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
-        if (address(validator) != address(0)) {
-            return validator.isValidSignature(data, signature);
+        IHook hook = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
+        if (address(hook) != address(0)) {
+            return hook.isValidSignature(data, signature);
         }
 
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
@@ -148,12 +148,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
         return MinimalDelegationStorageLib.get().entryPoint;
-    }
-
-    /// @notice Sets a validator for a key
-    function setValidator(bytes32 keyHash, HookId id) external {
-        _onlyThis();
-        HookLib.set(keyHash, id);
     }
 
     /// @notice Verifies that the key signed over the digest
@@ -170,5 +164,12 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             Key memory key = _getKey(keyHash);
             isValid = key.verify(digest, signature);
         }
+    }
+
+    /// @notice Sets a hook for a key
+    /// @dev Can only be called by the account itself
+    function setHook(bytes32 keyHash, HookId id) external {
+        _onlyThis();
+        HookLib.set(keyHash, id);
     }
 }
