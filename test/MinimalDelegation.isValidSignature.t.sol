@@ -3,12 +3,13 @@ pragma solidity ^0.8.23;
 
 import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
+import {HookHandler} from "./utils/HookHandler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {TestKeyManager} from "./utils/TestKeyManager.sol";
 
-contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
+contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler {
     using TestKeyManager for TestKey;
     using WrappedDataHash for bytes32;
 
@@ -17,6 +18,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
 
     function setUp() public {
         setUpDelegation();
+        setUpHooks();
     }
 
     function test_isValidSignature_P256_isValid() public {
@@ -119,5 +121,19 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler {
         // Don't wrap the signature with the key hash
         vm.expectRevert();
         signerAccount.isValidSignature(testDigest, signature);
+    }
+
+    function test_isValidSignature_withHook_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes32 keyHash = p256Key.toKeyHash();
+
+        vm.prank(address(signerAccount));
+        signerAccount.setHook(keyHash, mockValidationHook);
+
+        bytes32 testDigest = keccak256("Test");
+        bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
+        bytes memory signature = p256Key.sign(testDigestToSign);
+
+        signerAccount.isValidSignature(testDigest, abi.encode(keyHash, signature));
     }
 }

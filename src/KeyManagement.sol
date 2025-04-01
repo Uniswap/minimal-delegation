@@ -5,6 +5,7 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
+import {IHook} from "./interfaces/IHook.sol";
 
 /// @dev A base contract for managing keys.
 abstract contract KeyManagement is IKeyManagement {
@@ -43,6 +44,12 @@ abstract contract KeyManagement is IKeyManagement {
         return _getKey(keyHash);
     }
 
+    /// @inheritdoc IKeyManagement
+    function setHook(bytes32 keyHash, IHook hook) external {
+        _onlyThis();
+        _setHook(keyHash, hook);
+    }
+
     function _authorize(Key memory key) internal returns (bytes32 keyHash) {
         keyHash = key.hash();
         MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
@@ -64,5 +71,9 @@ abstract contract KeyManagement is IKeyManagement {
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
+    }
+
+    function _setHook(bytes32 keyHash, IHook hook) internal {
+        MinimalDelegationStorageLib.get().keyExtraStorage[keyHash].hook = hook;
     }
 }
