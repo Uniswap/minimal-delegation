@@ -12,18 +12,18 @@ abstract contract KeyManagement is IKeyManagement {
     using KeyLib for Key;
 
     /// @dev Must be overridden by the implementation
-    function _authorizeCaller() internal view virtual {}
+    function _onlyThis() internal view virtual {}
 
     /// @inheritdoc IKeyManagement
     function authorize(Key memory key) external returns (bytes32 keyHash) {
-        _authorizeCaller();
+        _onlyThis();
         keyHash = _authorize(key);
         emit Authorized(keyHash, key);
     }
 
     /// @inheritdoc IKeyManagement
     function revoke(bytes32 keyHash) external {
-        _authorizeCaller();
+        _onlyThis();
         _revoke(keyHash);
         emit Revoked(keyHash);
     }
@@ -60,6 +60,7 @@ abstract contract KeyManagement is IKeyManagement {
     }
 
     function _getKey(bytes32 keyHash) internal view returns (Key memory) {
+        if (keyHash == bytes32(0)) return KeyLib.toRootKey();
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));
