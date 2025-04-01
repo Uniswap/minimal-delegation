@@ -8,7 +8,7 @@ contract BaseNoopHook is IHook {
     function verifySignature(bytes32, bytes calldata) external view virtual returns (bool) {
         revert("Not implemented");
     }
-    
+
     function validateUserOp(PackedUserOperation calldata, bytes32) external view virtual returns (uint256) {
         revert("Not implemented");
     }
@@ -25,4 +25,3 @@ contract BaseNoopHook is IHook {
         revert("Not implemented");
     }
 }
-    

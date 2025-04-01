@@ -35,7 +35,12 @@ contract MultiSignerValidatorHook is BaseNoopHook {
         requiredSigners[keyHash.wrap()].add(signerKeyHash);
     }
 
-    function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view override returns (bool isValid) {
+    function verifySignature(bytes32 digest, bytes calldata wrappedSignature)
+        external
+        view
+        override
+        returns (bool isValid)
+    {
         (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes32, bytes[]));
         AccountKeyHash accountKeyHash = keyHash.wrap();
 

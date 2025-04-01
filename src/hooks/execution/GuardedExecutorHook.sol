@@ -79,11 +79,16 @@ contract GuardedExecutorHook is BaseNoopHook, IGuardedExecutorHook {
         return false;
     }
 
-    function preExecutionHook(bytes32 keyHash, address to, bytes calldata data) external view override returns (bytes memory) {
+    function preExecutionHook(bytes32 keyHash, address to, bytes calldata data)
+        external
+        view
+        override
+        returns (bytes memory)
+    {
         if (!_canExecute(keyHash, to, data)) revert IERC7821.Unauthorized();
         return bytes("");
     }
-    
+
     /// @dev Returns true if the call is a self-execute call.
     function _isSelfExecute(address to, bytes4 selector) internal view returns (bool) {
         return to == msg.sender && selector == IERC7821.execute.selector;
