@@ -60,6 +60,7 @@ abstract contract KeyManagement is IKeyManagement {
     }
 
     function _getKey(bytes32 keyHash) internal view returns (Key memory) {
+        if (keyHash == bytes32(0)) return KeyLib.toRootKey();
         bytes memory data = MinimalDelegationStorageLib.get().keyStorage[keyHash];
         if (data.length == 0) revert KeyDoesNotExist();
         return abi.decode(data, (Key));

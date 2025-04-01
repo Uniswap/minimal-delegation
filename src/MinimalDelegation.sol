@@ -26,7 +26,7 @@ import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HookId, HookFlags, HookLib} from "./libraries/HookLib.sol";
 
-contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement {
+contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -55,7 +55,7 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
             // Unwrap the signature
             (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-            _validateSignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
+            _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
 
             _dispatch(mode, calls, keyHash);
         } else {
@@ -89,20 +89,6 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         if (address(hook) != address(0)) {
             hook.postExecutionHook(keyHash, hookData);
         }
-    }
-
-    function _validateSignature(bytes32 digest, bytes32 keyHash, bytes calldata signature) private view {
-        IHook hook = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
-
-        bool isValid;
-        if (address(hook) != address(0)) {
-            isValid = hook.verifySignature(digest, abi.encodePacked(keyHash, signature));
-        } else {
-            // Use default signature verification.
-            isValid = _verifySignature(digest, keyHash, signature);
-        }
-
-        if (!isValid) revert IERC7821.InvalidSignature();
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -159,25 +145,20 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
         return MinimalDelegationStorageLib.get().entryPoint;
     }
 
-    /// @notice Sets a hook for a key
-    function setHook(bytes32 keyHash, HookId id) external {
-        _onlyThis();
-        HookLib.set(keyHash, id);
-    }
-
     /// @notice Verifies that the key signed over the digest
-    /// Handles signatures from the root ECDSA key and wrapped signatures
     function _verifySignature(bytes32 digest, bytes32 keyHash, bytes calldata signature)
         internal
         view
         returns (bool isValid)
     {
-        if (keyHash == bytes32(0)) {
-            // Recover to the root EOA key
-            isValid = ECDSA.recoverCalldata(digest, signature) == address(this);
-        } else {
-            Key memory key = _getKey(keyHash);
-            isValid = key.verify(digest, signature);
-        }
+        Key memory key = _getKey(keyHash);
+        isValid = key.verify(digest, signature);
+    }
+
+    /// @notice Sets a hook for a key
+    /// @dev Can only be called by the account itself
+    function setHook(bytes32 keyHash, HookId id) external {
+        _onlyThis();
+        HookLib.set(keyHash, id);
     }
 }
