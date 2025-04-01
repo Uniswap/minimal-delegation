@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {Key, KeyLib} from "../../libraries/KeyLib.sol";
 import {Call, CallLib} from "../../libraries/CallLib.sol";
 import {IValidator} from "../../interfaces/IValidator.sol";
@@ -31,6 +32,14 @@ contract MultiSignerValidator is IValidator {
 
         keyStorage[signerKeyHash] = encodedKey;
         requiredSigners[_accountKeyHash(keyHash)].add(signerKeyHash);
+    }
+
+    function validateUserOp(PackedUserOperation calldata, bytes32) external view returns (uint256) {
+        revert("Not implemented");
+    }
+
+    function isValidSignature(bytes32, bytes calldata) external view returns (bytes4) {
+        revert("Not implemented");
     }
 
     function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view returns (bool isValid) {

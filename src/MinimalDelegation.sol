@@ -22,21 +22,11 @@ import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
-import {BaseValidator} from "./BaseValidator.sol";
-import {ValidationModuleManager} from "./ValidationModuleManager.sol";
 import {IValidator} from "./interfaces/IValidator.sol";
+import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
+import {ValidatorId, ValidatorFlags, ValidatorLib} from "./libraries/ValidatorLib.sol";
 
-contract MinimalDelegation is
-    IERC7821,
-    IKeyManagement,
-    ERC1271,
-    EIP712,
-    ERC4337Account,
-    Receiver,
-    KeyManagement,
-    BaseValidator,
-    ValidationModuleManager
-{
+contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -44,6 +34,8 @@ contract MinimalDelegation is
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
     using ExecutionDataLib for ExecutionData;
+    using SignatureUnwrapper for bytes;
+    using ValidatorLib for uint256;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -89,10 +81,19 @@ contract MinimalDelegation is
         (, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         // TODO: Decode as an execute struct with the nonce. This is temporary!
         ExecutionData memory executeStruct = ExecutionData({calls: calls});
-        // Check signature.
-        if (!_unwrapAndVerifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature)) {
-            revert IERC7821.InvalidSignature();
+
+        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+        IValidator validator = ValidatorLib.get(keyHash, ValidatorFlags.VERIFY_SIGNATURE);
+
+        bool isValid;
+        if (address(validator) != address(0)) {
+            isValid = validator.verifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature);
+        } else {
+            // Use default signature verification.
+            isValid = _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
         }
+
+        if (!isValid) revert IERC7821.InvalidSignature();
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -113,10 +114,16 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
+        (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
+
+        IValidator validator = ValidatorLib.get(keyHash, ValidatorFlags.VALIDATE_USER_OP);
+        if (address(validator) != address(0)) {
+            return validator.validateUserOp(userOp, userOpHash);
+        }
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
-        if (_unwrapAndVerifySignature(userOpHash, userOp.signature)) return SIG_VALIDATION_SUCCEEDED;
+        if (_verifySignature(userOpHash, keyHash, signature)) return SIG_VALIDATION_SUCCEEDED;
         else return SIG_VALIDATION_FAILED;
     }
 
@@ -126,8 +133,15 @@ contract MinimalDelegation is
 
     /// @inheritdoc ERC1271
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
+        (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
+
+        IValidator validator = ValidatorLib.get(keyHash, ValidatorFlags.VALIDATE_USER_OP);
+        if (address(validator) != address(0)) {
+            return validator.isValidSignature(data, signature);
+        }
+
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
-        if (_unwrapAndVerifySignature(_hashTypedData(data.hashWithWrappedType()), signature)) return _1271_MAGIC_VALUE;
+        if (_verifySignature(_hashTypedData(data.hashWithWrappedType()), keyHash, _signature)) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
     }
 
@@ -136,33 +150,25 @@ contract MinimalDelegation is
         return MinimalDelegationStorageLib.get().entryPoint;
     }
 
-    function setValidator(bytes32 keyHash, IValidator validator) external {
+    /// @notice Sets a validator for a key
+    function setValidator(bytes32 keyHash, ValidatorId id) external {
         _onlyThis();
-        _setValidator(keyHash, validator);
+        ValidatorLib.set(keyHash, id);
     }
 
     /// @notice Verifies that the key signed over the digest
     /// Handles signatures from the root ECDSA key and wrapped signatures
-    /// @dev If the key has a validator, it will use that validator to verify the signature instead of the fallback implementation
-    function _unwrapAndVerifySignature(bytes32 digest, bytes calldata signatureOrWrapped)
+    function _verifySignature(bytes32 digest, bytes32 keyHash, bytes calldata signature)
         internal
         view
         returns (bool isValid)
     {
-        if (_isUnwrapped(signatureOrWrapped)) {
+        if (keyHash == bytes32(0)) {
             // Use ecrecover
-            isValid = _verifySignature(digest, signatureOrWrapped);
+            isValid = ECDSA.recoverCalldata(digest, signature) == address(this);
         } else {
-            // Otherwise, decode the wrapped signature
-            (bytes32 keyHash, bytes calldata signature) = CalldataDecoder.decodeBytes32Bytes(signatureOrWrapped);
-            IValidator validator = _getValidator(keyHash);
-            if (address(validator) != address(0)) {
-                // pass the wrapped signature to the validator, containing the keyHash and signature
-                return validator.verifySignature(digest, signatureOrWrapped);
-            }
-
             Key memory key = _getKey(keyHash);
-            return _verifySignature(digest, key, signature);
+            isValid = key.verify(digest, signature);
         }
     }
 }

@@ -3,9 +3,10 @@ pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IValidator} from "../interfaces/IValidator.sol";
+import {ValidatorLib, ValidatorId} from "./ValidatorLib.sol";
 
 struct KeyExtraStorage {
-    IValidator validator;
+    ValidatorId validator;
 }
 
 /// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
