@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {MockValidationHook} from "./MockValidationHook.sol";
-
 /// @dev Helper contract for testing execute
 contract ExecuteHandler {
     bytes32 internal constant BATCHED_CALL = 0x0100000000000000000000000000000000000000000000000000000000000000;

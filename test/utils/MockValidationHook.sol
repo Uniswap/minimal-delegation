@@ -5,20 +5,22 @@ import {IHook} from "src/interfaces/IHook.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 contract MockValidationHook is IHook {
-    // Per ERC1271 spec
-    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
-    // Per ERC4337 spec
-    uint256 internal constant SIG_VALIDATION_SUCCEEDED = 0;
+    bytes4 internal _isValidSignatureReturnValue;
+    uint256 internal _validateUserOpReturnValue;
+
+    function setIsValidSignatureReturnValue(bytes4 returnValue) external {
+        _isValidSignatureReturnValue = returnValue;
+    }
+
+    function setValidateUserOpReturnValue(uint256 returnValue) external {
+        _validateUserOpReturnValue = returnValue;
+    }
 
     function isValidSignature(bytes32, bytes calldata) external view virtual returns (bytes4) {
-        return _1271_MAGIC_VALUE;
+        return _isValidSignatureReturnValue;
     }
 
     function validateUserOp(PackedUserOperation calldata, bytes32) external view virtual returns (uint256) {
-        return SIG_VALIDATION_SUCCEEDED;
-    }
-
-    function verifySignature(bytes32, bytes calldata) external view virtual returns (bool) {
-        return true;
+        return _validateUserOpReturnValue;
     }
 }

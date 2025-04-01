@@ -134,6 +134,10 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
         bytes memory signature = p256Key.sign(testDigestToSign);
 
-        signerAccount.isValidSignature(testDigest, abi.encode(keyHash, signature));
+        mockValidationHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
+        assertEq(signerAccount.isValidSignature(testDigest, abi.encode(keyHash, signature)), _1271_MAGIC_VALUE);
+
+        mockValidationHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
+        assertEq(signerAccount.isValidSignature(testDigest, abi.encode(keyHash, signature)), _1271_INVALID_VALUE);
     }
 }
