@@ -39,10 +39,6 @@ jobs:
           forge build --sizes
         id: build
 
-      - name: Run yarn build for js-scripts
-        run: |
-          cd test/js-scripts && npm i && node build.js && rm -rf node_modules
-
       - name: Run Forge tests
         run: |
           forge test -vvv
