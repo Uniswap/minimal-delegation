@@ -52,31 +52,31 @@ contract MinimalDelegation is IERC7821, IKeyManagement, ERC1271, EIP712, ERC4337
 
     /// @inheritdoc IERC7914
     function approveNative(address spender, uint256 amount) external override returns (bool) {
-		_authorizeCaller();
+        _authorizeCaller();
         MinimalDelegationStorageLib.get().allowance[spender] = amount;
         emit ApproveNative(msg.sender, spender, amount);
         return true;
     }
 
     /// @inheritdoc IERC7914
-    function transferFromNative(address recipient, uint256 amount) public override returns (bool) {
-        _authorizeCaller();
+    function transferFromNative(address from, address recipient, uint256 amount) public override returns (bool) {
+        if (from != address(this)) revert IncorrectSpender();
         if (MinimalDelegationStorageLib.get().allowance[msg.sender] < amount) revert AllowanceExceeded();
         if (amount == 0) return false; // early return for amount == 0
         MinimalDelegationStorageLib.get().allowance[msg.sender] -= amount;
         (bool success,) = payable(recipient).call{value: amount}("");
         if (success) {
-	        emit TransferFromNative(address(this), recipient, amount);
-	        return true;
-	      }
-        return false; 
+            emit TransferFromNative(address(this), recipient, amount);
+            return true;
+        }
+        return false;
     }
 
-    /// @inheritdoc IERC165
-    function supportsInterface(bytes4 _interfaceId) public view virtual returns (bool) {
-        return _interfaceId == type(IERC165).interfaceId || _interfaceId == type(IERC7914).interfaceId;
+    /// @inheritdoc ERC7914
+    function allowance(address spender) external view override returns (uint256) {
+        return MinimalDelegationStorageLib.get().allowance[spender];
     }
- 
+
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
         if (msg.sender == ENTRY_POINT()) {
