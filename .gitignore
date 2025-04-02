@@ -6,6 +6,7 @@ out/
 !/broadcast
 /broadcast/*/31337/
 /broadcast/**/dry-run/
+/broadcast/**/*
 
 # Docs
 docs/
@@ -13,5 +14,5 @@ docs/
 # Dotenv file
 .env
 
-# js script builds
-test/js-scripts/dist/
+# node_modules
+node_modules/

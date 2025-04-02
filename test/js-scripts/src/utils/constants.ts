@@ -13,7 +13,8 @@ export const types = {
       { name: 'data', type: 'bytes' }
     ],
     Execute: [
-      { name: 'calls', type: 'Call[]' }
+      { name: 'calls', type: 'Call[]' },
+      { name: 'nonce', type: 'uint256' }
     ]
     } as const;
 
