@@ -16,6 +16,8 @@ import {EIP712} from "./EIP712.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {NonceManager} from "./NonceManager.sol";
+import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
@@ -26,11 +28,10 @@ import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HookId, HookFlags, HookLib} from "./libraries/HookLib.sol";
 
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement {
+contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CallLib for Call[];
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
     using ExecutionDataLib for ExecutionData;
@@ -52,8 +53,20 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         }
     }
 
+    /// @inheritdoc INonceManager
+    function getNonce(uint256 key) public view override returns (uint256 nonce) {
+        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
+    }
+
+    /// @inheritdoc INonceManager
+    function invalidateNonce(uint256 nonce) public override {
+        _onlyThis();
+        _invalidateNonce(nonce);
+        emit NonceInvalidated(nonce);
+    }
+
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         if (msg.sender == ENTRY_POINT()) {
             // TODO: check nonce and parse out key hash from opData if desired to usein future
             // short circuit because entrypoint is already verified using validateUserOp
@@ -61,19 +74,19 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         }
 
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
-        (, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-        // TODO: Decode as an execute struct with the nonce. This is temporary!
-        ExecutionData memory executeStruct = ExecutionData({calls: calls});
+        (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
+        _useNonce(nonce);
+        ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         IHook hook = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
 
         bool isValid;
         if (address(hook) != address(0)) {
-            isValid = hook.verifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature);
+            isValid = hook.verifySignature(_hashTypedData(executionData.hash()), wrappedSignature);
         } else {
             // Use default signature verification.
-            isValid = _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
+            isValid = _verifySignature(_hashTypedData(executionData.hash()), keyHash, signature);
         }
 
         if (!isValid) revert IERC7821.InvalidSignature();
