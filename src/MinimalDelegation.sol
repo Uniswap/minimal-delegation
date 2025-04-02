@@ -52,15 +52,24 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         }
     }
 
+    /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
+    /// UserOperations can be executed through the execute function, but another method of authorization (ie through a passed in signature) is required.
+    /// userOp.callData is abi.encodeCall(executeUserOp.selector, (bytes32 mode, bytes executionData)) where executionData is abi.encode(Call[]).
+    function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
+        // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
+        // and must be used to check further on-chain permissions over the call execution.
+        // TODO: Handle keyHash authorization.
+        // (bytes32 keyHash,) = userOp.signature.unwrap();
+
+        // The only valid modes for executeUserOp are BATCHED_CALL and BATCHED_CALL_CAN_REVERT.
+        (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
+        Call[] calldata calls = executionData.decodeCalls();
+
+        _dispatch(mode, calls);
+    }
+
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
-        if (msg.sender == ENTRY_POINT()) {
-            // TODO: check nonce and parse out key hash from opData if desired to usein future
-            // short circuit because entrypoint is already verified using validateUserOp
-            return;
-        }
-
-        // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         // TODO: Decode as an execute struct with the nonce. This is temporary!
         ExecutionData memory executeStruct = ExecutionData({calls: calls});

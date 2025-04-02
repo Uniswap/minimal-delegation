@@ -12,6 +12,7 @@ import {CallBuilder} from "./utils/CallBuilder.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
+import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
 
 contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHandler {
     using CallBuilder for Call[];
@@ -39,11 +40,10 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        // TODO: encode nonce into opData
-        bytes memory opData = bytes("");
-        bytes memory executionData = abi.encode(calls, opData);
+        /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
+        bytes memory executionData = abi.encode(calls);
         bytes memory callData =
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -77,7 +77,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         bytes memory opData = bytes("");
         bytes memory executionData = abi.encode(calls, opData);
         bytes memory callData =
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
