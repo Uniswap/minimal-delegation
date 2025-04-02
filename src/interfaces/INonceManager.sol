@@ -23,7 +23,7 @@ interface INonceManager {
     ///               - Lower 64 bits: the expected sequence number for this key
     function getNonce(uint256 key) external view returns (uint256 nonce);
 
-    /// @notice Invalidates all nonces for a given sequence key up to and including the provided nonce
-    /// @param nonce The nonce to invalidate
-    function invalidateNonce(uint256 nonce) external;
+    /// @notice Invalidates all sequence numbers for a given key up to but not including the provided sequence number in the nonce
+    /// @param newNonce The new nonce to set. Invalidates all sequence numbers for the key less than it.
+    function invalidateNonce(uint256 newNonce) external;
 }

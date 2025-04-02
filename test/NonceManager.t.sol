@@ -27,24 +27,24 @@ contract NonceManagerTest is DelegationHandler {
     }
 
     function test_invalidateNonce_revertsWithInvalidNonce() public {
-        uint256 nonce = 0; // nonce 0 means key = 0, sequence = 0
+        uint256 nonce = 1; // nonce 1 means key = 0, sequence = 1
 
-        // First invalidate nonce 0, which will increment the sequence for key 0 to 1
+        // First invalidate up to nonce 1, which will increment the sequence for key 0 from 0 to 1
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
 
         // At this point:
         // - key 0's sequence is now 1
-        // - nonce 0 represents sequence=0 which is now invalid for key=0
-        // Trying to invalidate nonce 0 again should revert since its sequence (0)
-        // is less than the current sequence (1) for key 0
+        // - nonce 1 represents sequence=1 which is now invalid for key=0
+        // Trying to invalidate up to nonce 1 again should revert since its sequence (1)
+        // is equal to the current sequence (1) for key 0
         vm.expectRevert(INonceManager.InvalidNonce.selector);
         signerAccount.invalidateNonce(nonce);
     }
 
     function test_invalidateNonce_revertsWithExcessiveInvalidation() public {
         uint192 key = 0;
-        uint64 sequence = type(uint16).max; // Use a high sequence number
+        uint64 sequence = uint64(type(uint16).max) + 1; // Use a high sequence number
         uint256 nonce = (uint256(key) << 64) | sequence;
 
         vm.startPrank(address(signerAccount));
@@ -54,31 +54,31 @@ contract NonceManagerTest is DelegationHandler {
 
     function test_invalidateNonce_succeeds() public {
         uint192 key = 0;
-        uint64 sequence = type(uint16).max - 1;
+        uint64 sequence = type(uint16).max;
         uint256 nonce = (uint256(key) << 64) | sequence;
 
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
         vm.snapshotGasLastCall("invalidateNonce");
 
-        // The new nonce should have sequence incremented by 1
+        // The new nonce should have been set
         uint256 expectedNextNonce = (uint256(key) << 64) | type(uint16).max;
         assertEq(signerAccount.getNonce(key), expectedNextNonce);
 
         // Invalidate the next nonce
-        sequence = uint64(expectedNextNonce * 2 - 1);
+        sequence = uint64(sequence * 2);
         nonce = (uint256(key) << 64) | sequence;
 
         signerAccount.invalidateNonce(nonce);
 
-        // The new nonce should have sequence incremented by 1
-        expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
+        // The new nonce should have been set
+        expectedNextNonce = (uint256(key) << 64) | (sequence);
         assertEq(signerAccount.getNonce(key), expectedNextNonce);
     }
 
     function test_fuzz_invalidateNonce(uint192 key, uint16 sequence) public {
         // Skip sequences that would overflow when incremented
-        vm.assume(sequence < type(uint16).max);
+        sequence = uint16(bound(sequence, 1, type(uint16).max));
 
         uint256 nonce = (uint256(key) << 64) | sequence;
 
@@ -86,7 +86,7 @@ contract NonceManagerTest is DelegationHandler {
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have sequence incremented by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
+        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence);
         assertEq(signerAccount.getNonce(key), expectedNextNonce);
     }
 }
