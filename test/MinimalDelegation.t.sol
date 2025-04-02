@@ -227,7 +227,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
         PackedUserOperation memory userOp;
         // Spoofed signature and userOpHash
-        userOp.signature = abi.encodePacked(p256Key.toKeyHash(), signature);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
         bytes32 userOpHash = bytes32(0);
 
         mockValidationHook.setValidateUserOpReturnValue(0);
