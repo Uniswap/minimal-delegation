@@ -27,6 +27,7 @@ contract ERC7914Test is DelegationHandler {
         emit ApproveNative(address(signerAccount), alice, 1 ether);
         vm.startPrank(address(signerAccount));
         bool success = signerAccount.approveNative(alice, 1 ether);
+        vm.snapshotGasLastCall("approveNative");
         assertTrue(success);
         assertEq(signerAccount.allowance(alice), 1 ether);
     }
@@ -61,6 +62,7 @@ contract ERC7914Test is DelegationHandler {
         emit TransferFromNative(address(signerAccount), alice, 1 ether);
         vm.prank(alice);
         success = signerAccount.transferFromNative(address(signerAccount), alice, 1 ether);
+        vm.snapshotGasLastCall("transferFromNative");
         assertTrue(success);
         assertEq(signerAccount.allowance(alice), 0);
         assertEq(alice.balance, aliceBalanceBefore + 1 ether);
