@@ -17,9 +17,6 @@ struct Key {
     uint40 expiry;
     /// @dev Type of key. See the {KeyType} enum.
     KeyType keyType;
-    /// @dev Whether the key is a super admin key.
-    /// Super admin keys are allowed to execute any external call
-    bool isSuperAdmin;
     /// @dev Public key in encoded form.
     bytes publicKey;
 }
@@ -31,7 +28,7 @@ library KeyLib {
 
     /// @notice A helper function to get the root key object.
     function toRootKey() internal view returns (Key memory) {
-        return Key({expiry: 0, keyType: KeyType.Secp256k1, isSuperAdmin: true, publicKey: abi.encode(address(this))});
+        return Key({expiry: 0, keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
     }
 
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {

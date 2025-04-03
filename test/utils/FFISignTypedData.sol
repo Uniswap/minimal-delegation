@@ -9,12 +9,12 @@ import {console2} from "forge-std/console2.sol";
 contract FFISignTypedData is JavascriptFfi {
     using stdJson for string;
 
-    function ffi_signTypedData(uint256 privateKey, Call[] memory calls, address verifyingContract)
+    function ffi_signTypedData(uint256 privateKey, Call[] memory calls, uint256 nonce, address verifyingContract)
         public
         returns (bytes memory)
     {
         // Create JSON object
-        string memory jsonObj = _createJsonInput(privateKey, calls, verifyingContract);
+        string memory jsonObj = _createJsonInput(privateKey, calls, nonce, verifyingContract);
 
         // Run the JavaScript script
         return runScript("sign-typed-data", jsonObj);
@@ -23,7 +23,7 @@ contract FFISignTypedData is JavascriptFfi {
     /**
      * @dev Creates a JSON input string for the JavaScript script
      */
-    function _createJsonInput(uint256 privateKey, Call[] memory calls, address verifyingContract)
+    function _createJsonInput(uint256 privateKey, Call[] memory calls, uint256 nonce, address verifyingContract)
         internal
         pure
         returns (string memory)
@@ -63,6 +63,8 @@ contract FFISignTypedData is JavascriptFfi {
             '",',
             '"calls":',
             callsJson,
+            ',"nonce":',
+            vm.toString(nonce),
             "}"
         );
 

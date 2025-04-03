@@ -2,20 +2,24 @@
 pragma solidity ^0.8.23;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
+import {HookHandler} from "./utils/HookHandler.sol";
 import {Key, KeyType, KeyLib} from "../src/libraries/KeyLib.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
+import {TestKey, TestKeyManager} from "./utils/TestKeyManager.sol";
 
-contract MinimalDelegationTest is DelegationHandler {
+contract MinimalDelegationTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
+    using TestKeyManager for TestKey;
 
     event Authorized(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
 
     function setUp() public {
         setUpDelegation();
+        setUpHooks();
     }
 
     /// forge-config: default.isolate = true
@@ -43,7 +47,6 @@ contract MinimalDelegationTest is DelegationHandler {
         Key memory fetchedKey = signerAccount.getKey(keyHash);
         assertEq(fetchedKey.expiry, 0);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
-        assertEq(fetchedKey.isSuperAdmin, true);
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
     }
@@ -61,7 +64,6 @@ contract MinimalDelegationTest is DelegationHandler {
         Key memory fetchedKey = signerAccount.getKey(keyHash);
         assertEq(fetchedKey.expiry, 0);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
-        assertEq(fetchedKey.isSuperAdmin, true);
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
 
@@ -72,7 +74,6 @@ contract MinimalDelegationTest is DelegationHandler {
         fetchedKey = signerAccount.getKey(keyHash);
         assertEq(fetchedKey.expiry, uint40(block.timestamp + 3600));
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
-        assertEq(fetchedKey.isSuperAdmin, true);
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         // key count should remain the same
         assertEq(signerAccount.keyCount(), 1);
@@ -141,7 +142,7 @@ contract MinimalDelegationTest is DelegationHandler {
         address mockSecp256k1PublicKey;
         for (uint256 i = 0; i < numKeys; i++) {
             mockSecp256k1PublicKey = makeAddr(string(abi.encodePacked(publicKey, i)));
-            mockSecp256k1Key = Key(0, KeyType.Secp256k1, true, abi.encodePacked(mockSecp256k1PublicKey));
+            mockSecp256k1Key = Key(0, KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
             vm.prank(address(signerAccount));
             signerAccount.authorize(mockSecp256k1Key);
         }
@@ -160,13 +161,11 @@ contract MinimalDelegationTest is DelegationHandler {
         Key memory key = signerAccount.keyAt(0);
         assertEq(key.expiry, 0);
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
-        assertEq(key.isSuperAdmin, true);
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
 
         key = signerAccount.keyAt(1);
         assertEq(key.expiry, uint40(block.timestamp + 3600));
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
-        assertEq(key.isSuperAdmin, false);
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey2));
 
         // revoke first key
@@ -178,7 +177,6 @@ contract MinimalDelegationTest is DelegationHandler {
         key = signerAccount.keyAt(0);
         assertEq(key.expiry, uint40(block.timestamp + 3600));
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
-        assertEq(key.isSuperAdmin, false);
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey2));
 
         // only one key should be left
@@ -210,6 +208,27 @@ contract MinimalDelegationTest is DelegationHandler {
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
         vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
         assertEq(valid, 0); // 0 is valid
+    }
+
+    function test_validateUserOp_withHook_validSignature() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes memory signature = p256Key.sign(bytes32(0));
+
+        vm.startPrank(address(signerAccount));
+        signerAccount.updateEntryPoint(address(entryPoint));
+        signerAccount.setHook(p256Key.toKeyHash(), mockValidationHook);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        // Spoofed signature and userOpHash
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
+        bytes32 userOpHash = bytes32(0);
+
+        mockValidationHook.setValidateUserOpReturnValue(0);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        assertEq(valid, 0);
     }
 
     /// forge-config: default.isolate = true

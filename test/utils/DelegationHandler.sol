@@ -18,17 +18,17 @@ contract DelegationHandler is Test {
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
     TestKey signerTestKey =
-        TestKey(uint40(block.timestamp + 3600), KeyType.Secp256k1, true, abi.encodePacked(signer), signerPrivateKey);
+        TestKey(uint40(block.timestamp + 3600), KeyType.Secp256k1, abi.encodePacked(signer), signerPrivateKey);
     IMinimalDelegation public signerAccount;
     uint256 DEFAULT_KEY_EXPIRY = 10 days;
 
     address mockSecp256k1PublicKey = makeAddr("mockSecp256k1PublicKey");
-    Key public mockSecp256k1Key = Key(0, KeyType.Secp256k1, true, abi.encodePacked(mockSecp256k1PublicKey));
+    Key public mockSecp256k1Key = Key(0, KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
 
     address mockSecp256k1PublicKey2 = makeAddr("mockSecp256k1PublicKey2");
     // May need to remove block.timestamp in the future if using vm.roll / warp
     Key public mockSecp256k1Key2 =
-        Key(uint40(block.timestamp + 3600), KeyType.Secp256k1, false, abi.encodePacked(mockSecp256k1PublicKey2));
+        Key(uint40(block.timestamp + 3600), KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey2));
 
     EntryPoint public entryPoint;
 

@@ -16,6 +16,8 @@ import {EIP712} from "./EIP712.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {NonceManager} from "./NonceManager.sol";
+import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
@@ -24,18 +26,17 @@ import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
-import {HookId, HookFlags, HookLib} from "./libraries/HookLib.sol";
+import {HooksLib} from "./libraries/HooksLib.sol";
 
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement {
+contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CallLib for Call[];
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
-    using HookLib for uint256;
+    using HooksLib for IHook;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -69,24 +70,35 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _dispatch(mode, calls);
     }
 
+    /// @inheritdoc INonceManager
+    function getNonce(uint256 key) public view override returns (uint256 nonce) {
+        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
+    }
+
+    /// @inheritdoc INonceManager
+    function invalidateNonce(uint256 nonce) public override {
+        _onlyThis();
+        _invalidateNonce(nonce);
+        emit NonceInvalidated(nonce);
+    }
+
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private view {
-        (, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-        // TODO: Decode as an execute struct with the nonce. This is temporary!
-        ExecutionData memory executeStruct = ExecutionData({calls: calls});
-
-        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-        IHook hook = HookLib.get(keyHash, HookFlags.VERIFY_SIGNATURE);
-
-        bool isValid;
-        if (address(hook) != address(0)) {
-            isValid = hook.verifySignature(_hashTypedData(executeStruct.hash()), wrappedSignature);
-        } else {
-            // Use default signature verification.
-            isValid = _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
+    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
+        if (msg.sender == ENTRY_POINT()) {
+            // TODO: check nonce and parse out key hash from opData if desired to usein future
+            // short circuit because entrypoint is already verified using validateUserOp
+            return;
         }
 
-        if (!isValid) revert IERC7821.InvalidSignature();
+        // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
+        (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
+        _useNonce(nonce);
+        ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
+
+        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+        if (!_verifySignature(_hashTypedData(executionData.hash()), keyHash, signature)) {
+            revert IERC7821.InvalidSignature();
+        }
     }
 
     /// @dev Dispatches a batch of calls.
@@ -126,10 +138,11 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
-        if (address(hook) != address(0)) {
+        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
+        if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
             return hook.validateUserOp(userOp, userOpHash);
         }
+
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
@@ -145,8 +158,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
 
-        IHook hook = HookLib.get(keyHash, HookFlags.VALIDATE_USER_OP);
-        if (address(hook) != address(0)) {
+        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
+        if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
             return hook.isValidSignature(data, signature);
         }
 
@@ -168,12 +181,5 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     {
         Key memory key = _getKey(keyHash);
         isValid = key.verify(digest, signature);
-    }
-
-    /// @notice Sets a hook for a key
-    /// @dev Can only be called by the account itself
-    function setHook(bytes32 keyHash, HookId id) external {
-        _onlyThis();
-        HookLib.set(keyHash, id);
     }
 }
