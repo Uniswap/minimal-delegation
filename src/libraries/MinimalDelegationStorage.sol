@@ -3,10 +3,10 @@ pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IHook} from "../interfaces/IHook.sol";
-import {HookLib, HookId} from "./HookLib.sol";
+import {HooksLib} from "./HooksLib.sol";
 
 struct KeyExtraStorage {
-    HookId hook;
+    IHook hook;
 }
 
 /// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
@@ -32,5 +32,9 @@ library MinimalDelegationStorageLib {
         assembly {
             $.slot := MINIMAL_DELEGATION_STORAGE_LOCATION
         }
+    }
+
+    function getKeyExtraStorage(bytes32 keyHash) internal view returns (KeyExtraStorage storage $) {
+        return get().keyExtraStorage[keyHash];
     }
 }
