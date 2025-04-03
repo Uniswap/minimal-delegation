@@ -61,8 +61,9 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         // TODO: Handle keyHash authorization.
         // (bytes32 keyHash,) = userOp.signature.unwrap();
 
-        // The only valid modes for executeUserOp are BATCHED_CALL and BATCHED_CALL_CAN_REVERT.
+        // The mode is only passed in to signify the EXEC_TYPE of the calls.
         (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
+        if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] calldata calls = executionData.decodeCalls();
 
         _dispatch(mode, calls);
