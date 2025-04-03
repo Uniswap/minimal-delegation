@@ -45,9 +45,9 @@ contract ERC7914Test is DelegationHandler {
         signerAccount.transferFromNative(address(signerAccount), alice, 2 ether);
     }
 
-    function test_transferFromNative_returnsFalse() public {
+    function test_transferFromNative_zeroAmount_returnsFalse() public {
         bool success = signerAccount.transferFromNative(address(signerAccount), alice, 0);
-        assertTrue(!success);
+        assertEq(success, false);
     }
 
     function test_transferFromNative_succeeds() public {

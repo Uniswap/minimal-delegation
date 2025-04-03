@@ -24,7 +24,6 @@ import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
 import {ERC7914} from "./ERC7914.sol";
-import {IERC7914} from "./interfaces/IERC7914.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
@@ -62,33 +61,6 @@ contract MinimalDelegation is
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
-    }
-
-    /// @inheritdoc IERC7914
-    function approveNative(address spender, uint256 amount) external override returns (bool) {
-        _onlyThis();
-        MinimalDelegationStorageLib.get().allowance[spender] = amount;
-        emit ApproveNative(msg.sender, spender, amount);
-        return true;
-    }
-
-    /// @inheritdoc IERC7914
-    function transferFromNative(address from, address recipient, uint256 amount) public override returns (bool) {
-        if (from != address(this)) revert IncorrectSpender();
-        if (MinimalDelegationStorageLib.get().allowance[msg.sender] < amount) revert AllowanceExceeded();
-        if (amount == 0) return false; // early return for amount == 0
-        MinimalDelegationStorageLib.get().allowance[msg.sender] -= amount;
-        (bool success,) = payable(recipient).call{value: amount}("");
-        if (success) {
-            emit TransferFromNative(address(this), recipient, amount);
-            return true;
-        }
-        return false;
-    }
-
-    /// @inheritdoc ERC7914
-    function allowance(address spender) external view override returns (uint256) {
-        return MinimalDelegationStorageLib.get().allowance[spender];
     }
 
     /// @inheritdoc INonceManager
@@ -171,7 +143,7 @@ contract MinimalDelegation is
         else return SIG_VALIDATION_FAILED;
     }
 
-    function _onlyThis() internal view override {
+    function _onlyThis() internal view override(KeyManagement, ERC7914) {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
