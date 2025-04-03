@@ -17,7 +17,6 @@ import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {NonceManager} from "./NonceManager.sol";
-import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
@@ -68,18 +67,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         Call[] calldata calls = executionData.decodeCalls();
 
         _dispatch(mode, calls);
-    }
-
-    /// @inheritdoc INonceManager
-    function getNonce(uint256 key) public view override returns (uint256 nonce) {
-        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
-    }
-
-    /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 nonce) public override {
-        _onlyThis();
-        _invalidateNonce(nonce);
-        emit NonceInvalidated(nonce);
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
@@ -150,7 +137,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         else return SIG_VALIDATION_FAILED;
     }
 
-    function _onlyThis() internal view override {
+    function _onlyThis() internal view override(KeyManagement, NonceManager) {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
