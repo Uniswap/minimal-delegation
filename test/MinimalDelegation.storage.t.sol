@@ -5,6 +5,9 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 
 contract MinimalDelegationStorageTest is DelegationHandler {
+    // Layout of the toplevel storage in MinimalDelegation
+    uint256 private constant ENTRY_POINT_SLOT = 4;
+
     function setUp() public {
         setUpDelegation();
     }
@@ -26,7 +29,6 @@ contract MinimalDelegationStorageTest is DelegationHandler {
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
         assertEq(readSlots.length, 1);
         assertEq(writeSlots.length, 0);
-        // Doesn't work because entrypoint is located at slot 4 of the storage layout
-        assertEq(readSlots[0], signerAccount.CUSTOM_STORAGE_ROOT());
+        assertEq(readSlots[0], bytes32(uint256(signerAccount.CUSTOM_STORAGE_ROOT()) + ENTRY_POINT_SLOT));
     }
 }
