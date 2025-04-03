@@ -47,7 +47,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         Key memory fetchedKey = signerAccount.getKey(keyHash);
         assertEq(fetchedKey.expiry, 0);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
-        assertEq(fetchedKey.isSuperAdmin, true);
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
     }
@@ -65,7 +64,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         Key memory fetchedKey = signerAccount.getKey(keyHash);
         assertEq(fetchedKey.expiry, 0);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
-        assertEq(fetchedKey.isSuperAdmin, true);
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
 
@@ -76,7 +74,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         fetchedKey = signerAccount.getKey(keyHash);
         assertEq(fetchedKey.expiry, uint40(block.timestamp + 3600));
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
-        assertEq(fetchedKey.isSuperAdmin, true);
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         // key count should remain the same
         assertEq(signerAccount.keyCount(), 1);
@@ -145,7 +142,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         address mockSecp256k1PublicKey;
         for (uint256 i = 0; i < numKeys; i++) {
             mockSecp256k1PublicKey = makeAddr(string(abi.encodePacked(publicKey, i)));
-            mockSecp256k1Key = Key(0, KeyType.Secp256k1, true, abi.encodePacked(mockSecp256k1PublicKey));
+            mockSecp256k1Key = Key(0, KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
             vm.prank(address(signerAccount));
             signerAccount.authorize(mockSecp256k1Key);
         }
@@ -164,13 +161,11 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         Key memory key = signerAccount.keyAt(0);
         assertEq(key.expiry, 0);
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
-        assertEq(key.isSuperAdmin, true);
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
 
         key = signerAccount.keyAt(1);
         assertEq(key.expiry, uint40(block.timestamp + 3600));
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
-        assertEq(key.isSuperAdmin, false);
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey2));
 
         // revoke first key
@@ -182,7 +177,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         key = signerAccount.keyAt(0);
         assertEq(key.expiry, uint40(block.timestamp + 3600));
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
-        assertEq(key.isSuperAdmin, false);
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey2));
 
         // only one key should be left
