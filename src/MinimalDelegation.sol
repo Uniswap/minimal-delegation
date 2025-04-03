@@ -84,12 +84,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
-        if (msg.sender == ENTRY_POINT()) {
-            // TODO: check nonce and parse out key hash from opData if desired to usein future
-            // short circuit because entrypoint is already verified using validateUserOp
-            return;
-        }
-
         // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
@@ -120,13 +114,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
         return mode.isBatchedCall() || mode.supportsOpData();
-    }
-
-    /// @inheritdoc IERC4337Account
-    function updateEntryPoint(address entryPoint) external {
-        _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = entryPoint;
-        emit EntryPointUpdated(entryPoint);
     }
 
     /// @inheritdoc IAccount
@@ -166,11 +153,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
         if (_verifySignature(_hashTypedData(data.hashWithWrappedType()), keyHash, _signature)) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
-    }
-
-    /// @inheritdoc IERC4337Account
-    function ENTRY_POINT() public view override returns (address) {
-        return MinimalDelegationStorageLib.get().entryPoint;
     }
 
     /// @notice Verifies that the key signed over the digest
