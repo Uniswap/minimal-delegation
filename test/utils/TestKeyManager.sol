@@ -10,7 +10,6 @@ import {Vm} from "forge-std/Vm.sol";
 struct TestKey {
     uint40 expiry;
     KeyType keyType;
-    bool isSuperAdmin;
     bytes publicKey;
     // saved to sign messages
     uint256 privateKey;
@@ -43,7 +42,6 @@ library TestKeyManager {
             return TestKey({
                 expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
-                isSuperAdmin: false,
                 publicKey: abi.encodePacked(x, y),
                 privateKey: DEFAULT_SECP256R1_PK
             });
@@ -52,7 +50,6 @@ library TestKeyManager {
             return TestKey({
                 expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
-                isSuperAdmin: false,
                 publicKey: abi.encodePacked(defaultAddress),
                 privateKey: DEFAULT_SECP256K1_PK
             });
@@ -60,7 +57,6 @@ library TestKeyManager {
             return TestKey({
                 expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
-                isSuperAdmin: false,
                 publicKey: abi.encodePacked(DEFAULT_WEBAUTHN_P256_PUBLIC_X, DEFAULT_WEBAUTHN_P256_PUBLIC_Y),
                 privateKey: DEFAULT_WEBAUTHN_P256_PK
             });
@@ -77,7 +73,6 @@ library TestKeyManager {
             return TestKey({
                 expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
-                isSuperAdmin: false,
                 publicKey: abi.encodePacked(x, y),
                 privateKey: seed
             });
@@ -86,7 +81,6 @@ library TestKeyManager {
             return TestKey({
                 expiry: DEFAULT_KEY_EXPIRY,
                 keyType: keyType,
-                isSuperAdmin: false,
                 publicKey: abi.encodePacked(addr),
                 privateKey: seed
             });
@@ -97,24 +91,7 @@ library TestKeyManager {
 
     // Update a Key with a new expiry.
     function withExpiry(TestKey memory key, uint40 expiry) internal pure returns (TestKey memory) {
-        return TestKey({
-            expiry: expiry,
-            keyType: key.keyType,
-            isSuperAdmin: key.isSuperAdmin,
-            publicKey: key.publicKey,
-            privateKey: key.privateKey
-        });
-    }
-
-    // Update a Key with a new super admin status.
-    function withSuperAdmin(TestKey memory key, bool isSuperAdmin) internal pure returns (TestKey memory) {
-        return TestKey({
-            expiry: key.expiry,
-            keyType: key.keyType,
-            isSuperAdmin: isSuperAdmin,
-            publicKey: key.publicKey,
-            privateKey: key.privateKey
-        });
+        return TestKey({expiry: expiry, keyType: key.keyType, publicKey: key.publicKey, privateKey: key.privateKey});
     }
 
     function sign(TestKey memory key, bytes32 hash) internal pure returns (bytes memory) {
@@ -143,7 +120,7 @@ library TestKeyManager {
     }
 
     function toKey(TestKey memory key) internal pure returns (Key memory) {
-        return Key({expiry: key.expiry, keyType: key.keyType, isSuperAdmin: key.isSuperAdmin, publicKey: key.publicKey});
+        return Key({expiry: key.expiry, keyType: key.keyType, publicKey: key.publicKey});
     }
 
     function toKeyHash(TestKey memory key) internal pure returns (bytes32) {
