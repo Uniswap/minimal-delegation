@@ -16,10 +16,19 @@ abstract contract NonceManager is INonceManager {
     }
 
     /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 nonce) public override {
+    function invalidateNonce(uint256 newNonce) public override {
         _onlyThis();
-        _invalidateNonce(nonce);
-        emit NonceInvalidated(nonce);
+        uint192 key = uint192(newNonce >> 64);
+        uint64 currentSeq = uint64(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]);
+        uint64 targetSeq = uint64(newNonce);
+        if (targetSeq <= currentSeq) revert InvalidNonce();
+        // Limit the amount of nonces that can be invalidated in one transaction.
+        unchecked {
+            uint64 delta = targetSeq - currentSeq;
+            if (delta > type(uint16).max) revert ExcessiveInvalidation();
+        }
+        MinimalDelegationStorageLib.get().nonceSequenceNumber[key] = targetSeq;
+        emit NonceInvalidated(newNonce);
     }
 
     /// @notice Validates that the provided nonce is valid and increments the sequence number
@@ -33,23 +42,5 @@ abstract contract NonceManager is INonceManager {
         if (!(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]++ == seq)) {
             revert InvalidNonce();
         }
-    }
-
-    /// @notice Invalidates all sequence numbers for a given key up to but not including the provided sequence number in the nonce
-    /// @param newNonce A 256-bit value where:
-    ///             - Upper 192 bits: the sequence key
-    ///             - Lower 64 bits: the new sequence number to set for the key
-    /// @dev Can't invalidate > 2**16 nonces per transaction.
-    function _invalidateNonce(uint256 newNonce) internal {
-        uint192 key = uint192(newNonce >> 64);
-        uint64 currentSeq = uint64(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]);
-        uint64 targetSeq = uint64(newNonce);
-        if (targetSeq <= currentSeq) revert InvalidNonce();
-        // Limit the amount of nonces that can be invalidated in one transaction.
-        unchecked {
-            uint64 delta = targetSeq - currentSeq;
-            if (delta > type(uint16).max) revert ExcessiveInvalidation();
-        }
-        MinimalDelegationStorageLib.get().nonceSequenceNumber[key] = targetSeq;
     }
 }
