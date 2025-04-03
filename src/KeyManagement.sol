@@ -11,7 +11,7 @@ struct KeyExtraStorage {
 }
 
 /// @dev A base contract for managing keys
-contract KeyManagement is IKeyManagement {
+abstract contract KeyManagement is IKeyManagement {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
 
