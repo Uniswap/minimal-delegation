@@ -53,6 +53,23 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         }
     }
 
+    /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
+    /// UserOperations can be executed through the execute function, but another method of authorization (ie through a passed in signature) is required.
+    /// userOp.callData is abi.encodeCall(IAccountExecute.executeUserOp.selector, (bytes32 mode, bytes executionData)) where executionData is abi.encode(Call[]).
+    function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
+        // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
+        // and must be used to check further on-chain permissions over the call execution.
+        // TODO: Handle keyHash authorization.
+        // (bytes32 keyHash,) = userOp.signature.unwrap();
+
+        // The mode is only passed in to signify the EXEC_TYPE of the calls.
+        (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
+        if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
+        Call[] calldata calls = executionData.decodeCalls();
+
+        _dispatch(mode, calls);
+    }
+
     /// @inheritdoc INonceManager
     function getNonce(uint256 key) public view override returns (uint256 nonce) {
         return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);

@@ -17,6 +17,14 @@ library CalldataDecoder {
     /// error SliceOutOfBounds();
     uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
 
+    /// @notice Removes the selector from the calldata and returns the encoded params.
+    function removeSelector(bytes calldata data) internal pure returns (bytes calldata params) {
+        assembly {
+            params.offset := add(data.offset, 4)
+            params.length := sub(data.length, 4)
+        }
+    }
+
     /// @notice equivalent to abi.decode(data, (uint256, bytes)) in calldata
     /// @return _value A uint256 value
     /// @return _data Bytes data following the uint256 value.

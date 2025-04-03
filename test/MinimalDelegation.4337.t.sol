@@ -12,6 +12,8 @@ import {CallBuilder} from "./utils/CallBuilder.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
+import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
+import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 
 contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHandler {
     using CallBuilder for Call[];
@@ -39,11 +41,10 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        // TODO: encode nonce into opData
-        bytes memory opData = bytes("");
-        bytes memory executionData = abi.encode(calls, opData);
+        /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
+        bytes memory executionData = abi.encode(calls);
         bytes memory callData =
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -63,6 +64,33 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         assertEq(tokenBalanceAfter, tokenBalanceBefore + 1e18);
     }
 
+    function test_handleOps_single_eoaSigner_emits_UserOperationRevertReason() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        bytes memory executionData = abi.encode(calls);
+        bytes memory callData =
+            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+
+        PackedUserOperation memory userOp =
+            UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
+
+        bytes32 digest = entryPoint.getUserOpHash(userOp);
+        userOp.withSignature(signerTestKey.sign(digest));
+
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+
+        vm.expectEmit(true, true, true, true);
+        emit IEntryPoint.UserOperationRevertReason(
+            entryPoint.getUserOpHash(userOp),
+            address(signerAccount),
+            0,
+            abi.encodeWithSelector(IERC7821.UnsupportedExecutionMode.selector)
+        );
+        entryPoint.handleOps(userOps, bundler);
+    }
+
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_handleOps_single_P256_gas() public {
@@ -77,7 +105,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         bytes memory opData = bytes("");
         bytes memory executionData = abi.encode(calls, opData);
         bytes memory callData =
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
