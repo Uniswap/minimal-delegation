@@ -13,7 +13,7 @@ struct KeyExtraStorage {
 struct MinimalDelegationStorage {
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-    mapping(address => uint256) allowance;
+    mapping(address => uint256) allowance; // for 7914
     mapping(uint256 key => uint256 seq) nonceSequenceNumber;
     mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
     address entryPoint;

@@ -7,6 +7,8 @@ interface IERC7914 {
     error AllowanceExceeded();
     /// @notice Thrown when the caller is not an approved spender
     error IncorrectSpender();
+    /// @notice Thrown when the transfer of native tokens fails
+    error TransferNativeFailed();
 
     /// @notice Emitted when a transfer from native is made
     event TransferFromNative(address indexed from, address indexed to, uint256 value);

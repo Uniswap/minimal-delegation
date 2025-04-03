@@ -68,4 +68,37 @@ contract ERC7914Test is DelegationHandler {
         assertEq(alice.balance, aliceBalanceBefore + 1 ether);
         assertEq(address(signerAccount).balance, signerAccountBalanceBefore - 1 ether);
     }
+
+    function test_fuzz_transferFromNative(uint256 balance, uint256 approvedAmount, uint256 transferAmount) public {
+        // ensure there are funds in the signerAccount
+        vm.deal(address(signerAccount), balance);
+        vm.prank(address(signerAccount));
+        bool success = signerAccount.approveNative(alice, approvedAmount);
+        assertEq(signerAccount.allowance(alice), approvedAmount);
+        assertTrue(success);
+
+        uint256 aliceBalanceBefore = alice.balance;
+        uint256 signerAccountBalanceBefore = address(signerAccount).balance;
+
+        vm.prank(alice);
+        // Check if the transfer amount is greater than the approved amount or the balance of the signerAccount
+        // and expect the appropriate revert
+        if (transferAmount > approvedAmount) {
+            vm.expectRevert(IERC7914.AllowanceExceeded.selector);
+        } else if (transferAmount > address(signerAccount).balance) {
+            vm.expectRevert(IERC7914.TransferNativeFailed.selector);
+        }
+        success = signerAccount.transferFromNative(address(signerAccount), alice, transferAmount);
+        // if the transfer was successful, check the balances have updated
+        // otherwise check the balances have not changed
+        if (success) {
+            assertEq(signerAccount.allowance(alice), approvedAmount - transferAmount);
+            assertEq(alice.balance, aliceBalanceBefore + transferAmount);
+            assertEq(address(signerAccount).balance, signerAccountBalanceBefore - transferAmount);
+        } else {
+            assertEq(signerAccount.allowance(alice), approvedAmount);
+            assertEq(alice.balance, aliceBalanceBefore);
+            assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
+        }
+    }
 }

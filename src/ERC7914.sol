@@ -24,16 +24,16 @@ abstract contract ERC7914 is IERC7914 {
     }
 
     /// @inheritdoc IERC7914
-    function transferFromNative(address from, address recipient, uint256 amount) public override returns (bool) {
+    function transferFromNative(address from, address recipient, uint256 amount) external override returns (bool) {
         if (from != address(this)) revert IncorrectSpender();
         if (MinimalDelegationStorageLib.get().allowance[msg.sender] < amount) revert AllowanceExceeded();
         if (amount == 0) return false; // early return for amount == 0
         MinimalDelegationStorageLib.get().allowance[msg.sender] -= amount;
         (bool success,) = payable(recipient).call{value: amount}("");
-        if (success) {
-            emit TransferFromNative(address(this), recipient, amount);
-            return true;
+        if (!success) {
+            revert TransferNativeFailed();
         }
-        return false;
+        emit TransferFromNative(address(this), recipient, amount);
+        return true;
     }
 }
