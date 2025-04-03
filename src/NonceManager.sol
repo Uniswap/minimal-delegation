@@ -11,12 +11,12 @@ abstract contract NonceManager is INonceManager {
     function _onlyThis() internal view virtual {}
 
     /// @inheritdoc INonceManager
-    function getNonce(uint256 key) public view override returns (uint256 nonce) {
+    function getNonce(uint256 key) external view override returns (uint256 nonce) {
         return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
     }
 
     /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 newNonce) public override {
+    function invalidateNonce(uint256 newNonce) external override {
         _onlyThis();
         uint192 key = uint192(newNonce >> 64);
         uint64 currentSeq = uint64(MinimalDelegationStorageLib.get().nonceSequenceNumber[key]);
