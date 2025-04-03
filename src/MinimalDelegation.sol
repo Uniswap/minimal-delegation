@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.29;
 
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {Call, CallLib} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
@@ -13,6 +12,7 @@ import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
+import {ERC7201} from "./ERC7201.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -27,7 +27,10 @@ import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
 
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
+/// @notice Uses custom storage layout according to ERC7201
+/// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
+/// @dev keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff))
+contract MinimalDelegation layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200 is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7201 {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -36,6 +39,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
+
+    address entryPoint;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -110,10 +115,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     }
 
     /// @inheritdoc IERC4337Account
-    function updateEntryPoint(address entryPoint) external {
+    function updateEntryPoint(address _entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = entryPoint;
-        emit EntryPointUpdated(entryPoint);
+        entryPoint = _entryPoint;
+        emit EntryPointUpdated(_entryPoint);
     }
 
     /// @inheritdoc IAccount
@@ -125,7 +130,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
+        IHook hook = keyExtraStorage[keyHash].hook;
         if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
             return hook.validateUserOp(userOp, userOpHash);
         }
@@ -145,7 +150,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
         (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
+        IHook hook = keyExtraStorage[keyHash].hook;
         if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
             return hook.isValidSignature(data, signature);
         }
@@ -157,7 +162,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
 
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
-        return MinimalDelegationStorageLib.get().entryPoint;
+        return entryPoint;
     }
 
     /// @notice Verifies that the key signed over the digest

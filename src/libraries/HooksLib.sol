@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./MinimalDelegationStorage.sol";
 import {IHook} from "../interfaces/IHook.sol";
 
 /// @author Inspired by https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol
