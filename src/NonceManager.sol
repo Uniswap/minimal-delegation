@@ -7,11 +7,20 @@ import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries
 /// @title NonceManager
 /// @notice A contract that manages nonces to prevent replay attacks
 abstract contract NonceManager is INonceManager {
-    /// @inheritdoc INonceManager
-    function getNonce(uint256 key) public view virtual returns (uint256 nonce);
+    /// @dev Must be overridden by the implementation
+    function _onlyThis() internal view virtual {}
 
     /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 nonce) public virtual;
+    function getNonce(uint256 key) public view override returns (uint256 nonce) {
+        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
+    }
+
+    /// @inheritdoc INonceManager
+    function invalidateNonce(uint256 nonce) public override {
+        _onlyThis();
+        _invalidateNonce(nonce);
+        emit NonceInvalidated(nonce);
+    }
 
     /// @notice Validates that the provided nonce is valid and increments the sequence number
     /// @param nonce A 256-bit value where:
