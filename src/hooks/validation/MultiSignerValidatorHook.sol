@@ -34,11 +34,11 @@ contract MultiSignerValidatorHook is IHook {
         requiredSigners[_accountKeyHash(keyHash)].add(signerKeyHash);
     }
 
-    function validateUserOp(PackedUserOperation calldata, bytes32) external view returns (uint256) {
+    function validateUserOp(PackedUserOperation calldata, bytes32) external pure returns (uint256) {
         revert("Not implemented");
     }
 
-    function isValidSignature(bytes32, bytes calldata) external view returns (bytes4) {
+    function isValidSignature(bytes32, bytes calldata) external pure returns (bytes4) {
         revert("Not implemented");
     }
 
