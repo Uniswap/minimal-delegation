@@ -136,14 +136,14 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
 
-    // Execute can contain a self call which authorizes a new key even if the caller is untrusted as long as the signature is valid
+    // Execute can contain a self call which registers a new key even if the caller is untrusted as long as the signature is valid
     function test_execute_opData_eoaSigner_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         Call[] memory calls = CallBuilder.init();
-        Call memory authorizeCall =
-            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, p256Key.toKey()));
-        calls = calls.push(authorizeCall);
+        Call memory registerCall =
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, p256Key.toKey()));
+        calls = calls.push(registerCall);
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
 
         // TODO: remove 0 nonce
@@ -159,12 +159,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
 
         vm.prank(address(signerAccount));
-        signerAccount.authorize(p256Key.toKey());
+        signerAccount.register(p256Key.toKey());
 
         Call[] memory calls = CallBuilder.init();
-        Call memory authorizeCall =
-            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.authorize.selector, secp256k1Key.toKey()));
-        calls = calls.push(authorizeCall);
+        Call memory registerCall =
+            Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, secp256k1Key.toKey()));
+        calls = calls.push(registerCall);
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
 
         // Sign using the registered P256 key
@@ -362,7 +362,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
 
         vm.startPrank(address(signer));
-        signerAccount.authorize(p256Key.toKey());
+        signerAccount.register(p256Key.toKey());
 
         // TODO: remove 0 nonce
         bytes memory packedSignature =
