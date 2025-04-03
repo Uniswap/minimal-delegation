@@ -28,6 +28,7 @@ import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
 import {Static} from "./libraries/Static.sol";
+import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
 contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
@@ -38,6 +39,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
+    using EntrypointLib for uint256;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -126,14 +128,14 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = _packEntryPoint(entryPoint);
+        MinimalDelegationStorageLib.get().entryPoint = EntrypointLib.pack(entryPoint);
         emit EntryPointUpdated(entryPoint);
     }
 
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
         uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
-        return _isEntryPointSet(packedEntryPoint) ? address(uint160(packedEntryPoint)) : Static.ENTRY_POINT_V_0_8;
+        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
