@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
+import {HookHandler} from "./utils/HookHandler.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
@@ -19,7 +20,7 @@ import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
 
-contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, ExecuteHandler {
+contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, ExecuteHandler, HookHandler {
     using TestKeyManager for TestKey;
     using KeyLib for Key;
     using CallBuilder for Call[];
@@ -31,6 +32,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     function setUp() public {
         setUpDelegation();
         setUpTokens();
+        setUpHooks();
 
         vm.deal(address(signerAccount), 100e18);
         tokenA.mint(address(signerAccount), 100e18);
@@ -245,6 +247,36 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         // Verify the nonce was incremented - sequence should increase by 1
         uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
         assertEq(signerAccount.getNonce(key), expectedNextNonce);
+    }
+
+    function test_execute_batch_opData_withHook_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.prank(address(signerAccount));
+        signerAccount.authorize(p256Key.toKey());
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        uint192 key = 0;
+        uint256 nonce = signerAccount.getNonce(key);
+
+        // Signature over a wrong digest
+        bytes memory signature = p256Key.sign(bytes32(0));
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature);
+        bytes memory executionData = abi.encode(calls, abi.encode(nonce, wrappedSignature));
+
+        // Expect the signature to be invalid (because it is)
+        vm.expectRevert(IERC7821.InvalidSignature.selector);
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+
+        // Expect the signature to be valid after adding the hook
+        vm.prank(address(signerAccount));
+        signerAccount.setHook(p256Key.toKeyHash(), mockValidationHook);
+        mockValidationHook.setVerifySignatureReturnValue(true);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
     function test_execute_batch_opData_revertsWithInvalidNonce() public {

@@ -8,4 +8,9 @@ interface IHook is IERC1271 {
     /// @notice Validates a user operation
     /// Does not require passing in missingAccountFunds like the IAccount interface
     function validateUserOp(PackedUserOperation calldata, bytes32) external view returns (uint256);
+
+    /// @notice Verifies a signature over a digest
+    /// @param digest The digest to verify the signature over
+    /// @param wrappedSignature The wrapped signature to verify, equivalent to abi.encodePacked(keyHash, signature)
+    function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view returns (bool);
 }
