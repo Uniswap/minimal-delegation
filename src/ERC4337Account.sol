@@ -6,9 +6,9 @@ import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 abstract contract ERC4337Account is IERC4337Account {
     uint256 internal constant SIG_VALIDATION_SUCCEEDED = 0;
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
+    uint256 internal constant ENTRY_POINT_SET = 1 << 255;
 
     modifier onlyEntryPoint() {
-        /// By default, the entry point is the zero address, so this is not an enabled feature.
         if (msg.sender != ENTRY_POINT()) revert NotEntryPoint();
         _;
     }
@@ -24,4 +24,15 @@ abstract contract ERC4337Account is IERC4337Account {
     }
 
     function ENTRY_POINT() public view virtual returns (address);
+
+    /// @notice Packs the entry point into a uint256.
+    /// @dev Set the most significant bit to 1 to indicate that the entrypoint has been set by the user.
+    function _packEntryPoint(address entryPoint) internal pure returns (uint256) {
+        return uint256(uint160(entryPoint)) | ENTRY_POINT_SET;
+    }
+
+    /// @notice Checks if the entry point has been set by the user.
+    function _isEntryPointSet(uint256 packedEntryPoint) internal pure returns (bool) {
+        return packedEntryPoint & ENTRY_POINT_SET != 0;
+    }
 }
