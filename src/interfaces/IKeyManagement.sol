@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Key} from "../libraries/KeyLib.sol";
+import {IHook} from "./IHook.sol";
 
 interface IKeyManagement {
     /// @dev Emitted when a key is authorized.
@@ -27,4 +28,7 @@ interface IKeyManagement {
 
     /// @dev Returns the key corresponding to the `keyHash`. Reverts if the key does not exist.
     function getKey(bytes32 keyHash) external view returns (Key memory key);
+
+    /// @dev Sets a hook for a key
+    function setHook(bytes32 keyHash, IHook hook) external;
 }
