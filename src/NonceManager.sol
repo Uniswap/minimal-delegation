@@ -5,7 +5,7 @@ import {INonceManager} from "./interfaces/INonceManager.sol";
 
 /// @title NonceManager
 /// @notice A contract that manages nonces to prevent replay attacks
-contract NonceManager is INonceManager {
+abstract contract NonceManager is INonceManager {
     mapping(uint256 key => uint256 seq) nonceSequenceNumber;
 
     /// @dev Must be overridden by the implementation
