@@ -7,10 +7,9 @@ abstract contract ERC4337Account is IERC4337Account {
     uint256 internal constant SIG_VALIDATION_SUCCEEDED = 0;
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
-    address public constant ENTRY_POINT_V_0_8 = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
-
     modifier onlyEntryPoint() {
-        if (msg.sender != ENTRY_POINT_V_0_8) revert NotEntryPoint();
+        /// By default, the entry point is the zero address, so this is not an enabled feature.
+        if (msg.sender != ENTRY_POINT()) revert NotEntryPoint();
         _;
     }
 
@@ -23,4 +22,6 @@ abstract contract ERC4337Account is IERC4337Account {
             }
         }
     }
+
+    function ENTRY_POINT() public view virtual returns (address);
 }
