@@ -47,6 +47,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
             _authorizeOpData(mode, calls, opData);
             _dispatch(mode, calls);
+        } else if (mode.isBatchOfBatches()) {
+            
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -106,7 +108,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return mode.isBatchedCall() || mode.supportsOpData();
+        return mode.isBatchedCall() || mode.supportsOpData() || mode.isBatchOfBatches();
     }
 
     /// @inheritdoc IERC4337Account
