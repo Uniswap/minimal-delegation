@@ -7,10 +7,6 @@ import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
-struct KeyExtraStorage {
-    IHook hook;
-}
-
 /// @dev A base contract for managing keys
 abstract contract KeyManagement is IKeyManagement {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
