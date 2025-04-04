@@ -53,7 +53,7 @@ contract MultiSignerValidatorHook is BaseNoopHook {
         returns (bytes4, bool isValid)
     {
         (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
-        AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
+        AccountKeyHash accountKeyHash = keyHash.wrap();
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 

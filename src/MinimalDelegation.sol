@@ -53,21 +53,9 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             _onlyThis();
             _dispatch(mode, calls, bytes32(0));
         } else if (mode.supportsOpData()) {
-            require(msg.sender != ENTRY_POINT(), "Entrypoint cannot call execute");
-
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
-            // Create temporary struct
-            ExecutionData memory executeStruct = ExecutionData({calls: calls});
-            // Decode the nonce and signature
-            (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-            // TODO: useNonce
-
-            // Unwrap the signature
-            (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-
-            _verifySignature(_hashTypedData(executeStruct.hash()), keyHash, signature);
-
-            _dispatch(mode, calls, keyHash);
+            _authorizeOpData(mode, calls, opData);
+            _dispatch(mode, calls);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -124,18 +112,14 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function _execute(Call calldata _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
         address to = _call.to == address(0) ? address(this) : _call.to;
 
-        IHook hook = HookLib.get(keyHash, HookFlags.BEFORE_EXECUTE);
-        bytes memory hookData;
-        if (address(hook) != address(0)) {
-            hookData = hook.preExecutionHook(keyHash, to, _call.data);
+        IHook hook = keySettings[keyHash].hook();
+        if(hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
+            hook.beforeExecute(keyHash, to, _call.data);
         }
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        hook = HookLib.get(keyHash, HookFlags.AFTER_EXECUTE);
-        if (address(hook) != address(0)) {
-            hook.postExecutionHook(keyHash, hookData);
-        }
+        if(hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.afterExecute(keyHash, output);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {

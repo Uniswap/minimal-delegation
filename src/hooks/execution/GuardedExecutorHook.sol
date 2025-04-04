@@ -79,7 +79,7 @@ contract GuardedExecutorHook is BaseNoopHook, IGuardedExecutorHook {
         return false;
     }
 
-    function preExecutionHook(bytes32 keyHash, address to, bytes calldata data)
+    function beforeExecute(bytes32 keyHash, address to, bytes calldata data)
         external
         view
         override

@@ -50,4 +50,19 @@ library HooksLib {
         if (hookSelector != IHook.overrideVerifySignature.selector) revert InvalidHookResponse();
         return result;
     }
+
+    function beforeExecute(IHook self, bytes32 keyHash, address to, bytes calldata data)
+        internal
+        returns (bytes memory result)
+    {
+        bytes4 hookSelector;
+        (hookSelector, result) = self.beforeExecute(keyHash, to, data);
+        if (hookSelector != IHook.beforeExecute.selector) revert InvalidHookResponse();
+        return result;
+    }
+
+    function afterExecute(IHook self, bytes32 keyHash, bytes calldata beforeExecuteData) internal {
+        bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
+        if (hookSelector != IHook.afterExecute.selector) revert InvalidHookResponse();
+    }
 }
