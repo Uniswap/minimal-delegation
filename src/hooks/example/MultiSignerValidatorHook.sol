@@ -52,21 +52,21 @@ contract MultiSignerValidatorHook is IHook {
         emit RequiredSignerAdded(keyHash, signerKeyHash);
     }
 
-    function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash) external view returns (uint256) {
+    function overrideValidateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash) external view returns (uint256) {
         (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = userOp.signature.unwrap();
         // TODO: return correct validationData
         return _hasAllRequiredSignatures(keyHash, userOpHash, wrappedSignerSignatures) ? 0 : 1;
     }
 
-    function isValidSignature(bytes32 digest, bytes calldata hookData) external view returns (bytes4) {
-        (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = hookData.unwrap();
+    function overrideIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bytes4) {
+        (bytes[] memory wrappedSignerSignatures) = hookData.unwrap();
         return _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
             ? _1271_MAGIC_VALUE
             : _1271_INVALID_VALUE;
     }
 
-    function verifySignature(bytes32 digest, bytes calldata hookData) external view returns (bool isValid) {
-        (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = hookData.unwrap();
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bool isValid) {
+        (bytes[] memory wrappedSignerSignatures) = hookData.unwrap();
         return _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures);
     }
 
@@ -90,9 +90,11 @@ contract MultiSignerValidatorHook is IHook {
 
             // break if any signatures are invalid
             if (!isValid) {
-                return false;
+                return (IHook.overrideVerifySignature.selector, false);
             }
         }
+
+        return (IHook.overrideVerifySignature.selector, true);
     }
 
     /// @notice Hash a call with the sender's account address
