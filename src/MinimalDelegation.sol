@@ -17,7 +17,6 @@ import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {NonceManager} from "./NonceManager.sol";
-import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
@@ -27,6 +26,9 @@ import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
+import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
+import {Static} from "./libraries/Static.sol";
+import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
 contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
@@ -37,6 +39,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
+    using SettingsLib for Settings;
+    using EntrypointLib for uint256;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -70,43 +74,22 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _dispatch(mode, calls);
     }
 
-    /// @inheritdoc INonceManager
-    function getNonce(uint256 key) public view override returns (uint256 nonce) {
-        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
-    }
-
-    /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 nonce) public override {
-        _onlyThis();
-        _invalidateNonce(nonce);
-        emit NonceInvalidated(nonce);
-    }
-
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
-        if (msg.sender == ENTRY_POINT()) {
-            // TODO: check nonce and parse out key hash from opData if desired to usein future
-            // short circuit because entrypoint is already verified using validateUserOp
-            return;
-        }
-
-        // TODO: Can switch on mode to handle different types of authorization, or decoding of opData.
         (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
         ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
+        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
 
+        /// TODO: Handle key expiry check.
         bytes32 digest = _hashTypedData(executionData.hash());
 
-        bool isValid;
-        if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
-            isValid = hook.verifySignature(digest, wrappedSignature);
-        } else {
-            isValid = _verifySignature(digest, keyHash, signature);
-        }
+        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
+            ? hook.verifySignature(digest, wrappedSignature)
+            : _verifySignature(digest, keyHash, signature);
 
         if (!isValid) revert IERC7821.InvalidSignature();
     }
@@ -135,8 +118,14 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = entryPoint;
+        MinimalDelegationStorageLib.get().entryPoint = EntrypointLib.pack(entryPoint);
         emit EntryPointUpdated(entryPoint);
+    }
+
+    /// @inheritdoc IERC4337Account
+    function ENTRY_POINT() public view override returns (address) {
+        uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
+        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
@@ -148,48 +137,58 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
-        if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
-            return hook.validateUserOp(userOp, userOpHash);
-        }
+        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
 
+        /// TODO: Handle key expiry check.
+        validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
+            ? hook.validateUserOp(keyHash, userOp, userOpHash)
+            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash);
+    }
+
+    /// TODO: This is left as an internal function to handle wrapping the returned validation data accoring to ERC-4337 spec.
+    function _handleValidateUserOp(
+        bytes32 keyHash,
+        bytes calldata signature,
+        PackedUserOperation calldata,
+        bytes32 userOpHash
+    ) private view returns (uint256 validationData) {
+        Key memory key = _getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
-        if (_verifySignature(userOpHash, keyHash, signature)) return SIG_VALIDATION_SUCCEEDED;
+        if (key.verify(userOpHash, signature)) return SIG_VALIDATION_SUCCEEDED;
         else return SIG_VALIDATION_FAILED;
     }
 
-    function _onlyThis() internal view override {
+    function _onlyThis() internal view override(KeyManagement, NonceManager) {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
     /// @inheritdoc ERC1271
-    function isValidSignature(bytes32 data, bytes calldata signature) public view override returns (bytes4 result) {
-        (bytes32 keyHash, bytes calldata _signature) = signature.unwrap();
-
-        IHook hook = MinimalDelegationStorageLib.getKeyExtraStorage(keyHash).hook;
-        if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
-            return hook.isValidSignature(data, signature);
-        }
-
-        /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
-        if (_verifySignature(_hashTypedData(data.hashWithWrappedType()), keyHash, _signature)) return _1271_MAGIC_VALUE;
-        return _1271_INVALID_VALUE;
-    }
-
-    /// @inheritdoc IERC4337Account
-    function ENTRY_POINT() public view override returns (address) {
-        return MinimalDelegationStorageLib.get().entryPoint;
-    }
-
-    /// @notice Verifies that the key signed over the digest
-    function _verifySignature(bytes32 digest, bytes32 keyHash, bytes calldata signature)
-        internal
+    function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
+        public
         view
-        returns (bool isValid)
+        override
+        returns (bytes4 result)
+    {
+        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+
+        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+
+        result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
+            ? hook.isValidSignature(keyHash, data, signature)
+            : _handleIsValidSignature(keyHash, data, signature);
+    }
+
+    function _handleIsValidSignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
+        private
+        view
+        returns (bytes4 result)
     {
         Key memory key = _getKey(keyHash);
-        isValid = key.verify(digest, signature);
+        if (key.verify(_hashTypedData(data.hashWithWrappedType()), signature)) {
+            return _1271_MAGIC_VALUE;
+        }
+        return _1271_INVALID_VALUE;
     }
 }

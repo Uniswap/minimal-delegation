@@ -21,15 +21,15 @@ contract MockValidationHook is IHook {
         _validateUserOpReturnValue = returnValue;
     }
 
-    function verifySignature(bytes32, bytes calldata) external view virtual returns (bool) {
-        return _verifySignatureReturnValue;
+    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
+        external
+        view
+        returns (bytes4, uint256)
+    {
+        return (IHook.overrideValidateUserOp.selector, _validateUserOpReturnValue);
     }
 
-    function isValidSignature(bytes32, bytes calldata) external view virtual returns (bytes4) {
-        return _isValidSignatureReturnValue;
-    }
-
-    function validateUserOp(PackedUserOperation calldata, bytes32) external view virtual returns (uint256) {
-        return _validateUserOpReturnValue;
+    function overrideIsValidSignature(bytes32, bytes32, bytes calldata) external view returns (bytes4, bytes4) {
+        return (IHook.overrideIsValidSignature.selector, _isValidSignatureReturnValue);
     }
 }
