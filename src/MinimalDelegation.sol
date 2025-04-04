@@ -26,6 +26,7 @@ import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
+import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
@@ -48,7 +49,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
 
     uint256 public packedEntrypoint;
 
-    function execute(bytes32 mode, bytes calldata executionData) external payable override {
+    function execute(bytes32 mode, bytes calldata executionData) public payable override {
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _onlyThis();
@@ -58,6 +59,11 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
             _authorizeOpData(mode, calls, opData);
             _dispatch(mode, calls);
+        } else if (mode.isBatchOfBatches()) {
+            bytes[] calldata executeDataArray = executionData.decodeBytesArray();
+            for (uint256 i = 0; i < executeDataArray.length; i++) {
+                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT, executeDataArray[i]);
+            }
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -118,7 +124,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return mode.isBatchedCall() || mode.supportsOpData();
+        return mode.isBatchedCall() || mode.supportsOpData() || mode.isBatchOfBatches();
     }
 
     /// @inheritdoc IERC4337Account
