@@ -157,7 +157,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, p256Key.toKey()));
         calls = calls.push(registerCall);
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
@@ -181,7 +181,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, secp256k1Key.toKey()));
         calls = calls.push(registerCall);
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
@@ -201,7 +201,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         // Get the current nonce components for key 0
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
@@ -234,7 +234,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // Get the current nonce components for key 0
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
@@ -269,7 +269,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Signature over a wrong digest
@@ -297,7 +297,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         // Get the current nonce components for key 0
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
@@ -385,7 +385,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
@@ -405,7 +405,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
@@ -429,7 +429,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
@@ -448,7 +448,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
@@ -468,7 +468,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // Get the current nonce components for key 0
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
@@ -497,7 +497,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         // Get the current nonce components for key 0
-        uint192 nonceKey = 0;
+        uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it

@@ -48,7 +48,7 @@ contract MinimalDelegationStorageTest is DelegationHandler {
     }
 
     function test_nonceSequenceNumber_nested_key() public {
-        uint192 nonceKey = 1;
+        uint256 nonceKey = 1;
 
         vm.record();
         signerAccount.getSeq(nonceKey);
