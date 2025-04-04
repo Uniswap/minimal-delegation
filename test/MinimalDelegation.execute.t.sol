@@ -195,6 +195,51 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(signerAccount.getKey(secp256k1Key.toKeyHash()).hash(), secp256k1Key.toKeyHash());
     }
 
+    // Root EOA using key.hash() will revert with KeyDoesNotExist
+    function test_execute_batch_opData_rootEOA_withKeyHash_reverts() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+
+        uint256 nonceKey = 0;
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
+
+        // Create hash of the calls + nonce and sign it
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signature);
+
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
+
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+    }
+
+    // Root EOA must use bytes32(0) as their keyHash 
+    function test_execute_batch_opData_rootEOA_withKeyHashZero_succeeds() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+
+        uint256 nonceKey = 0;
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
+
+        // Create hash of the calls + nonce and sign it
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes memory wrappedSignature = abi.encode(bytes32(0), signature);
+
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
+
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
     function test_execute_batch_opData_twoCalls_succeeds() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
@@ -229,7 +274,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
-    function test_execute_batch_opData_singeCall_succeeds() public {
+    function test_execute_batch_opData_singleCall_succeeds() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
