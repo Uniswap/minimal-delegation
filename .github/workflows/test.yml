@@ -43,3 +43,5 @@ jobs:
         run: |
           forge test -vvv
         id: test
+        env:
+          FORGE_SNAPSHOT_CHECK: true
