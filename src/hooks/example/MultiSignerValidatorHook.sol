@@ -41,7 +41,11 @@ contract MultiSignerValidatorHook is IHook {
         emit RequiredSignerAdded(keyHash, signerKeyHash);
     }
 
-    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash) external view returns (bytes4, uint256) {
+    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash)
+        external
+        view
+        returns (bytes4, uint256)
+    {
         (bytes[] memory wrappedSignerSignatures) = abi.decode(userOp.signature, (bytes[]));
         // TODO: return correct validationData
         return (
@@ -50,7 +54,11 @@ contract MultiSignerValidatorHook is IHook {
         );
     }
 
-    function overrideIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bytes4, bytes4) {
+    function overrideIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
+        external
+        view
+        returns (bytes4, bytes4)
+    {
         (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
         return (
             IHook.overrideIsValidSignature.selector,
@@ -60,11 +68,14 @@ contract MultiSignerValidatorHook is IHook {
         );
     }
 
-    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bytes4, bool isValid) {
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
+        external
+        view
+        returns (bytes4, bool isValid)
+    {
         (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
         return (
-            IHook.overrideVerifySignature.selector,
-            _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
+            IHook.overrideVerifySignature.selector, _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
         );
     }
 

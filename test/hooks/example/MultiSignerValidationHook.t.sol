@@ -81,9 +81,7 @@ contract MultiSignerValidationHookTest is DelegationHandler, HookHandler {
 
         vm.expectRevert(SignerNotRegistered.selector);
         vm.prank(address(signerAccount));
-        (bytes4 selector, bool isValid) = hook.overrideVerifySignature(baseKey.toKeyHash(), digest, hookData);
-        assertEq(selector, IHook.overrideVerifySignature.selector);
-        assertEq(isValid, false);
+        hook.overrideVerifySignature(baseKey.toKeyHash(), digest, hookData);
     }
 
     function test_verifySignature_withInvalidSignatures_returnsFalse() public {
