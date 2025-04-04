@@ -18,7 +18,7 @@ abstract contract KeyManagement is IKeyManagement {
 
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-    mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
+    mapping(bytes32 keyHash => Settings settings) keySettings;
 
     /// @dev Must be overridden by the implementation
     function _onlyThis() internal view virtual {}
@@ -29,19 +29,16 @@ abstract contract KeyManagement is IKeyManagement {
 
         bytes32 keyHash = key.hash();
         // If the keyHash already exists, it does not revert and updates the key instead.
-        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
-        minimalDelegationStorage.keyStorage[keyHash] = abi.encode(key);
-        minimalDelegationStorage.keyHashes.add(keyHash);
+        keyStorage[keyHash] = abi.encode(key);
+        keyHashes.add(keyHash);
 
         emit Registered(keyHash, key);
     }
 
     function update(bytes32 keyHash, Settings settings) external {
         _onlyThis();
-        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
-        if (!minimalDelegationStorage.keyHashes.contains(keyHash)) revert KeyDoesNotExist();
-
-        minimalDelegationStorage.keySettings[keyHash] = settings;
+        if (!keyHashes.contains(keyHash)) revert KeyDoesNotExist();
+        keySettings[keyHash] = settings;
     }
 
     /// @inheritdoc IKeyManagement
@@ -68,15 +65,14 @@ abstract contract KeyManagement is IKeyManagement {
 
     /// @inheritdoc IKeyManagement
     function getKeySettings(bytes32 keyHash) external view returns (Settings) {
-        return MinimalDelegationStorageLib.get().keySettings[keyHash];
+        return keySettings[keyHash];
     }
 
     function _revoke(bytes32 keyHash) internal {
-        MinimalDelegationStorage storage minimalDelegationStorage = MinimalDelegationStorageLib.get();
-        delete minimalDelegationStorage.keyStorage[keyHash];
-        minimalDelegationStorage.keySettings[keyHash] = SettingsLib.DEFAULT;
+        delete keyStorage[keyHash];
+        keySettings[keyHash] = SettingsLib.DEFAULT;
 
-        if (!minimalDelegationStorage.keyHashes.remove(keyHash)) {
+        if (!keyHashes.remove(keyHash)) {
             revert KeyDoesNotExist();
         }
     }

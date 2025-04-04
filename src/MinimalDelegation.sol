@@ -43,6 +43,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
     using EntrypointLib for *;
+    using SettingsLib for Settings;
 
     uint256 public packedEntrypoint;
 
@@ -133,7 +134,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = keyExtraStorage[keyHash].hook;
+        IHook hook = keySettings[keyHash].hook();
 
         /// TODO: Handle key expiry check.
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
@@ -169,7 +170,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     {
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-        IHook hook = keyExtraStorage[keyHash].hook;
+        IHook hook = keySettings[keyHash].hook();
 
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
             ? hook.isValidSignature(keyHash, data, signature)
