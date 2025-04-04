@@ -5,8 +5,8 @@ pragma solidity ^0.8.0;
 interface IERC7914 {
     /// @notice Thrown when the caller's allowance is exceeded when transferring
     error AllowanceExceeded();
-    /// @notice Thrown when the caller is not an approved spender
-    error IncorrectSpender();
+    /// @notice Thrown when the sender is not the expected one
+    error IncorrectSender();
     /// @notice Thrown when the transfer of native tokens fails
     error TransferNativeFailed();
 
@@ -14,7 +14,9 @@ interface IERC7914 {
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     /// @notice Emitted when a native approval is made
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
-        /// @notice Emitted when a transient native approval is made
+    /// @notice Emitted when a transfer from native transient is made
+    event TransferFromNativeTransient(address indexed from, address indexed to, uint256 value);
+    /// @notice Emitted when a transient native approval is made
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
 
     /// @notice Returns the allowance of a spender
@@ -28,6 +30,9 @@ interface IERC7914 {
 
     /// @notice Approves a spender to transfer native tokens on behalf of the caller
     function approveNative(address spender, uint256 amount) external returns (bool);
+
+    /// @notice Transfers native tokens from the caller to a recipient with transient storage
+    function transferFromNativeTransient(address from, address recipient, uint256 amount) external returns (bool);
 
     /// @notice Approves a spender to transfer native tokens on behalf of the caller with transient storage
     function approveNativeTransient(address spender, uint256 amount) external returns (bool);

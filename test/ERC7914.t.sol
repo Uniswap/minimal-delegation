@@ -33,7 +33,7 @@ contract ERC7914Test is DelegationHandler {
     }
 
     function test_transferFromNative_revertsWithIncorrectSpender() public {
-        vm.expectRevert(IERC7914.IncorrectSpender.selector);
+        vm.expectRevert(IERC7914.IncorrectSender.selector);
         signerAccount.transferFromNative(alice, recipient, 1 ether);
     }
 
