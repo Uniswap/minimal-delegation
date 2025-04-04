@@ -199,7 +199,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.keyCount(), 1);
     }
 
-    function test_entryPoint_defaultValue() public {
+    function test_entryPoint_defaultValue() public view {
         assertEq(signerAccount.ENTRY_POINT(), Constants.ENTRY_POINT_V_0_8);
     }
 

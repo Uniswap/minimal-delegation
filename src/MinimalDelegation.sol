@@ -151,7 +151,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         bytes calldata signature,
         PackedUserOperation calldata,
         bytes32 userOpHash
-    ) private returns (uint256 validationData) {
+    ) private view returns (uint256 validationData) {
         Key memory key = _getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
