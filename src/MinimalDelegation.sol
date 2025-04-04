@@ -21,6 +21,7 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
+import {ERC7914} from "./ERC7914.sol";
 import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
@@ -33,7 +34,7 @@ import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 /// @notice Uses custom storage layout according to ERC7201
 /// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
 /// @dev keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff))
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200 { 
+contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7914, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200 { 
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -165,7 +166,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         else return SIG_VALIDATION_FAILED;
     }
 
-    function _onlyThis() internal view override(KeyManagement, NonceManager) {
+    function _onlyThis() internal view override(KeyManagement, NonceManager, ERC7914) {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
