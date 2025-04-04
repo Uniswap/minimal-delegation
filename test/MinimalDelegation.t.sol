@@ -74,7 +74,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
 
-        keySettings = Settings.wrap(0).fromExpiration(uint40(block.timestamp + 3600));
+        keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
         // already registered key should be updated
         signerAccount.update(keyHash, keySettings);
 
@@ -241,7 +241,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes memory signature = p256Key.sign(bytes32(0));
 
         vm.startPrank(address(signerAccount));
-        Settings keySettings = Settings.wrap(0).fromHook(mockValidationHook);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
         signerAccount.register(p256Key.toKey());
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         vm.stopPrank();

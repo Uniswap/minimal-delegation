@@ -8,7 +8,7 @@ import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {TestKeyManager} from "./utils/TestKeyManager.sol";
-import {Settings} from "../src/libraries/SettingsLib.sol";
+import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler {
@@ -132,7 +132,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
-        signerAccount.update(keyHash, Settings.wrap(0).fromHook(mockValidationHook));
+        signerAccount.update(keyHash, SettingsBuilder.init().fromHook(mockValidationHook));
 
         bytes32 testDigest = keccak256("Test");
         bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());

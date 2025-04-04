@@ -11,31 +11,31 @@ contract SettingsLibTest is Test {
     using SettingsLib for Settings;
 
     function test_settings_default_values() public pure {
-        Settings settings = Settings.wrap(0);
+        Settings settings = SettingsBuilder.init(); // (Settings.wrap(0))
         assertEq(settings.expiration(), 0);
         assertEq(settings.isAdmin(), false);
         assertEq(address(settings.hook()), address(0));
     }
 
     function test_expiration_fuzz(uint40 expiration) public pure {
-        Settings settings = Settings.wrap(0).fromExpiration(expiration);
+        Settings settings = SettingsBuilder.init().fromExpiration(expiration);
         assertEq(settings.expiration(), expiration);
     }
 
     function test_isAdmin() public pure {
         bool isAdmin = true;
-        Settings settings = Settings.wrap(0).fromIsAdmin(isAdmin);
+        Settings settings = SettingsBuilder.init().fromIsAdmin(isAdmin);
         assertEq(settings.isAdmin(), isAdmin);
     }
 
     function test_hook() public pure {
         IHook hook = IHook(address(1));
-        Settings settings = Settings.wrap(0).fromHook(hook);
+        Settings settings = SettingsBuilder.init().fromHook(hook);
         assertEq(address(settings.hook()), address(hook));
     }
 
     function test_hook_fuzz(IHook hook) public pure {
-        Settings settings = Settings.wrap(0).fromHook(hook);
+        Settings settings = SettingsBuilder.init().fromHook(hook);
         assertEq(address(settings.hook()), address(hook));
     }
 }

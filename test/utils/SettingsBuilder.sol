@@ -11,6 +11,10 @@ library SettingsBuilder {
     uint256 constant CLEAR_5_BYTES = uint256(0xFFFFFFFFFFFFFF0000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
     uint256 constant CLEAR_1_BYTE = uint256(0xFFFFFFFFFFFF00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
 
+    function init() internal pure returns (Settings) {
+        return Settings.wrap(0);
+    }
+
     function fromExpiration(Settings settings, uint40 expiration) internal pure returns (Settings) {
         uint256 _settings = (Settings.unwrap(settings) & CLEAR_5_BYTES) | (uint256(expiration) << 160);
         return Settings.wrap(_settings);

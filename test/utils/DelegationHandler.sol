@@ -9,7 +9,7 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 import {Constants} from "./Constants.sol";
-import {Settings} from "../../src/libraries/SettingsLib.sol";
+import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./SettingsBuilder.sol";
 
 contract DelegationHandler is Test {
@@ -26,12 +26,12 @@ contract DelegationHandler is Test {
 
     address mockSecp256k1PublicKey = makeAddr("mockSecp256k1PublicKey");
     Key public mockSecp256k1Key = Key(KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
-    Settings public mockSecp256k1KeySettings = Settings.wrap(0).fromExpiration(0);
+    Settings public mockSecp256k1KeySettings = SettingsBuilder.init().fromExpiration(0);
 
     address mockSecp256k1PublicKey2 = makeAddr("mockSecp256k1PublicKey2");
     // May need to remove block.timestamp in the future if using vm.roll / warp
     Key public mockSecp256k1Key2 = Key(KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey2));
-    Settings public mockSecp256k1Key2Settings = Settings.wrap(0).fromExpiration(uint40(block.timestamp + 3600));
+    Settings public mockSecp256k1Key2Settings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
 
     EntryPoint public entryPoint;
 
