@@ -12,6 +12,9 @@ remappings = [
     "webauthn-sol/=lib/webauthn-sol/"
 ]
 
+[profile.default.invariant]
+fail_on_revert = true
+
 [profile.default.fuzz]
 runs = 1000
 

@@ -23,19 +23,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         setUpHooks();
     }
 
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_authorize_gas() public {
-        bytes32 keyHash = mockSecp256k1Key.hash();
-
-        vm.expectEmit(true, false, false, true);
-        emit Authorized(keyHash, mockSecp256k1Key);
-
-        vm.prank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
-        vm.snapshotGasLastCall("authorize");
-    }
-
     function test_authorize() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
@@ -78,6 +65,19 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         // key count should remain the same
         assertEq(signerAccount.keyCount(), 1);
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_authorize_gas() public {
+        bytes32 keyHash = mockSecp256k1Key.hash();
+
+        vm.expectEmit(true, false, false, true);
+        emit Authorized(keyHash, mockSecp256k1Key);
+
+        vm.prank(address(signerAccount));
+        signerAccount.authorize(mockSecp256k1Key);
+        vm.snapshotGasLastCall("authorize");
     }
 
     /// forge-config: default.isolate = true
