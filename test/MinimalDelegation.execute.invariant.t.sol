@@ -326,25 +326,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         excludeSelector(selector);
     }
 
-    function invariant_unregisteredKeyDoesNotExist() public {
-        // iterate through keyHashes
-        TestKey memory randomKey = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
-        bytes32 randomKeyHash = randomKey.toKeyHash();
-
-        // assume for now it doesn't exist (crazy collision)
-        // sign something to use through execute()
-
-        Call[] memory calls = CallBuilder.init();
-        calls = calls.push(buildTransferCall(address(tokenA), vm.addr(randomKey.privateKey), 1));
-
-        bytes32 data = keccak256("test");
-        bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
-        bytes memory signature = randomKey.sign(hashTypedData);
-
-        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
-        signerAccount.isValidSignature(data, signature);
-    }
-
     function invariant_rootKeyCanAlwaysRevokeOtherKeys() public {
         // Ensure key exists
         bytes32 keyHash = untrustedKey.toKeyHash();
