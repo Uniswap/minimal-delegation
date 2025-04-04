@@ -21,7 +21,7 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
-import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
@@ -36,7 +36,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
-    using ExecutionDataLib for ExecutionData;
+    using CallLib for Call[];
+    using SignedCallsLib for SignedCalls;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
     using SettingsLib for Settings;
@@ -78,8 +79,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
-        ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 digest = _hashTypedData(executionData.hash());
+
+        bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         Key memory key = _getKey(keyHash);

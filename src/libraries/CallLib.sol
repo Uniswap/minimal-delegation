@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {SignedCalls} from "./SignedCallsLib.sol";
+
 struct Call {
     address to;
     uint256 value;
@@ -28,5 +30,9 @@ library CallLib {
             }
         }
         return keccak256(abi.encodePacked(hashes));
+    }
+
+    function toSignedCalls(Call[] memory calls, uint256 nonce) internal pure returns (SignedCalls memory signedCalls) {
+        return SignedCalls({calls: calls, nonce: nonce});
     }
 }
