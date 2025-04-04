@@ -34,16 +34,24 @@ contract MultiSignerValidatorHook is IHook {
         requiredSigners[_accountKeyHash(keyHash)].add(signerKeyHash);
     }
 
-    function validateUserOp(PackedUserOperation calldata, bytes32) external pure returns (uint256) {
+    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
+        external
+        pure
+        returns (bytes4, uint256)
+    {
         revert("Not implemented");
     }
 
-    function isValidSignature(bytes32, bytes calldata) external pure returns (bytes4) {
+    function overrideIsValidSignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4, bytes4) {
         revert("Not implemented");
     }
 
-    function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view returns (bool isValid) {
-        (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes32, bytes[]));
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
+        external
+        view
+        returns (bytes4, bool isValid)
+    {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
         AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
@@ -60,9 +68,11 @@ contract MultiSignerValidatorHook is IHook {
             isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
             if (!isValid) {
-                return false;
+                return (IHook.overrideVerifySignature.selector, false);
             }
         }
+
+        return (IHook.overrideVerifySignature.selector, true);
     }
 
     /// @notice Hash a call with the sender's account address
