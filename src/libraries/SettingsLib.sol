@@ -35,10 +35,11 @@ library SettingsLib {
         }
     }
 
+    /// @notice A key is expired if its expiration is less than or equal to the current block timestamp.
+    /// @dev Keys with expiry of 0 never expire.
     function isExpired(Settings settings) internal view returns (bool _isExpired) {
         uint256 _exp = expiration(settings);
-        // Keys with expiry of 0 never expire
         if (_exp == 0) return false;
-        return _exp < block.timestamp;
+        return _exp <= block.timestamp;
     }
 }

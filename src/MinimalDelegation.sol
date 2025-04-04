@@ -144,7 +144,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
         Settings settings = keySettings[keyHash];
-        // TODO: should this be return 0 or revert
         if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
         IHook hook = settings.hook();
