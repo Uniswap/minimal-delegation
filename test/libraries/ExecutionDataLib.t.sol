@@ -16,8 +16,8 @@ contract SignedCallsLibTest is Test {
     }
 
     function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce) public pure {
-        SignedCalls memory execute = SignedCalls({calls: calls, nonce: nonce});
-        bytes32 actualHash = SignedCallsLib.hash(execute);
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
         bytes32 expectedHash = keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce));
         assertEq(actualHash, expectedHash);

@@ -6,6 +6,7 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {IERC7821} from "./IERC7821.sol";
 import {IEIP712} from "./IEIP712.sol";
+import {IERC7201} from "./IERC7201.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {IERC4337Account} from "./IERC4337Account.sol";
 
@@ -24,5 +25,6 @@ interface IMinimalDelegation is
     IERC1271,
     IEIP712,
     IERC5267,
+    IERC7201,
     INonceManager
 {}

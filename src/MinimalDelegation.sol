@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.29;
 
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {Call, CallLib} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
@@ -13,6 +12,7 @@ import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
+import {ERC7201} from "./ERC7201.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -30,7 +30,10 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
+/// @notice Uses custom storage layout according to ERC7201
+/// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
+/// @dev keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff))
+contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200 { 
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -40,8 +43,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using SignedCallsLib for SignedCalls;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
+    using EntrypointLib for *;
     using SettingsLib for Settings;
-    using EntrypointLib for uint256;
+
+    uint256 public packedEntrypoint;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -85,7 +90,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         Key memory key = _getKey(keyHash);
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        IHook hook = keySettings[keyHash].hook();
 
         /// TODO: Handle key expiry check.
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
@@ -119,14 +124,13 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = EntrypointLib.pack(entryPoint);
+        packedEntrypoint = entryPoint.pack();
         emit EntryPointUpdated(entryPoint);
     }
 
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
-        uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
-        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
+        return packedEntrypoint.isOverriden() ? packedEntrypoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
@@ -138,7 +142,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        IHook hook = keySettings[keyHash].hook();
 
         /// TODO: Handle key expiry check.
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
@@ -174,7 +178,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     {
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        IHook hook = keySettings[keyHash].hook();
 
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
             ? hook.isValidSignature(keyHash, data, signature)
