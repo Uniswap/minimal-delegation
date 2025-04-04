@@ -22,7 +22,12 @@ contract MultiSignerValidatorHook is IHook {
     mapping(bytes32 => bytes encodedKey) private keyStorage;
 
     error InvalidSignatureCount();
-    error MissingSigner();
+    error SignerNotRegistered();
+
+    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
+
+    event RequiredSignerAdded(bytes32 keyHash, bytes32 signerKeyHash);
 
     /// @notice Add a required signer for a call.
     /// @dev Calculates the accountKeyHash using the msg.sender and the provided keyHash
@@ -32,47 +37,73 @@ contract MultiSignerValidatorHook is IHook {
 
         keyStorage[signerKeyHash] = encodedKey;
         requiredSigners[_accountKeyHash(keyHash)].add(signerKeyHash);
+
+        emit RequiredSignerAdded(keyHash, signerKeyHash);
     }
 
-    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
+    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash)
         external
-        pure
+        view
         returns (bytes4, uint256)
     {
-        revert("Not implemented");
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(userOp.signature, (bytes[]));
+        // TODO: return correct validationData
+        return (
+            IHook.overrideValidateUserOp.selector,
+            _hasAllRequiredSignatures(keyHash, userOpHash, wrappedSignerSignatures) ? 0 : 1
+        );
     }
 
-    function overrideIsValidSignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4, bytes4) {
-        revert("Not implemented");
+    function overrideIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
+        external
+        view
+        returns (bytes4, bytes4)
+    {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
+        return (
+            IHook.overrideIsValidSignature.selector,
+            _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
+                ? _1271_MAGIC_VALUE
+                : _1271_INVALID_VALUE
+        );
     }
 
-    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
         returns (bytes4, bool isValid)
     {
-        (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
-        AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
+        return (
+            IHook.overrideVerifySignature.selector, _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
+        );
+    }
 
+    function _hasAllRequiredSignatures(bytes32 keyHash, bytes32 digest, bytes[] memory wrappedSignerSignatures)
+        internal
+        view
+        returns (bool isValid)
+    {
+        AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 
         // iterate over requiredSigners
         for (uint256 i = 0; i < requiredSigners[accountKeyHash].length(); i++) {
-            // Verify that keyHash is in the requiredSigners set
             (bytes32 signerKeyHash, bytes memory signerSignature) =
                 abi.decode(wrappedSignerSignatures[i], (bytes32, bytes));
 
-            if (!requiredSigners[accountKeyHash].contains(signerKeyHash)) revert MissingSigner();
+            if (!requiredSigners[accountKeyHash].contains(signerKeyHash)) revert SignerNotRegistered();
 
             Key memory signerKey = abi.decode(keyStorage[signerKeyHash], (Key));
             isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
+            // break if any signatures are invalid
             if (!isValid) {
-                return (IHook.overrideVerifySignature.selector, false);
+                return false;
             }
         }
 
-        return (IHook.overrideVerifySignature.selector, true);
+        return true;
     }
 
     /// @notice Hash a call with the sender's account address
