@@ -160,9 +160,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         uint192 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
-        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
         bytes memory executionData = abi.encode(calls, signature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -183,11 +183,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint192 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
         // Sign using the registered P256 key
         bytes memory packedSignature =
-            abi.encode(nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(execute.hash()))));
+            abi.encode(nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()))));
         bytes memory executionData = abi.encode(calls, packedSignature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -386,9 +386,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint192 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
-        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -406,13 +406,13 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint192 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
         vm.startPrank(address(signer));
         signerAccount.register(p256Key.toKey());
 
         bytes memory packedSignature = abi.encode(
-            nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(execute.hash())))
+            nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash())))
         );
 
         bytes memory executionData = abi.encode(calls, packedSignature);
@@ -430,10 +430,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint192 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
         // sign via EOA
-        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -449,9 +449,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint192 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
-        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
