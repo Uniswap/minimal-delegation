@@ -89,7 +89,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         Key memory key = _getKey(keyHash);
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        IHook hook = keySettings[keyHash].hook();
 
         /// TODO: Handle key expiry check.
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)

@@ -97,8 +97,7 @@ contract NonceManagerTest is DelegationHandler {
         vm.snapshotGasLastCall("invalidateNonce");
 
         // The new nonce should have been set
-        uint256 expectedNextNonce = (uint256(key) << 64) | type(uint16).max;
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(key), type(uint16).max);
 
         // Invalidate the next nonce
         sequence = uint64(sequence * 2);
@@ -107,7 +106,6 @@ contract NonceManagerTest is DelegationHandler {
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have been set
-        expectedNextNonce = (uint256(key) << 64) | (sequence);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(key), sequence);
     }
 }

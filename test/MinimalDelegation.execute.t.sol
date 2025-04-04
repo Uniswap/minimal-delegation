@@ -260,7 +260,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
 
         // Signature over a wrong digest
         bytes memory signature = p256Key.sign(bytes32(0));
@@ -449,7 +450,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
@@ -478,7 +480,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
