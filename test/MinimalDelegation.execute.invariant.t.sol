@@ -147,10 +147,10 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(calls, opData)) {}
         catch (bytes memory revertData) {
             // Must be in order of occurrence
-            if (!nonceIsValid) {
-                assertEq(bytes4(revertData), INonceManager.InvalidNonce.selector);
-            } else if (!keyExists) {
+            if (!keyExists) {
                 assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+            } else if (!nonceIsValid) {
+                assertEq(bytes4(revertData), INonceManager.InvalidNonce.selector);
             } else {
                 revert("uncaught revert");
             }
