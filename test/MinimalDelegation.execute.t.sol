@@ -237,7 +237,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         // Execute the batch of calls with the signature
         vm.startPrank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall");
 
         // Verify the transfers succeeded
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
@@ -281,10 +280,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         vm.expectRevert(INonceManager.InvalidNonce.selector);
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
     }
+
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-
     function test_execute_reverts_withUnsupportedExecutionMode_gas() public {
         bytes32 invalid_mode = 0x0101100000000000000000000000000000000000000000000000000000000000;
         vm.startPrank(address(signerAccount));
@@ -406,5 +405,62 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_batch_opData_singeCall_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+
+        // Get the current nonce components for key 0
+        uint192 key = 0;
+        uint256 nonce = signerAccount.getNonce(key);
+
+        // Create hash of the calls + nonce and sign it
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Pack the execution data:
+        // 1. Encode the nonce and signature into opData
+        bytes memory opData = abi.encode(nonce, signature);
+        // 2. Encode the calls and opData together
+        bytes memory executionData = abi.encode(calls, opData);
+
+        // Execute the batch of calls with the signature
+        vm.startPrank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_batch_opData_twoCalls_gas() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
+
+        // Get the current nonce components for key 0
+        uint192 key = 0;
+        uint256 nonce = signerAccount.getNonce(key);
+
+        // Create hash of the calls + nonce and sign it
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Pack the execution data:
+        // 1. Encode the nonce and signature into opData
+        bytes memory opData = abi.encode(nonce, signature);
+        // 2. Encode the calls and opData together
+        bytes memory executionData = abi.encode(calls, opData);
+
+        // Execute the batch of calls with the signature
+        vm.startPrank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
     }
 }
