@@ -15,6 +15,16 @@ contract CalldataDecoderTest is Test {
         decoder = new MockCalldataDecoder();
     }
 
+    function test_removeSelector() public view {
+        bytes4 selector = bytes4(keccak256("test"));
+        bytes memory data = abi.encodeWithSelector(selector, uint256(1), uint256(2));
+        bytes memory dataWithoutSelector = decoder.removeSelector(data);
+
+        (uint256 one, uint256 two) = abi.decode(dataWithoutSelector, (uint256, uint256));
+        assertEq(one, 1);
+        assertEq(two, 2);
+    }
+
     function test_fuzz_decodeCallsBytes(Call[] calldata actualCalls, bytes calldata actualBytes) public view {
         (Call[] memory _calls, bytes memory _bytes) = decoder.decodeCallsBytes(abi.encode(actualCalls, actualBytes));
 

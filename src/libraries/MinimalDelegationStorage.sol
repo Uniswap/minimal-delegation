@@ -3,14 +3,16 @@ pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IHook} from "../interfaces/IHook.sol";
-import {HookLib, HookId} from "./HookLib.sol";
+import {HooksLib} from "./HooksLib.sol";
+import {Settings} from "./SettingsLib.sol";
 
 /// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
 struct MinimalDelegationStorage {
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-    mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
-    address entryPoint;
+    mapping(bytes32 keyHash => Settings settings) keySettings;
+    mapping(uint256 key => uint256 seq) nonceSequenceNumber;
+    uint256 entryPoint;
 }
 
 struct KeyExtraStorage {

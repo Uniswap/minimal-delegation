@@ -10,4 +10,8 @@ contract MockCalldataDecoder {
     function decodeCallsBytes(bytes calldata data) public pure returns (Call[] calldata calls, bytes calldata opData) {
         return data.decodeCallsBytes();
     }
+
+    function removeSelector(bytes calldata data) public pure returns (bytes memory _data) {
+        return data.removeSelector();
+    }
 }

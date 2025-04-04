@@ -35,14 +35,25 @@ contract MultiSignerValidatorHook is BaseNoopHook {
         requiredSigners[keyHash.wrap()].add(signerKeyHash);
     }
 
-    function verifySignature(bytes32 digest, bytes calldata wrappedSignature)
+    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
+        external
+        pure
+        returns (bytes4, uint256)
+    {
+        revert("Not implemented");
+    }
+
+    function overrideIsValidSignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4, bytes4) {
+        revert("Not implemented");
+    }
+
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
         external
         view
-        override
-        returns (bool isValid)
+        returns (bytes4, bool isValid)
     {
-        (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes32, bytes[]));
-        AccountKeyHash accountKeyHash = keyHash.wrap();
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
+        AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 
@@ -58,8 +69,10 @@ contract MultiSignerValidatorHook is BaseNoopHook {
             isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
             if (!isValid) {
-                return false;
+                return (IHook.overrideVerifySignature.selector, false);
             }
         }
+
+        return (IHook.overrideVerifySignature.selector, true);
     }
 }

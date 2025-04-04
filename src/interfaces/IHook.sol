@@ -4,15 +4,25 @@ pragma solidity ^0.8.0;
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 interface IHook {
-    /// @notice From ERC1271
-    function isValidSignature(bytes32 digest, bytes calldata signature) external view returns (bytes4);
+    /// @notice Validates a user operation
+    /// Does not require passing in missingAccountFunds like the IAccount interface
+    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata, bytes32)
+        external
+        view
+        returns (bytes4, uint256);
 
-    /// @notice From ERC4337
-    function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash) external view returns (uint256);
+    /// @notice Validates a signature over a digest and returns the ERC1271 return value
+    function overrideIsValidSignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
+        external
+        view
+        returns (bytes4, bytes4);
 
-    /// @notice Verifies a signature over a digest
-    function verifySignature(bytes32 digest, bytes calldata signature) external view returns (bool);
-
+    /// @notice Validates a signature over a digest and returns a boolean
+    function overrideVerifySignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
+        external
+        view
+        returns (bytes4, bool);
+        
     /**
      * EXECUTION HOOKS
      * Similar to https://eips.ethereum.org/EIPS/eip-6900
