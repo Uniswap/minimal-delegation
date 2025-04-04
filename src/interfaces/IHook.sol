@@ -22,7 +22,7 @@ interface IHook {
         external
         view
         returns (bytes4, bool);
-        
+
     /**
      * EXECUTION HOOKS
      * Similar to https://eips.ethereum.org/EIPS/eip-6900
