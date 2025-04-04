@@ -190,8 +190,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
-        uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
+        uint64 sequence = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | sequence;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
@@ -215,8 +215,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(tokenB.balanceOf(address(receiver)), 1e18);
 
         // Verify the nonce was incremented - sequence should increase by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(key), sequence + 1);
     }
 
     function test_execute_batch_opData_singeCall_succeeds() public {
@@ -225,8 +224,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
-        uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
+        uint64 sequence = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | sequence;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
@@ -248,8 +247,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
 
         // Verify the nonce was incremented - sequence should increase by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(key), sequence + 1);
     }
 
     function test_execute_batch_opData_withHook_succeeds() public {
@@ -262,7 +260,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
 
         // Signature over a wrong digest
         bytes memory signature = p256Key.sign(bytes32(0));
@@ -290,8 +289,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
-        uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
+        uint64 sequence = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | sequence;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
@@ -310,8 +309,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
 
         // Verify the nonce was incremented - sequence should increase by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(key), sequence + 1);
 
         // Try to execute again with same nonce - should revert
         vm.expectRevert(INonceManager.InvalidNonce.selector);
@@ -452,7 +450,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
@@ -481,7 +480,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Get the current nonce components for key 0
         uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
 
         // Create hash of the calls + nonce and sign it
         ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
