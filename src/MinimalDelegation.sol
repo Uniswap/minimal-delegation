@@ -17,7 +17,6 @@ import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {NonceManager} from "./NonceManager.sol";
-import {INonceManager} from "./interfaces/INonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
@@ -28,6 +27,8 @@ import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
+import {Static} from "./libraries/Static.sol";
+import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
 contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
@@ -39,6 +40,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
     using SettingsLib for Settings;
+    using EntrypointLib for uint256;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -70,18 +72,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         Call[] calldata calls = executionData.decodeCalls();
 
         _dispatch(mode, calls);
-    }
-
-    /// @inheritdoc INonceManager
-    function getNonce(uint256 key) public view override returns (uint256 nonce) {
-        return MinimalDelegationStorageLib.get().nonceSequenceNumber[uint192(key)] | (key << 64);
-    }
-
-    /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 nonce) public override {
-        _onlyThis();
-        _invalidateNonce(nonce);
-        emit NonceInvalidated(nonce);
     }
 
     /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
@@ -128,8 +118,14 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = entryPoint;
+        MinimalDelegationStorageLib.get().entryPoint = EntrypointLib.pack(entryPoint);
         emit EntryPointUpdated(entryPoint);
+    }
+
+    /// @inheritdoc IERC4337Account
+    function ENTRY_POINT() public view override returns (address) {
+        uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
+        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
@@ -164,7 +160,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         else return SIG_VALIDATION_FAILED;
     }
 
-    function _onlyThis() internal view override {
+    function _onlyThis() internal view override(KeyManagement, NonceManager) {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 
@@ -194,10 +190,5 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             return _1271_MAGIC_VALUE;
         }
         return _1271_INVALID_VALUE;
-    }
-
-    /// @inheritdoc IERC4337Account
-    function ENTRY_POINT() public view override returns (address) {
-        return MinimalDelegationStorageLib.get().entryPoint;
     }
 }

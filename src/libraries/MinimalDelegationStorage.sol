@@ -12,7 +12,7 @@ struct MinimalDelegationStorage {
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
     mapping(bytes32 keyHash => Settings settings) keySettings;
     mapping(uint256 key => uint256 seq) nonceSequenceNumber;
-    address entryPoint;
+    uint256 entryPoint;
 }
 
 library MinimalDelegationStorageLib {

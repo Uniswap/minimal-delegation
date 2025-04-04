@@ -30,9 +30,6 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         vm.deal(address(signerAccount), 100e18);
         tokenA.mint(address(signerAccount), 100e18);
         tokenB.mint(address(signerAccount), 100e18);
-
-        vm.prank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
     }
 
     /// forge-config: default.isolate = true
