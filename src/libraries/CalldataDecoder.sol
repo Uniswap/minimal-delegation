@@ -68,6 +68,18 @@ library CalldataDecoder {
         }
     }
 
+    function decodeBytesArray(bytes calldata data)
+        internal
+        pure
+        returns (bytes[] calldata bytesArray)
+    {
+        assembly {
+            let lengthPtr := add(data.offset, calldataload(data.offset))
+            bytesArray.offset := add(lengthPtr, 0x20)
+            bytesArray.length := calldataload(lengthPtr)
+        }
+    }
+
     /// TODO: Import CalldataDecoder.sol, has been previously audited.
     /// @notice Decode the `_arg`-th element in `_bytes` as `bytes`
     // @param _bytes The input bytes string to extract a bytes string from

@@ -26,6 +26,7 @@ import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
+import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 
 contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
@@ -37,7 +38,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
 
-    function execute(bytes32 mode, bytes calldata executionData) external payable override {
+    function execute(bytes32 mode, bytes calldata executionData) public payable override {
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _onlyThis();
@@ -48,7 +49,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             _authorizeOpData(mode, calls, opData);
             _dispatch(mode, calls);
         } else if (mode.isBatchOfBatches()) {
-            
+            bytes[] calldata executeDataArray = executionData.decodeBytesArray();
+            for (uint256 i = 0; i < executeDataArray.length; i++) {
+                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA, executeDataArray[i]);
+            }
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }

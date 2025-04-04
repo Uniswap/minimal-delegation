@@ -407,4 +407,51 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
     }
+
+    function test_execute_batchOfBatches() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+
+        // Create hash of the calls + nonce and sign it
+        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
+        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Pack the execution data:
+        // 1. Encode the nonce and signature into opData
+        bytes memory opData = abi.encode(0, signature);
+        // 2. Encode the calls and opData together
+        bytes memory executionData1 = abi.encode(calls, opData);
+
+
+        calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 2e18)); // Transfer 2 tokenA
+
+        // Create hash of the calls + nonce and sign it
+        execute = ExecutionData({calls: calls, nonce: 1});
+        hashToSign = signerAccount.hashTypedData(execute.hash());
+        (v, r, s) = vm.sign(signerPrivateKey, hashToSign);
+        signature = abi.encodePacked(r, s, v);
+
+        // Pack the execution data:
+        // 1. Encode the nonce and signature into opData
+        opData = abi.encode(1, signature);
+        // 2. Encode the calls and opData together
+        bytes memory executionData2 = abi.encode(calls, opData);
+
+        bytes[] memory executionDataArray = new bytes[](2);
+        executionDataArray[0] = executionData1;
+        executionDataArray[1] = executionData2;
+
+        // execute the batch of batches
+        signerAccount.execute(BATCH_OF_BATCHES_CALL, abi.encode(executionDataArray));
+
+        // Verify the transfers succeeded
+        assertEq(tokenA.balanceOf(address(receiver)), 3e18);
+
+        // Verify the nonce was incremented - sequence should increase by 1
+        assertEq(signerAccount.getNonce(0), 2);
+
+    }
 }
