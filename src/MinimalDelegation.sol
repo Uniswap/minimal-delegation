@@ -41,9 +41,9 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
-    using EntrypointLib for uint256, address;
+    using EntrypointLib for *;
 
-    address public entryPoint;
+    uint256 public packedEntrypoint;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -118,16 +118,15 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     }
 
     /// @inheritdoc IERC4337Account
-    function updateEntryPoint(address _entryPoint) external {
+    function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        entryPoint = _entryPoint.pack();
-        emit EntryPointUpdated(_entryPoint);
+        packedEntrypoint = entryPoint.pack();
+        emit EntryPointUpdated(entryPoint);
     }
 
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
-        uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
-        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
+        return packedEntrypoint.isOverriden() ? packedEntrypoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
