@@ -33,7 +33,7 @@ contract MockValidationHook is IHook {
         return (IHook.overrideIsValidSignature.selector, _isValidSignatureReturnValue);
     }
 
-    function overrideVerifySignature(bytes32, bytes32, bytes calldata) external view returns (bool) {
-        return _verifySignatureReturnValue;
+    function overrideVerifySignature(bytes32, bytes32, bytes calldata) external view returns (bytes4, bool) {
+        return (IHook.overrideVerifySignature.selector, _verifySignatureReturnValue);
     }
 }

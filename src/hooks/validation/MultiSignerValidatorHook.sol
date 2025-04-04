@@ -46,12 +46,12 @@ contract MultiSignerValidatorHook is IHook {
         revert("Not implemented");
     }
 
-    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata wrappedSignature)
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
         external
         view
-        returns (bool isValid)
+        returns (bytes4, bool isValid)
     {
-        (bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes[]));
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
         AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
@@ -68,9 +68,11 @@ contract MultiSignerValidatorHook is IHook {
             isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
             if (!isValid) {
-                return false;
+                return (IHook.overrideVerifySignature.selector, false);
             }
         }
+
+        return (IHook.overrideVerifySignature.selector, true);
     }
 
     /// @notice Hash a call with the sender's account address

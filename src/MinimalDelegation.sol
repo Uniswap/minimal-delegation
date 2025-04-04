@@ -89,7 +89,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         bytes32 digest = _hashTypedData(executionData.hash());
 
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.overrideVerifySignature(keyHash, digest, signature)
+            ? hook.verifySignature(keyHash, digest, signature)
             : key.verify(digest, signature);
 
         if (!isValid) revert IERC7821.InvalidSignature();
