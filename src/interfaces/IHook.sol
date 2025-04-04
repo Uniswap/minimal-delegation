@@ -11,8 +11,15 @@ interface IHook {
         view
         returns (bytes4, uint256);
 
+    /// @notice Validates a signature over a digest and returns the ERC1271 return value
     function overrideIsValidSignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
         external
         view
         returns (bytes4, bytes4);
+
+    /// @notice Validates a signature over a digest and returns a boolean
+    function overrideVerifySignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
+        external
+        view
+        returns (bytes4, bool);
 }

@@ -39,4 +39,15 @@ library HooksLib {
         if (hookSelector != IHook.overrideIsValidSignature.selector) revert InvalidHookResponse();
         return result;
     }
+
+    function verifySignature(IHook self, bytes32 keyHash, bytes32 data, bytes calldata signature)
+        internal
+        view
+        returns (bool result)
+    {
+        bytes4 hookSelector;
+        (hookSelector, result) = self.overrideVerifySignature(keyHash, data, signature);
+        if (hookSelector != IHook.overrideVerifySignature.selector) revert InvalidHookResponse();
+        return result;
+    }
 }
