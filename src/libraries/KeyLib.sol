@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
+import {Settings, SettingsLib} from "./SettingsLib.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -13,8 +14,6 @@ enum KeyType {
 }
 
 struct Key {
-    /// @dev Unix timestamp at which the key expires (0 = never).
-    uint40 expiry;
     /// @dev Type of key. See the {KeyType} enum.
     KeyType keyType;
     /// @dev Public key in encoded form.
@@ -28,7 +27,7 @@ library KeyLib {
 
     /// @notice A helper function to get the root key object.
     function toRootKey() internal view returns (Key memory) {
-        return Key({expiry: 0, keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
+        return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
     }
 
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
@@ -44,7 +43,6 @@ library KeyLib {
             (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));
             // Expect signature to be a wrapper of the WebAuthn signature.
             WebAuthn.WebAuthnAuth memory auth = abi.decode(signature, (WebAuthn.WebAuthnAuth));
-
             isValid = WebAuthn.verify({challenge: abi.encode(_hash), requireUV: false, webAuthnAuth: auth, x: x, y: y});
         } else {
             isValid = false;
