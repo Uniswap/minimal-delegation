@@ -8,16 +8,15 @@ contract MinimalDelegationStorageTest is DelegationHandler {
     /**
      * MinimalDelegation storage layout
      * slots are assigned starting from the custom layout slot and in order of declaration, from left to right
-    
-    MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200
-
+     *
+     * MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200
+     *
      * 0: mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
      * 1: mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
      * 2: EnumerableSetLib.Bytes32Set keyHashes;
      * 3: mapping(uint256 key => uint256 seq) nonceSequenceNumber
      * 4: uint256 entryPoint
      */
-
     uint256 private constant KEY_EXTRA_STORAGE_SLOT = 0;
     uint256 private constant KEY_STORAGE_SLOT = 1;
     uint256 private constant KEY_HASHES_SLOT = 2;
@@ -43,7 +42,8 @@ contract MinimalDelegationStorageTest is DelegationHandler {
 
     /// @dev Sanity check tests for changes in the calculated custom storage root
     function test_erc7201_customStorageRoot() public {
-        bytes32 customStorageRoot = keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff));
+        bytes32 customStorageRoot =
+            keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(signerAccount.CUSTOM_STORAGE_ROOT(), customStorageRoot);
     }
 
