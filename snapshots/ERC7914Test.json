@@ -1,4 +1,6 @@
 {
   "approveNative": "24494",
-  "transferFromNative": "34881"
+  "approveNativeTransient": "2551",
+  "transferFromNative": "34881",
+  "transferFromNativeTransient": "34967"
 }
