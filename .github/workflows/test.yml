@@ -41,7 +41,7 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          rm -rf .forge-snapshots/ && forge test -vvv
         id: test
         env:
           FORGE_SNAPSHOT_CHECK: true
