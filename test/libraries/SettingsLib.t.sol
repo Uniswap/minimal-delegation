@@ -38,4 +38,17 @@ contract SettingsLibTest is Test {
         Settings settings = SettingsBuilder.init().fromHook(hook);
         assertEq(address(settings.hook()), address(hook));
     }
+
+    function test_isExpired_expiryOfZero_isNotExpired() public {
+        Settings settings = SettingsBuilder.init().fromExpiration(0);
+        vm.warp(1);
+        assertEq(settings.isExpired(), false);
+    }
+
+    function test_isExpired_fuzz(uint40 expiration) public {
+        vm.assume(expiration > 0 && expiration < type(uint40).max);
+        Settings settings = SettingsBuilder.init().fromExpiration(expiration);
+        vm.warp(expiration + 1);
+        assertEq(settings.isExpired(), true);
+    }
 }

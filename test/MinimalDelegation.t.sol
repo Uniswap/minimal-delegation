@@ -74,6 +74,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
 
+        vm.warp(100);
         keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
         // already registered key should be updated
         signerAccount.update(keyHash, keySettings);
@@ -269,6 +270,27 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         vm.prank(address(entryPoint));
         signerAccount.validateUserOp(userOp, userOpHash, 0);
         vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
+    }
+
+    function test_validateUserOp_expiredKey() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        vm.warp(100);
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1));
+        assertEq(keySettings.expiration(), uint40(block.timestamp - 1));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = p256Key.sign(userOpHash);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
+
+        vm.prank(address(entryPoint));
+        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
     }
 
     function test_validateUserOp_invalidSignature() public {
