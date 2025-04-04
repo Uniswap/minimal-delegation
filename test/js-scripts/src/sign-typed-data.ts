@@ -58,7 +58,7 @@ async function signTypedData(): Promise<void> {
       account,
       domain,
       types,
-      primaryType: 'Execute',
+      primaryType: 'SignedCalls',
       message: {
         calls: calls,
         nonce: nonce,

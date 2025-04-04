@@ -8949,7 +8949,7 @@ var types = {
     { name: "value", type: "uint256" },
     { name: "data", type: "bytes" }
   ],
-  Execute: [
+  SignedCalls: [
     { name: "calls", type: "Call[]" },
     { name: "nonce", type: "uint256" }
   ]
@@ -8982,7 +8982,7 @@ async function signTypedData3() {
       account,
       domain,
       types,
-      primaryType: "Execute",
+      primaryType: "SignedCalls",
       message: {
         calls,
         nonce
