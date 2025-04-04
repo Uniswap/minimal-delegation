@@ -8,7 +8,6 @@ abstract contract ERC4337Account is IERC4337Account {
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     modifier onlyEntryPoint() {
-        /// By default, the entry point is the zero address, so this is not an enabled feature.
         if (msg.sender != ENTRY_POINT()) revert NotEntryPoint();
         _;
     }
