@@ -13,7 +13,7 @@ abstract contract NonceManager is INonceManager {
 
     /// @inheritdoc INonceManager
     function getSeq(uint256 key) external view override returns (uint256 seq) {
-        return nonceSequenceNumber[key];
+        return nonceSequenceNumber[uint192(key)];
     }
 
     /// @inheritdoc INonceManager
