@@ -14,13 +14,21 @@ interface IERC7914 {
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     /// @notice Emitted when a native approval is made
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
+        /// @notice Emitted when a transient native approval is made
+    event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
 
     /// @notice Returns the allowance of a spender
     function allowance(address spender) external returns (uint256);
+
+    /// @notice Returns the transient allowance of a spender
+    function transientAllowance(address spender) external returns (uint256);
 
     /// @notice Transfers native tokens from the caller to a recipient
     function transferFromNative(address from, address recipient, uint256 amount) external returns (bool);
 
     /// @notice Approves a spender to transfer native tokens on behalf of the caller
     function approveNative(address spender, uint256 amount) external returns (bool);
+
+    /// @notice Approves a spender to transfer native tokens on behalf of the caller with transient storage
+    function approveNativeTransient(address spender, uint256 amount) external returns (bool);
 }

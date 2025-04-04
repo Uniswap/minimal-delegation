@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {IERC7914} from "./interfaces/IERC7914.sol";
 import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
+import {TransientAllowance} from "./libraries/TransientAllowance.sol";
 
 /// @title ERC-7914
 /// @notice Abstract ERC-7914 implementation
@@ -13,6 +14,11 @@ abstract contract ERC7914 is IERC7914 {
     /// @inheritdoc IERC7914
     function allowance(address spender) external view override returns (uint256) {
         return MinimalDelegationStorageLib.get().allowance[spender];
+    }
+
+    /// @inheritdoc IERC7914
+    function transientAllowance(address spender) external view returns (uint256) {
+        return TransientAllowance.getTransientAllowance(spender);
     }
 
     /// @inheritdoc IERC7914
@@ -34,6 +40,14 @@ abstract contract ERC7914 is IERC7914 {
             revert TransferNativeFailed();
         }
         emit TransferFromNative(address(this), recipient, amount);
+        return true;
+    }
+
+    /// @inheritdoc IERC7914
+    function approveNativeTransient(address spender, uint256 amount) external override returns (bool) {
+        _onlyThis();
+        TransientAllowance.setTransientAllowance(spender, amount);
+        emit ApproveNativeTransient(address(this), spender, amount);
         return true;
     }
 }
