@@ -81,6 +81,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+        Key memory key = _getKey(keyHash);
 
         IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
 
@@ -88,8 +89,8 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         bytes32 digest = _hashTypedData(executionData.hash());
 
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.verifySignature(digest, wrappedSignature)
-            : _verifySignature(digest, keyHash, signature);
+            ? hook.overrideVerifySignature(keyHash, digest, signature)
+            : key.verify(digest, signature);
 
         if (!isValid) revert IERC7821.InvalidSignature();
     }

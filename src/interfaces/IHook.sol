@@ -16,7 +16,7 @@ interface IHook {
         view
         returns (bytes4, bytes4);
 
-    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata signature)
+    function overrideVerifySignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
         external
         view
         returns (bool);

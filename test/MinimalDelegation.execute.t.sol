@@ -19,6 +19,8 @@ import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
+import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
+import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, ExecuteHandler, HookHandler {
     using TestKeyManager for TestKey;
@@ -26,7 +28,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     using CallBuilder for Call[];
     using CallLib for Call[];
     using ExecutionDataLib for ExecutionData;
-
+    using SettingsLib for Settings;
+    using SettingsBuilder for Settings;
+    
     address receiver = makeAddr("receiver");
 
     function setUp() public {
@@ -253,7 +257,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
-        signerAccount.authorize(p256Key.toKey());
+        signerAccount.register(p256Key.toKey());
 
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
@@ -272,7 +276,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Expect the signature to be valid after adding the hook
         vm.prank(address(signerAccount));
-        signerAccount.setHook(p256Key.toKeyHash(), mockValidationHook);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
         mockValidationHook.setVerifySignatureReturnValue(true);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);

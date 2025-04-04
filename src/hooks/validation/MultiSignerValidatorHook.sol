@@ -46,8 +46,12 @@ contract MultiSignerValidatorHook is IHook {
         revert("Not implemented");
     }
 
-    function verifySignature(bytes32 digest, bytes calldata wrappedSignature) external view returns (bool isValid) {
-        (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes32, bytes[]));
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata wrappedSignature)
+        external
+        view
+        returns (bool isValid)
+    {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(wrappedSignature, (bytes[]));
         AccountKeyHash accountKeyHash = _accountKeyHash(keyHash);
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
