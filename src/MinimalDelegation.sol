@@ -84,12 +84,19 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
         ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
+        bytes32 digest = _hashTypedData(executionData.hash());
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         Key memory key = _getKey(keyHash);
-        if (!key.verify(_hashTypedData(executionData.hash()), signature)) {
-            revert IERC7821.InvalidSignature();
-        }
+
+        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+
+        /// TODO: Handle key expiry check.
+        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
+            ? hook.verifySignature(keyHash, digest, signature)
+            : key.verify(digest, signature);
+
+        if (!isValid) revert IERC7821.InvalidSignature();
     }
 
     /// @dev Dispatches a batch of calls.

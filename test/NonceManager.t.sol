@@ -57,7 +57,6 @@ contract NonceManagerTest is DelegationHandler {
 
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
-        vm.snapshotGasLastCall("invalidateNonce");
 
         // The new nonce should have been set with the max sequence number
         assertEq(signerAccount.getSeq(key), uint256(type(uint16).max));
@@ -83,5 +82,32 @@ contract NonceManagerTest is DelegationHandler {
 
         // The new nonce should have sequence incremented by 1
         assertEq(signerAccount.getSeq(key), sequence);
+    }
+
+    /// GAS TESTS
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_invalidateNonce_gas() public {
+        uint192 key = 0;
+        uint64 sequence = type(uint16).max;
+        uint256 nonce = (uint256(key) << 64) | sequence;
+
+        vm.startPrank(address(signerAccount));
+        signerAccount.invalidateNonce(nonce);
+        vm.snapshotGasLastCall("invalidateNonce");
+
+        // The new nonce should have been set
+        uint256 expectedNextNonce = (uint256(key) << 64) | type(uint16).max;
+        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+
+        // Invalidate the next nonce
+        sequence = uint64(sequence * 2);
+        nonce = (uint256(key) << 64) | sequence;
+
+        signerAccount.invalidateNonce(nonce);
+
+        // The new nonce should have been set
+        expectedNextNonce = (uint256(key) << 64) | (sequence);
+        assertEq(signerAccount.getNonce(key), expectedNextNonce);
     }
 }
