@@ -90,9 +90,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         Key memory key = _getKey(keyHash);
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
-        /// TODO: Handle key expiry check.
+        IHook hook = settings.hook();
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
             ? hook.verifySignature(keyHash, digest, signature)
             : key.verify(digest, signature);
@@ -142,9 +143,11 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        // TODO: should this be return 0 or revert
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
-        /// TODO: Handle key expiry check.
+        IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
             ? hook.validateUserOp(keyHash, userOp, userOpHash)
             : _handleValidateUserOp(keyHash, signature, userOp, userOpHash);
@@ -178,8 +181,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     {
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
+        IHook hook = settings.hook();
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
             ? hook.isValidSignature(keyHash, data, signature)
             : _handleIsValidSignature(keyHash, data, signature);

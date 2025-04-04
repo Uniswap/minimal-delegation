@@ -15,6 +15,9 @@ interface IKeyManagement {
     /// @dev The key does not exist.
     error KeyDoesNotExist();
 
+    /// @dev The key has expired.
+    error KeyExpired();
+
     /// @dev Registers the `key`.
     function register(Key memory key) external;
 
