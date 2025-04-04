@@ -6,15 +6,15 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IERC7821} from "../../interfaces/IERC7821.sol";
 import {Call} from "../../libraries/CallLib.sol";
 import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
-import {BaseNoopHook} from "../shared/BaseNoopHook.sol";
+import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
 
-interface IGuardedExecutorHook {
+interface IGuardedExecutorHook is IExecutionHook {
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external;
 }
 
 /// @title GuardedExecutorHook
 /// @author modified from https://github.com/ithacaxyz/account/blob/main/src/GuardedExecutor.sol
-contract GuardedExecutorHook is BaseNoopHook, IGuardedExecutorHook {
+contract GuardedExecutorHook is IGuardedExecutorHook {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using AccountKeyHashLib for bytes32;
 
@@ -83,10 +83,15 @@ contract GuardedExecutorHook is BaseNoopHook, IGuardedExecutorHook {
         external
         view
         override
-        returns (bytes memory)
+        returns (bytes4, bytes memory)
     {
         if (!_canExecute(keyHash, to, data)) revert IERC7821.Unauthorized();
-        return bytes("");
+        return (IExecutionHook.beforeExecute.selector, bytes(""));
+    }
+
+    /// @dev This hook is a no-op.
+    function afterExecute(bytes32 keyHash, bytes calldata beforeExecuteData) external view override returns (bytes4) {
+        return IExecutionHook.afterExecute.selector;
     }
 
     /// @dev Returns true if the call is a self-execute call.

@@ -2,6 +2,8 @@
 pragma solidity ^0.8.23;
 
 import {IHook} from "../interfaces/IHook.sol";
+import {IValidationHook} from "../interfaces/IValidationHook.sol";
+import {IExecutionHook} from "../interfaces/IExecutionHook.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 /// @author Inspired by https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol
@@ -25,7 +27,7 @@ library HooksLib {
     {
         bytes4 hookSelector;
         (hookSelector, validationData) = self.overrideValidateUserOp(keyHash, userOp, userOpHash);
-        if (hookSelector != IHook.overrideValidateUserOp.selector) revert InvalidHookResponse();
+        if (hookSelector != IValidationHook.overrideValidateUserOp.selector) revert InvalidHookResponse();
         return validationData;
     }
 
@@ -36,7 +38,7 @@ library HooksLib {
     {
         bytes4 hookSelector;
         (hookSelector, result) = self.overrideIsValidSignature(keyHash, data, signature);
-        if (hookSelector != IHook.overrideIsValidSignature.selector) revert InvalidHookResponse();
+        if (hookSelector != IValidationHook.overrideIsValidSignature.selector) revert InvalidHookResponse();
         return result;
     }
 
@@ -47,22 +49,22 @@ library HooksLib {
     {
         bytes4 hookSelector;
         (hookSelector, result) = self.overrideVerifySignature(keyHash, data, signature);
-        if (hookSelector != IHook.overrideVerifySignature.selector) revert InvalidHookResponse();
+        if (hookSelector != IValidationHook.overrideVerifySignature.selector) revert InvalidHookResponse();
         return result;
     }
 
-    function beforeExecute(IHook self, bytes32 keyHash, address to, bytes calldata data)
+    function handleBeforeExecute(IHook self, bytes32 keyHash, address to, bytes calldata data)
         internal
         returns (bytes memory result)
     {
         bytes4 hookSelector;
         (hookSelector, result) = self.beforeExecute(keyHash, to, data);
-        if (hookSelector != IHook.beforeExecute.selector) revert InvalidHookResponse();
+        if (hookSelector != IExecutionHook.beforeExecute.selector) revert InvalidHookResponse();
         return result;
     }
 
-    function afterExecute(IHook self, bytes32 keyHash, bytes calldata beforeExecuteData) internal {
+    function handleAfterExecute(IHook self, bytes32 keyHash, bytes memory beforeExecuteData) internal {
         bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
-        if (hookSelector != IHook.afterExecute.selector) revert InvalidHookResponse();
+        if (hookSelector != IExecutionHook.afterExecute.selector) revert InvalidHookResponse();
     }
 }

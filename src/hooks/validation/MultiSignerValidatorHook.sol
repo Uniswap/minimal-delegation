@@ -5,14 +5,13 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {Key, KeyLib} from "../../libraries/KeyLib.sol";
 import {Call, CallLib} from "../../libraries/CallLib.sol";
-import {IHook} from "../../interfaces/IHook.sol";
+import {IValidationHook} from "../../interfaces/IValidationHook.sol";
 import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
-import {BaseNoopHook} from "../shared/BaseNoopHook.sol";
 
 /// @title MultiSignerValidatorHook
 /// Require signatures from additional, arbitary signers for a key
 /// TODO: add threshold signature verification
-contract MultiSignerValidatorHook is BaseNoopHook {
+contract MultiSignerValidatorHook is IValidationHook {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallLib for Call;
@@ -69,10 +68,10 @@ contract MultiSignerValidatorHook is BaseNoopHook {
             isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
             if (!isValid) {
-                return (IHook.overrideVerifySignature.selector, false);
+                return (IValidationHook.overrideVerifySignature.selector, false);
             }
         }
 
-        return (IHook.overrideVerifySignature.selector, true);
+        return (IValidationHook.overrideVerifySignature.selector, true);
     }
 }

@@ -276,9 +276,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Expect the signature to be valid after adding the hook
         vm.prank(address(signerAccount));
-        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
         signerAccount.update(p256Key.toKeyHash(), keySettings);
-        mockValidationHook.setVerifySignatureReturnValue(true);
+        mockHook.setVerifySignatureReturnValue(true);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);

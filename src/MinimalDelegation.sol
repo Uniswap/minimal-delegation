@@ -55,8 +55,15 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
             _dispatch(mode, calls, bytes32(0));
         } else if (mode.supportsOpData()) {
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
-            _authorizeOpData(mode, calls, opData);
-            _dispatch(mode, calls);
+            (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
+            _useNonce(nonce);
+
+            bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
+
+            (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+
+            _handleVerifySignature(keyHash, digest, signature);
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -68,35 +75,15 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
-        // TODO: Handle keyHash authorization.
-        // (bytes32 keyHash,) = userOp.signature.unwrap();
+        
+        (bytes32 keyHash,) = userOp.signature.unwrap();
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] calldata calls = executionData.decodeCalls();
 
-        _dispatch(mode, calls);
-    }
-
-    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
-        (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-        _useNonce(nonce);
-
-        bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
-
-        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-        Key memory key = _getKey(keyHash);
-
-        IHook hook = keySettings[keyHash].hook();
-
-        /// TODO: Handle key expiry check.
-        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.verifySignature(keyHash, digest, signature)
-            : key.verify(digest, signature);
-
-        if (!isValid) revert IERC7821.InvalidSignature();
+        _dispatch(mode, calls, keyHash);
     }
 
     /// @dev Dispatches a batch of calls.
@@ -114,13 +101,14 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         address to = _call.to == address(0) ? address(this) : _call.to;
 
         IHook hook = keySettings[keyHash].hook();
+        bytes memory beforeExecuteData;
         if(hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
-            hook.beforeExecute(keyHash, to, _call.data);
+            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.data);
         }
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        if(hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.afterExecute(keyHash, output);
+        if(hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -169,6 +157,20 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
         if (key.verify(userOpHash, signature)) return SIG_VALIDATION_SUCCEEDED;
         else return SIG_VALIDATION_FAILED;
+    }
+
+    /// @dev This function is used to handle the verification of signatures sent through execute()
+    function _handleVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata signature) private view {
+        Key memory key = _getKey(keyHash);
+
+        IHook hook = keySettings[keyHash].hook();
+
+        /// TODO: Handle key expiry check.
+        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
+            ? hook.verifySignature(keyHash, digest, signature)
+            : key.verify(digest, signature);
+
+        if (!isValid) revert IERC7821.InvalidSignature();
     }
 
     function _onlyThis() internal view override(KeyManagement, NonceManager) {

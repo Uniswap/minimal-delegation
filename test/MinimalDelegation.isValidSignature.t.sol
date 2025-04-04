@@ -10,6 +10,7 @@ import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {TestKeyManager} from "./utils/TestKeyManager.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
+import {IValidationHook} from "../src/interfaces/IValidationHook.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler {
     using TestKeyManager for TestKey;
@@ -132,16 +133,16 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
-        signerAccount.update(keyHash, SettingsBuilder.init().fromHook(mockValidationHook));
+        signerAccount.update(keyHash, SettingsBuilder.init().fromHook(mockHook));
 
         bytes32 testDigest = keccak256("Test");
         bytes32 testDigestToSign = signerAccount.hashTypedData(testDigest.hashWithWrappedType());
         bytes memory signature = p256Key.sign(testDigestToSign);
 
-        mockValidationHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
+        mockHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
         assertEq(signerAccount.isValidSignature(testDigest, abi.encode(keyHash, signature)), _1271_MAGIC_VALUE);
 
-        mockValidationHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
+        mockHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
         assertEq(signerAccount.isValidSignature(testDigest, abi.encode(keyHash, signature)), _1271_INVALID_VALUE);
     }
 }
