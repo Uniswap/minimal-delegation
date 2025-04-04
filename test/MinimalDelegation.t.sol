@@ -9,13 +9,17 @@ import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
 import {TestKey, TestKeyManager} from "./utils/TestKeyManager.sol";
+import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
+import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
 
 contract MinimalDelegationTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
+    using SettingsLib for Settings;
+    using SettingsBuilder for Settings;
 
-    event Authorized(bytes32 indexed keyHash, Key key);
+    event Registered(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
 
     function setUp() public {
@@ -25,55 +29,58 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_authorize_gas() public {
+    function test_register_gas() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
         vm.expectEmit(true, false, false, true);
-        emit Authorized(keyHash, mockSecp256k1Key);
+        emit Registered(keyHash, mockSecp256k1Key);
 
         vm.prank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
-        vm.snapshotGasLastCall("authorize");
+        signerAccount.register(mockSecp256k1Key);
+        vm.snapshotGasLastCall("register");
     }
 
-    function test_authorize() public {
+    function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
         vm.expectEmit(true, false, false, true);
-        emit Authorized(keyHash, mockSecp256k1Key);
+        emit Registered(keyHash, mockSecp256k1Key);
 
         vm.prank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
+        signerAccount.register(mockSecp256k1Key);
 
         Key memory fetchedKey = signerAccount.getKey(keyHash);
-        assertEq(fetchedKey.expiry, 0);
+        Settings keySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(keySettings.expiration(), 0);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
     }
 
-    function test_authorize_revertsWithUnauthorized() public {
+    function test_register_revertsWithUnauthorized() public {
         vm.expectRevert(IERC7821.Unauthorized.selector);
-        signerAccount.authorize(mockSecp256k1Key);
+        signerAccount.register(mockSecp256k1Key);
     }
 
-    function test_authorize_expiryUpdated() public {
+    function test_register_expiryUpdated() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
         vm.startPrank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
+        signerAccount.register(mockSecp256k1Key);
 
         Key memory fetchedKey = signerAccount.getKey(keyHash);
-        assertEq(fetchedKey.expiry, 0);
+        Settings keySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(keySettings.expiration(), 0);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
 
-        mockSecp256k1Key.expiry = uint40(block.timestamp + 3600);
-        // already authorized key should be updated
-        signerAccount.authorize(mockSecp256k1Key);
+        keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        // already registered key should be updated
+        signerAccount.update(keyHash, keySettings);
 
         fetchedKey = signerAccount.getKey(keyHash);
-        assertEq(fetchedKey.expiry, uint40(block.timestamp + 3600));
+        Settings fetchedKeySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(fetchedKeySettings.expiration(), uint40(block.timestamp + 3600));
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
         assertEq(fetchedKey.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
         // key count should remain the same
@@ -83,9 +90,10 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_revoke_gas() public {
-        // first authorize the key
+        // first register the key
         vm.startPrank(address(signerAccount));
-        bytes32 keyHash = signerAccount.authorize(mockSecp256k1Key);
+        signerAccount.register(mockSecp256k1Key);
+        bytes32 keyHash = mockSecp256k1Key.hash();
         assertEq(signerAccount.keyCount(), 1);
 
         vm.expectEmit(true, false, false, true);
@@ -97,10 +105,12 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     }
 
     function test_revoke() public {
-        // first authorize the key
+        // first register the key
         vm.startPrank(address(signerAccount));
-        bytes32 keyHash = signerAccount.authorize(mockSecp256k1Key);
+        signerAccount.register(mockSecp256k1Key);
         assertEq(signerAccount.keyCount(), 1);
+
+        bytes32 keyHash = mockSecp256k1Key.hash();
 
         vm.expectEmit(true, false, false, true);
         emit Revoked(keyHash);
@@ -129,8 +139,8 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     function test_keyCount() public {
         vm.startPrank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
-        signerAccount.authorize(mockSecp256k1Key2);
+        signerAccount.register(mockSecp256k1Key);
+        signerAccount.register(mockSecp256k1Key2);
 
         assertEq(signerAccount.keyCount(), 2);
     }
@@ -143,9 +153,9 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         address mockSecp256k1PublicKey;
         for (uint256 i = 0; i < numKeys; i++) {
             mockSecp256k1PublicKey = makeAddr(string(abi.encodePacked(publicKey, i)));
-            mockSecp256k1Key = Key(0, KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
+            mockSecp256k1Key = Key(KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
             vm.prank(address(signerAccount));
-            signerAccount.authorize(mockSecp256k1Key);
+            signerAccount.register(mockSecp256k1Key);
         }
 
         assertEq(signerAccount.keyCount(), numKeys);
@@ -153,19 +163,23 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     function test_keyAt() public {
         vm.startPrank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
-        signerAccount.authorize(mockSecp256k1Key2);
+        signerAccount.register(mockSecp256k1Key);
+        signerAccount.update(mockSecp256k1Key.hash(), mockSecp256k1KeySettings);
+        signerAccount.register(mockSecp256k1Key2);
+        signerAccount.update(mockSecp256k1Key2.hash(), mockSecp256k1Key2Settings);
 
-        // 2 keys authorized
+        // 2 keys registered
         assertEq(signerAccount.keyCount(), 2);
 
         Key memory key = signerAccount.keyAt(0);
-        assertEq(key.expiry, 0);
+        Settings keySettings = signerAccount.getKeySettings(key.hash());
+        assertEq(keySettings.expiration(), 0);
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey));
 
         key = signerAccount.keyAt(1);
-        assertEq(key.expiry, uint40(block.timestamp + 3600));
+        keySettings = signerAccount.getKeySettings(key.hash());
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey2));
 
@@ -176,7 +190,8 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         signerAccount.keyAt(1);
 
         key = signerAccount.keyAt(0);
-        assertEq(key.expiry, uint40(block.timestamp + 3600));
+        keySettings = signerAccount.getKeySettings(key.hash());
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
         assertEq(key.publicKey, abi.encodePacked(mockSecp256k1PublicKey2));
 
@@ -184,7 +199,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.keyCount(), 1);
     }
 
-    function test_entryPoint_defaultValue() public {
+    function test_entryPoint_defaultValue() public view {
         assertEq(signerAccount.ENTRY_POINT(), Constants.ENTRY_POINT_V_0_8);
     }
 
@@ -225,8 +240,11 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         bytes memory signature = p256Key.sign(bytes32(0));
 
-        vm.prank(address(signerAccount));
-        signerAccount.setHook(p256Key.toKeyHash(), mockValidationHook);
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
 
         PackedUserOperation memory userOp;
         // Spoofed signature and userOpHash

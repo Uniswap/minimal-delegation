@@ -94,7 +94,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
-        signerAccount.authorize(p256Key.toKey());
+        signerAccount.register(p256Key.toKey());
 
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
