@@ -51,7 +51,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         } else if (mode.isBatchOfBatches()) {
             bytes[] calldata executeDataArray = executionData.decodeBytesArray();
             for (uint256 i = 0; i < executeDataArray.length; i++) {
-                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA, executeDataArray[i]);
+                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT, executeDataArray[i]);
             }
         } else {
             revert IERC7821.UnsupportedExecutionMode();
