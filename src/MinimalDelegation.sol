@@ -26,6 +26,8 @@ import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
+import {Static} from "./libraries/Static.sol";
+import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
 contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
     using ModeDecoder for bytes32;
@@ -36,6 +38,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using ExecutionDataLib for ExecutionData;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
+    using EntrypointLib for uint256;
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
@@ -112,8 +115,14 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = entryPoint;
+        MinimalDelegationStorageLib.get().entryPoint = EntrypointLib.pack(entryPoint);
         emit EntryPointUpdated(entryPoint);
+    }
+
+    /// @inheritdoc IERC4337Account
+    function ENTRY_POINT() public view override returns (address) {
+        uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
+        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
@@ -153,11 +162,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         /// TODO: Hashing it with the wrapped type obfuscates the data underneath if it is typed. We may not want to do this!
         if (_verifySignature(_hashTypedData(data.hashWithWrappedType()), keyHash, _signature)) return _1271_MAGIC_VALUE;
         return _1271_INVALID_VALUE;
-    }
-
-    /// @inheritdoc IERC4337Account
-    function ENTRY_POINT() public view override returns (address) {
-        return MinimalDelegationStorageLib.get().entryPoint;
     }
 
     /// @notice Verifies that the key signed over the digest

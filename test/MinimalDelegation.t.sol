@@ -9,6 +9,7 @@ import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
 import {TestKey, TestKeyManager} from "./utils/TestKeyManager.sol";
+import {Constants} from "./utils/Constants.sol";
 
 contract MinimalDelegationTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
@@ -183,22 +184,32 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.keyCount(), 1);
     }
 
+    function test_entryPoint_defaultValue() public {
+        assertEq(signerAccount.ENTRY_POINT(), Constants.ENTRY_POINT_V_0_8);
+    }
+
     function test_updateEntryPoint_revertsWithUnauthorized() public {
         vm.expectRevert(IERC7821.Unauthorized.selector);
         signerAccount.updateEntryPoint(address(entryPoint));
     }
 
-    function test_validateUserOp_revertsWithNotEntryPoint() public {
-        // Even with a prank, this should revert if not enabled on the account.
-        vm.startPrank(address(entryPoint));
-        PackedUserOperation memory userOp;
-        vm.expectRevert(IERC4337Account.NotEntryPoint.selector);
-        signerAccount.validateUserOp(userOp, "", 0);
+    function test_updateEntryPoint_succeeds() public {
+        address newEntryPoint = makeAddr("newEntryPoint");
+
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(newEntryPoint);
+
+        assertEq(signerAccount.ENTRY_POINT(), newEntryPoint);
+    }
+
+    function test_updateEntryPoint_fuzz(address newEntryPoint) public {
+        vm.prank(address(signerAccount));
+        signerAccount.updateEntryPoint(newEntryPoint);
+
+        assertEq(signerAccount.ENTRY_POINT(), newEntryPoint);
     }
 
     function test_validateUserOp_validSignature() public {
-        vm.prank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
@@ -214,10 +225,8 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         bytes memory signature = p256Key.sign(bytes32(0));
 
-        vm.startPrank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
+        vm.prank(address(signerAccount));
         signerAccount.setHook(p256Key.toKeyHash(), mockValidationHook);
-        vm.stopPrank();
 
         PackedUserOperation memory userOp;
         // Spoofed signature and userOpHash
@@ -234,8 +243,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_validateUserOp_validSignature_gas() public {
-        vm.prank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, userOpHash);
@@ -247,8 +254,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     }
 
     function test_validateUserOp_invalidSignature() public {
-        vm.prank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         // incorrect private key
@@ -261,8 +266,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     }
 
     function test_validateUserOp_missingAccountFunds() public {
-        vm.prank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 missingAccountFunds = 1e18;
@@ -286,8 +289,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_validateUserOp_missingAccountFunds_gas() public {
-        vm.prank(address(signerAccount));
-        signerAccount.updateEntryPoint(address(entryPoint));
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 missingAccountFunds = 1e18;
