@@ -13,8 +13,8 @@ import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {ModeDecoder} from "../src/libraries/ModeDecoder.sol";
-import {ExecutionData, ExecutionDataLib} from "../src/libraries/ExecuteLib.sol";
 import {Call, CallLib} from "../src/libraries/CallLib.sol";
+import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 
@@ -22,7 +22,7 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
     using TestKeyManager for TestKey;
     using ModeDecoder for bytes32;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using ExecutionDataLib for ExecutionData;
+    using SignedCallsLib for SignedCalls;
     using CallBuilder for Call;
     using CallBuilder for Call[];
 
@@ -78,14 +78,13 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
 
     function _nonceIsValid(uint256 nonce) internal view returns (bool) {
         uint64 seq = uint64(nonce);
-        // getNonce casts to uint192
-        return signerAccount.getNonce(nonce) + 1 == seq;
+        return signerAccount.getSeq(nonce) + 1 == seq;
     }
 
     function fixtureCall() internal view returns (Call[] memory) {
         Call[] memory calls = new Call[](1);
         calls[0] = CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-            _dataAuthorize(_randFromArray(fixtureKey()))
+            _dataRegister(_randFromArray(fixtureKey()))
         );
         return calls;
     }
@@ -132,10 +131,9 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
 
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
 
-        // Build execution data
-        ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
         // Compute digest
-        bytes32 digest = signerAccount.hashTypedData(executionData.hash());
+        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
 
         bytes memory signature = currentSigningKey.sign(digest);
         bytes memory wrappedSignature = abi.encode(currentKeyHash, signature);
@@ -159,7 +157,7 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
 
     function registerKey(uint256 keyIndexSeed) internal useSigningKey(keyIndexSeed) {
         vm.prank(address(signerAccount));
-        signerAccount.authorize(currentSigningKey.toKey());
+        signerAccount.register(currentSigningKey.toKey());
 
         _ghostKeyHashes.add(currentSigningKey.toKeyHash());
     }

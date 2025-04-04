@@ -89,19 +89,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_authorize_gas() public {
-        bytes32 keyHash = mockSecp256k1Key.hash();
-
-        vm.expectEmit(true, false, false, true);
-        emit Authorized(keyHash, mockSecp256k1Key);
-
-        vm.prank(address(signerAccount));
-        signerAccount.authorize(mockSecp256k1Key);
-        vm.snapshotGasLastCall("authorize");
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
     function test_revoke_gas() public {
         // first register the key
         vm.startPrank(address(signerAccount));

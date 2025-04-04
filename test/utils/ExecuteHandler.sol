@@ -4,8 +4,8 @@ pragma solidity ^0.8.23;
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {IKeyManagement} from "../../src/interfaces/IKeyManagement.sol";
 import {IERC7821} from "../../src/interfaces/IERC7821.sol";
-import {IHook} from "../../src/interfaces/IHook.sol";
 import {Call} from "../../src/libraries/CallLib.sol";
+import {Settings} from "../../src/libraries/SettingsLib.sol";
 import {Key} from "../../src/libraries/KeyLib.sol";
 
 /// @dev Helper contract for testing execute
@@ -20,16 +20,16 @@ contract ExecuteHandler {
 
     /// Helper functions for creating data for fuzz tests
 
-    function _dataAuthorize(Key memory key) internal view returns (bytes memory) {
-        return abi.encodeWithSelector(IKeyManagement.authorize.selector, key);
+    function _dataRegister(Key memory key) internal view returns (bytes memory) {
+        return abi.encodeWithSelector(IKeyManagement.register.selector, key);
     }
 
     function _dataRevoke(bytes32 keyHash) internal view returns (bytes memory) {
         return abi.encodeWithSelector(IKeyManagement.revoke.selector, keyHash);
     }
 
-    function _dataSetHook(bytes32 keyHash, IHook hook) internal view returns (bytes memory) {
-        return abi.encodeWithSelector(IKeyManagement.setHook.selector, keyHash, hook);
+    function _dataUpdate(bytes32 keyHash, Settings settings) internal view returns (bytes memory) {
+        return abi.encodeWithSelector(IKeyManagement.update.selector, keyHash, settings);
     }
 
     function _dataSelfBatchedCall(Call[] memory calls) internal view returns (bytes memory) {
