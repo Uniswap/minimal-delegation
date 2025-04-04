@@ -9,16 +9,6 @@ import {IHook} from "../../interfaces/IHook.sol";
 
 type AccountKeyHash is bytes32;
 
-library MultiSignerWrappedSignatureLib {
-    function unwrap(bytes calldata wrappedSignature)
-        internal
-        pure
-        returns (bytes32 keyHash, bytes[] memory signatures)
-    {
-        (keyHash, signatures) = abi.decode(wrappedSignature, (bytes32, bytes[]));
-    }
-}
-
 /// @title MultiSignerValidatorHook
 /// Require signatures from additional, arbitary signers for a key
 /// TODO: add threshold signature verification
@@ -27,7 +17,6 @@ contract MultiSignerValidatorHook is IHook {
     using KeyLib for Key;
     using CallLib for Call;
     using CallLib for Call[];
-    using MultiSignerWrappedSignatureLib for bytes;
 
     mapping(AccountKeyHash => EnumerableSetLib.Bytes32Set requiredSigners) private requiredSigners;
     mapping(bytes32 => bytes encodedKey) private keyStorage;
@@ -52,22 +41,31 @@ contract MultiSignerValidatorHook is IHook {
         emit RequiredSignerAdded(keyHash, signerKeyHash);
     }
 
-    function overrideValidateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash) external view returns (uint256) {
-        (bytes32 keyHash, bytes[] memory wrappedSignerSignatures) = userOp.signature.unwrap();
+    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash) external view returns (bytes4, uint256) {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(userOp.signature, (bytes[]));
         // TODO: return correct validationData
-        return _hasAllRequiredSignatures(keyHash, userOpHash, wrappedSignerSignatures) ? 0 : 1;
+        return (
+            IHook.overrideValidateUserOp.selector,
+            _hasAllRequiredSignatures(keyHash, userOpHash, wrappedSignerSignatures) ? 0 : 1
+        );
     }
 
-    function overrideIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bytes4) {
-        (bytes[] memory wrappedSignerSignatures) = hookData.unwrap();
-        return _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
-            ? _1271_MAGIC_VALUE
-            : _1271_INVALID_VALUE;
+    function overrideIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bytes4, bytes4) {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
+        return (
+            IHook.overrideIsValidSignature.selector,
+            _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
+                ? _1271_MAGIC_VALUE
+                : _1271_INVALID_VALUE
+        );
     }
 
-    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bool isValid) {
-        (bytes[] memory wrappedSignerSignatures) = hookData.unwrap();
-        return _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures);
+    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData) external view returns (bytes4, bool isValid) {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
+        return (
+            IHook.overrideVerifySignature.selector,
+            _hasAllRequiredSignatures(keyHash, digest, wrappedSignerSignatures)
+        );
     }
 
     function _hasAllRequiredSignatures(bytes32 keyHash, bytes32 digest, bytes[] memory wrappedSignerSignatures)
@@ -90,11 +88,11 @@ contract MultiSignerValidatorHook is IHook {
 
             // break if any signatures are invalid
             if (!isValid) {
-                return (IHook.overrideVerifySignature.selector, false);
+                return false;
             }
         }
 
-        return (IHook.overrideVerifySignature.selector, true);
+        return true;
     }
 
     /// @notice Hash a call with the sender's account address

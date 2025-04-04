@@ -6,6 +6,7 @@ import {HookHandler} from "../../utils/HookHandler.sol";
 import {MultiSignerValidatorHook} from "../../../src/hooks/example/MultiSignerValidatorHook.sol";
 import {TestKey, TestKeyManager} from "../../utils/TestKeyManager.sol";
 import {Key, KeyType, KeyLib} from "../../../src/libraries/KeyLib.sol";
+import {IHook} from "../../../src/interfaces/IHook.sol";
 
 contract MultiSignerValidationHookTest is DelegationHandler, HookHandler {
     using TestKeyManager for TestKey;
@@ -27,7 +28,7 @@ contract MultiSignerValidationHookTest is DelegationHandler, HookHandler {
 
         // Add a signer on signerAccount
         vm.prank(address(signerAccount));
-        signerAccount.authorize(baseKey.toKey());
+        signerAccount.register(baseKey.toKey());
     }
 
     /// Add a required signer for signerAccount
@@ -58,11 +59,13 @@ contract MultiSignerValidationHookTest is DelegationHandler, HookHandler {
         bytes[] memory wrappedSignerSignatures = new bytes[](1);
         wrappedSignerSignatures[0] = abi.encode(key.toKeyHash(), signature);
 
-        bytes memory hookData = abi.encode(baseKey.toKeyHash(), wrappedSignerSignatures);
+        bytes memory hookData = abi.encode(wrappedSignerSignatures);
 
         // Prank as signerAccount because hooks are called from signerAccount
         vm.prank(address(signerAccount));
-        assertEq(hook.verifySignature(digest, hookData), true);
+        (bytes4 selector, bool isValid) = hook.overrideVerifySignature(baseKey.toKeyHash(), digest, hookData);
+        assertEq(selector, IHook.overrideVerifySignature.selector);
+        assertEq(isValid, true);
     }
 
     function test_verifySignature_reverts_withSignerNotRegistered() public {
@@ -74,11 +77,13 @@ contract MultiSignerValidationHookTest is DelegationHandler, HookHandler {
         // signer is different than required signer
         wrappedSignerSignatures[0] = abi.encode(bytes32(0), bytes(""));
 
-        bytes memory hookData = abi.encode(baseKey.toKeyHash(), wrappedSignerSignatures);
+        bytes memory hookData = abi.encode(wrappedSignerSignatures);
 
         vm.expectRevert(SignerNotRegistered.selector);
         vm.prank(address(signerAccount));
-        assertEq(hook.verifySignature(digest, hookData), false);
+        (bytes4 selector, bool isValid) = hook.overrideVerifySignature(baseKey.toKeyHash(), digest, hookData);
+        assertEq(selector, IHook.overrideVerifySignature.selector);
+        assertEq(isValid, false);
     }
 
     function test_verifySignature_withInvalidSignatures_returnsFalse() public {
@@ -91,9 +96,11 @@ contract MultiSignerValidationHookTest is DelegationHandler, HookHandler {
         bytes[] memory wrappedSignerSignatures = new bytes[](1);
         wrappedSignerSignatures[0] = abi.encode(key.toKeyHash(), invalidSignature);
 
-        bytes memory hookData = abi.encode(baseKey.toKeyHash(), wrappedSignerSignatures);
+        bytes memory hookData = abi.encode(wrappedSignerSignatures);
 
         vm.prank(address(signerAccount));
-        assertEq(hook.verifySignature(digest, hookData), false);
+        (bytes4 selector, bool isValid) = hook.overrideVerifySignature(baseKey.toKeyHash(), digest, hookData);
+        assertEq(selector, IHook.overrideVerifySignature.selector);
+        assertEq(isValid, false);
     }
 }
