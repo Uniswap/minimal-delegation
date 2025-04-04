@@ -51,7 +51,7 @@ contract MinimalDelegationStorageTest is DelegationHandler {
         uint256 key = 1;
 
         vm.record();
-        signerAccount.getNonce(key);
+        signerAccount.getSeq(key);
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
         assertEq(readSlots.length, 1);
         assertEq(writeSlots.length, 0);
