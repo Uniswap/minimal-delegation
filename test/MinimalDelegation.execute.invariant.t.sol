@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
@@ -15,12 +16,15 @@ import {ModeDecoder} from "../src/libraries/ModeDecoder.sol";
 import {ExecutionData, ExecutionDataLib} from "../src/libraries/ExecuteLib.sol";
 import {Call, CallLib} from "../src/libraries/CallLib.sol";
 import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
+import {CallBuilder} from "./utils/CallBuilder.sol";
 
 contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
     using TestKeyManager for TestKey;
     using ModeDecoder for bytes32;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using ExecutionDataLib for ExecutionData;
+    using CallBuilder for Call;
+    using CallBuilder for Call[];
 
     IMinimalDelegation public signerAccount;
 
@@ -35,7 +39,7 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
 
     constructor(IMinimalDelegation _signerAccount, TestKey[] memory _keys, address[] memory _callers) {
         signerAccount = _signerAccount;
-        for(uint256 i = 0; i < _keys.length; i++) {
+        for (uint256 i = 0; i < _keys.length; i++) {
             keys.push(_keys[i]);
         }
         callers = _callers;
@@ -60,19 +64,59 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
         return call;
     }
 
+    function _randFromArray(bytes32[] memory array) internal view returns (bytes32) {
+        return array[bound(uint256(array.length), 0, array.length - 1)];
+    }
+
+    function _randFromArray(Key[] memory array) internal view returns (Key memory) {
+        return array[bound(uint256(array.length), 0, array.length - 1)];
+    }
+
+    function _randFromArray(Call[] memory array) internal view returns (Call memory) {
+        return array[bound(uint256(array.length), 0, array.length - 1)];
+    }
+
     function _nonceIsValid(uint256 nonce) internal view returns (bool) {
         uint64 seq = uint64(nonce);
         // getNonce casts to uint192
         return signerAccount.getNonce(nonce) + 1 == seq;
     }
 
-    // TODO: support execution type
-    function executeBatchedCall(Call calldata call, uint256 callerIndexSeed)
-        public
-        useCaller(callerIndexSeed)
-    {
+    function fixtureCall() internal view returns (Call[] memory) {
         Call[] memory calls = new Call[](1);
-        calls[0] = _boundCall(call);
+        calls[0] = CallBuilder.initDefault().withTo(address(signerAccount)).withData(
+            _dataAuthorize(_randFromArray(fixtureKey()))
+        );
+        return calls;
+    }
+
+    /// Generate a list of keyHashes to be used in fuzz tests
+    function fixtureKeyHash() internal view returns (bytes32[] memory) {
+        // Add random keyHashes
+        uint256 numKeyHashes = bound(uint256(keys.length), 1, 10);
+        bytes32[] memory keyHashes = new bytes32[](numKeyHashes);
+        for (uint256 i = 0; i < keys.length; i++) {
+            keyHashes[i] = keys[i].toKeyHash();
+        }
+        for (uint256 i = keys.length; i < numKeyHashes; i++) {
+            // Generate random keyHash
+            keyHashes[i] = bytes32(uint256(keccak256(abi.encode(i))));
+        }
+        return keyHashes;
+    }
+
+    function fixtureKey() internal view returns (Key[] memory) {
+        Key[] memory _keys = new Key[](keys.length);
+        for (uint256 i = 0; i < keys.length; i++) {
+            _keys[i] = keys[i].toKey();
+        }
+        return _keys;
+    }
+
+    // TODO: support execution type
+    function executeBatchedCall(uint256 callerIndexSeed) public useCaller(callerIndexSeed) {
+        Call[] memory calls = new Call[](1);
+        calls[0] = _randFromArray(fixtureCall());
 
         if (currentCaller != address(signerAccount)) {
             vm.expectRevert(IERC7821.Unauthorized.selector);
@@ -82,12 +126,9 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
 
     /// Computes digest and signs correctly
     // TODO: add switch on caller for entrypoint vs. native bundler use case
-    function executeWithOpData(Call calldata call, uint256 nonce, uint256 keyIndexSeed)
-        public
-        useSigningKey(keyIndexSeed)
-    {
+    function executeWithOpData(uint256 nonce, uint256 keyIndexSeed) public useSigningKey(keyIndexSeed) {
         Call[] memory calls = new Call[](1);
-        calls[0] = _boundCall(call);
+        calls[0] = _randFromArray(fixtureCall());
 
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
 
@@ -103,10 +144,10 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
         bool keyExists = _ghostKeyHashes.contains(currentKeyHash);
         bool nonceIsValid = _nonceIsValid(nonce);
 
-        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(calls, opData)) {
-        } catch (bytes memory revertData) {
+        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(calls, opData)) {}
+        catch (bytes memory revertData) {
             // Must be in order of occurrence
-            if(!nonceIsValid) {
+            if (!nonceIsValid) {
                 assertEq(bytes4(revertData), INonceManager.InvalidNonce.selector);
             } else if (!keyExists) {
                 assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
@@ -119,7 +160,7 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
     function registerKey(uint256 keyIndexSeed) internal useSigningKey(keyIndexSeed) {
         vm.prank(address(signerAccount));
         signerAccount.authorize(currentSigningKey.toKey());
-        
+
         _ghostKeyHashes.add(currentSigningKey.toKeyHash());
     }
 }
@@ -160,7 +201,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     }
 
     function invariant_executeNeverChangesKeyPermissions() public view {
-        for(uint256 i = 0; i < _keys.length; i++) {
+        for (uint256 i = 0; i < _keys.length; i++) {
             TestKey memory key = _keys[i];
             bytes32 keyHash = key.toKeyHash();
             // assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
