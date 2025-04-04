@@ -13,9 +13,9 @@ contract NonceManagerTest is DelegationHandler {
     function test_getSeq_succeeds() public view {
         // Start with nonce 0, which has key = 0 and sequence = 0
         uint256 nonce = 0;
-        uint192 key = uint192(nonce >> 64); // Extract key (high 192 bits)
+        uint192 nonceKey = uint192(nonce >> 64); // Extract key (high 192 bits)
         uint256 expectedSeq = uint256(uint64(nonce));
-        assertEq(signerAccount.getSeq(key), expectedSeq);
+        assertEq(signerAccount.getSeq(nonceKey), expectedSeq);
     }
 
     function test_invalidateNonce_revertsWithUnauthorized() public {
@@ -41,9 +41,9 @@ contract NonceManagerTest is DelegationHandler {
     }
 
     function test_invalidateNonce_revertsWithExcessiveInvalidation() public {
-        uint192 key = 0;
+        uint192 nonceKey = 0;
         uint64 sequence = uint64(type(uint16).max) + 1; // Use a high sequence number
-        uint256 nonce = (uint256(key) << 64) | sequence;
+        uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
         vm.startPrank(address(signerAccount));
         vm.expectRevert(INonceManager.ExcessiveInvalidation.selector);
@@ -51,61 +51,61 @@ contract NonceManagerTest is DelegationHandler {
     }
 
     function test_invalidateNonce_succeeds() public {
-        uint192 key = 0;
+        uint192 nonceKey = 0;
         uint64 sequence = type(uint16).max;
-        uint256 nonce = (uint256(key) << 64) | sequence;
+        uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have been set with the max sequence number
-        assertEq(signerAccount.getSeq(key), uint256(type(uint16).max));
+        assertEq(signerAccount.getSeq(nonceKey), uint256(type(uint16).max));
 
         // Invalidate the next nonce
         sequence = uint64(sequence * 2);
-        nonce = (uint256(key) << 64) | sequence;
+        nonce = (uint256(nonceKey) << 64) | sequence;
 
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have been set with the sequence number incremented by 1
-        assertEq(signerAccount.getSeq(key), sequence);
+        assertEq(signerAccount.getSeq(nonceKey), sequence);
     }
 
-    function test_fuzz_invalidateNonce(uint192 key, uint16 sequence) public {
+    function test_fuzz_invalidateNonce(uint192 nonceKey, uint16 sequence) public {
         // Skip sequences that would overflow when incremented
         sequence = uint16(bound(sequence, 1, type(uint16).max));
 
-        uint256 nonce = (uint256(key) << 64) | sequence;
+        uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have sequence incremented by 1
-        assertEq(signerAccount.getSeq(key), sequence);
+        assertEq(signerAccount.getSeq(nonceKey), sequence);
     }
 
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_invalidateNonce_gas() public {
-        uint192 key = 0;
+        uint192 nonceKey = 0;
         uint64 sequence = type(uint16).max;
-        uint256 nonce = (uint256(key) << 64) | sequence;
+        uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
         vm.snapshotGasLastCall("invalidateNonce");
 
         // The new nonce should have been set
-        assertEq(signerAccount.getSeq(key), type(uint16).max);
+        assertEq(signerAccount.getSeq(nonceKey), type(uint16).max);
 
         // Invalidate the next nonce
         sequence = uint64(sequence * 2);
-        nonce = (uint256(key) << 64) | sequence;
+        nonce = (uint256(nonceKey) << 64) | sequence;
 
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have been set
-        assertEq(signerAccount.getSeq(key), sequence);
+        assertEq(signerAccount.getSeq(nonceKey), sequence);
     }
 }

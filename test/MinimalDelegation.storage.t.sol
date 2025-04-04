@@ -48,16 +48,16 @@ contract MinimalDelegationStorageTest is DelegationHandler {
     }
 
     function test_nonceSequenceNumber_nested_key() public {
-        uint256 key = 1;
+        uint192 nonceKey = 1;
 
         vm.record();
-        signerAccount.getSeq(key);
+        signerAccount.getSeq(nonceKey);
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
         assertEq(readSlots.length, 1);
         assertEq(writeSlots.length, 0);
 
         bytes32 mappingRootSlot = _addOffset(signerAccount.CUSTOM_STORAGE_ROOT(), NONCE_SEQUENCE_NUMBER_SLOT);
-        bytes32 nestedSlot = _calculateNestedMappingSlot(key, mappingRootSlot);
+        bytes32 nestedSlot = _calculateNestedMappingSlot(nonceKey, mappingRootSlot);
         assertEq(readSlots[0], nestedSlot);
     }
 
