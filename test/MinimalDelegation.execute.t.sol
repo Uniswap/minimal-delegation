@@ -186,8 +186,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
         // Sign using the registered P256 key
-        bytes memory packedSignature =
-            abi.encode(nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()))));
+        bytes memory packedSignature = abi.encode(
+            nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash())))
+        );
         bytes memory executionData = abi.encode(calls, packedSignature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
