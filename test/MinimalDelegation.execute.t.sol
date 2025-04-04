@@ -30,7 +30,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     using ExecutionDataLib for ExecutionData;
     using SettingsLib for Settings;
     using SettingsBuilder for Settings;
-    
+
     address receiver = makeAddr("receiver");
 
     function setUp() public {
