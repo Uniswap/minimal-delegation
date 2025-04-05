@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Key, KeyLib} from "../../src/libraries/KeyLib.sol";
 import {TestKey, TestKeyManager} from "./TestKeyManager.sol";
@@ -40,5 +41,15 @@ abstract contract GhostStateTracker {
     // Noop
     function ghost_UpdateCallback(bytes32 keyHash) public {}
 
-    function ghost_ExecuteCallback(Call[] memory calls) public {}
+    function ghost_ExecuteCallback(Call[] memory calls) public {
+        console2.log("ghost_ExecuteCallback");
+        console2.log("calls.length");
+        console2.logUint(calls.length);
+        for (uint256 i = 0; i < calls.length; i++) {
+            console2.log("call.to");
+            console2.logAddress(calls[i].to);
+            console2.log("call.data");
+            console2.logBytes(calls[i].data);
+        }
+    }
 }

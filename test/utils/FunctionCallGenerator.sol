@@ -44,7 +44,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     uint256 public constant FUNCTION_COUNT = 4; // Total number of function types
 
     // Recursion control
-    uint256 public constant MAX_DEPTH = 10;
+    uint256 public constant MAX_DEPTH = 5;
 
     address private immutable _tokenA;
     address private immutable _tokenB;
@@ -98,6 +98,8 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
 
     function _getSettingsForKeyHash(bytes32 keyHash) internal virtual returns (Settings) {}
 
+    // TODO: add transient tracking of ghost key hashes to avoid revoking a key that was already revoked in different recursion depths 
+
     /**
      * @notice Generate a random function call with equal weighting between function types
      * @param randomSeed Random seed for generation
@@ -107,7 +109,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     function generateRandomFunctionHandlerCall(uint256 randomSeed, uint256 depth) public returns (HandlerCall memory) {
         vm.assume(randomSeed < type(uint256).max);
         // Select function type with equal weighting
-        uint256 functionType = bound(randomSeed, 0, FUNCTION_COUNT - 1);
+        uint256 functionType = _bound(randomSeed, 0, FUNCTION_COUNT - 1);
 
         // REGISTER
         if (functionType == FUNCTION_REGISTER || _ghostKeyHashes.values().length == 0) {
@@ -131,22 +133,21 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
                 return _updateCall(keyHashToUpdate, settings);
             }
         }
-        // TRANSFER
-        else if (functionType == TRANSFER_TOKEN) {
-            return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
-        }
 
-        // Always recurse
+        // If no matches above, recurse
         if (depth < MAX_DEPTH) {
             HandlerCall[] memory innerCalls = _generateRandomHandlerCalls(randomSeed + 1, depth + 1);
 
             return HandlerCallLib.initDefault().withCall(
                 CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, innerCalls.toCalls())
+                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, abi.encode(innerCalls.toCalls()))
                 )
             ).withCallback(
                 abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls)
             );
+        } else {
+            // Transfer is default
+            return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
     }
 
@@ -158,9 +159,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
      */
     function _generateRandomHandlerCalls(uint256 seed, uint256 depth) internal returns (HandlerCall[] memory) {
         // How many calls to generate (more at lower depths)
-        uint256 cnt = bound(seed % 3, 1, (MAX_DEPTH - depth + 1) ** 2);
-        console2.log("cnt");
-        console2.logUint(cnt);
+        uint256 cnt = _bound(seed % 10, 1, MAX_DEPTH - depth + 1);
 
         HandlerCall[] memory handlerCalls = new HandlerCall[](cnt);
         for (uint256 i = 0; i < cnt; i++) {
@@ -174,7 +173,11 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     function _processCallbacks(HandlerCall[] memory handlerCalls) internal {
         for (uint256 i = 0; i < handlerCalls.length; i++) {
             if (handlerCalls[i].callback.length > 0) {
-                (bool success,) = address(this).call(handlerCalls[i].callback);
+                (bool success, bytes memory revertData) = address(this).call(handlerCalls[i].callback);
+                if(!success) {
+                    console2.log("revertData");
+                    console2.logBytes(revertData);
+                }
                 assertEq(success, true);
             }
         }

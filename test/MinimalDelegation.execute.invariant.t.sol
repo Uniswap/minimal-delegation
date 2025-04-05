@@ -23,6 +23,8 @@ import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {HandlerCall, HandlerCallLib} from "./utils/HandlerCallLib.sol";
 import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {IHandlerGhostCallbacks} from "./utils/GhostStateTracker.sol";
+import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
+import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 
 struct SetupParams {
     IMinimalDelegation _signerAccount;
@@ -42,6 +44,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     using CallBuilder for Call[];
     using HandlerCallLib for HandlerCall;
     using HandlerCallLib for HandlerCall[];
+    using SettingsBuilder for Settings;
 
     address[] public callers;
     address public currentCaller;
@@ -63,13 +66,13 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
 
     /// @notice Sets the current signing key for the test
     modifier useSigningKey(uint256 keyIndexSeed) {
-        currentSigningKey = keys[bound(keyIndexSeed, 0, keys.length - 1)];
+        currentSigningKey = keys[_bound(keyIndexSeed, 0, keys.length - 1)];
         _;
     }
 
     /// @notice Sets the current caller for the test
     modifier useCaller(uint256 callerIndexSeed) {
-        currentCaller = callers[bound(callerIndexSeed, 0, callers.length - 1)];
+        currentCaller = callers[_bound(callerIndexSeed, 0, callers.length - 1)];
         vm.startPrank(currentCaller);
         _;
         vm.stopPrank();
@@ -95,7 +98,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
 
     /// @notice Executes a batched call with the current caller
     function executeBatchedCall(uint256 seed) public useCaller(seed) {
-        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
+        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
 
         try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
             _processCallbacks(handlerCalls);
@@ -117,7 +120,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
             _registerSigningKeyIfNotRegistered(currentSigningKey);
         }
 
-        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
+        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         SignedCalls memory signedCalls = SignedCalls({calls: handlerCalls.toCalls(), nonce: nonce});
@@ -203,7 +206,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     }
 
     /// @notice Verifies that the root key can always revoke other keys
-    function invariant_rootKeyCanAlwaysRevokeOtherKeys() public {
+    function invariant_rootKeyCanAlwaysRevokeOtherSigningKeys() public {
         // Ensure key exists
         bytes32 keyHash = untrustedKey.toKeyHash();
         try signerAccount.getKey(keyHash) {
@@ -212,5 +215,22 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         } catch (bytes memory revertData) {
             assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
         }
+    }
+
+    function invariant_rootKeyCanAlwaysUpdateOtherSigningKeys() public {
+        bytes32 keyHash = untrustedKey.toKeyHash();
+        try signerAccount.getKey(keyHash) {
+            vm.prank(address(signerAccount));
+            signerAccount.update(keyHash, SettingsBuilder.init());
+        } catch (bytes memory revertData) {
+            assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+        }
+    }
+
+    function invariant_rootKeyCanAlwaysRegisterOtherSigningKeys() public {
+        TestKey memory newKey = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
+        vm.prank(address(signerAccount));
+        signerAccount.register(newKey.toKey());
+        assertEq(signerAccount.getKey(newKey.toKeyHash()).hash(), newKey.toKeyHash());
     }
 }
