@@ -43,7 +43,7 @@ library TestKeyManager {
             address defaultAddress = vm.addr(DEFAULT_SECP256K1_PK);
             return TestKey({
                 keyType: keyType,
-                publicKey: abi.encodePacked(defaultAddress),
+                publicKey: abi.encode(defaultAddress),
                 privateKey: DEFAULT_SECP256K1_PK
             });
         } else if (keyType == KeyType.WebAuthnP256) {
@@ -65,7 +65,7 @@ library TestKeyManager {
             return TestKey({keyType: keyType, publicKey: abi.encodePacked(x, y), privateKey: seed});
         } else if (keyType == KeyType.Secp256k1) {
             address addr = vm.addr(seed);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(addr), privateKey: seed});
+            return TestKey({keyType: keyType, publicKey: abi.encode(addr), privateKey: seed});
         } else {
             revert KeyNotSupported();
         }

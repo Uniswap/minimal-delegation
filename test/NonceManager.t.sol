@@ -73,7 +73,7 @@ contract NonceManagerTest is DelegationHandler {
 
     function test_fuzz_invalidateNonce(uint256 nonceKey, uint16 sequence) public {
         // Skip sequences that would overflow when incremented
-        sequence = uint16(bound(sequence, 1, type(uint16).max));
+        sequence = uint16(_bound(sequence, 1, type(uint16).max));
 
         uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 

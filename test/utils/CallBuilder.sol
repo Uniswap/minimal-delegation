@@ -16,4 +16,23 @@ library CallBuilder {
         newCalls[calls.length] = call;
         return newCalls;
     }
+
+    function initDefault() internal pure returns (Call memory) {
+        return Call({to: address(0), value: 0, data: ""});
+    }
+
+    function withTo(Call memory call, address to) internal pure returns (Call memory) {
+        call.to = to;
+        return call;
+    }
+
+    function withValue(Call memory call, uint256 value) internal pure returns (Call memory) {
+        call.value = value;
+        return call;
+    }
+
+    function withData(Call memory call, bytes memory data) internal pure returns (Call memory) {
+        call.data = data;
+        return call;
+    }
 }
