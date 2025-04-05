@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {Test} from "forge-std/Test.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
@@ -39,12 +40,11 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     uint256 public constant FUNCTION_REGISTER = 0;
     uint256 public constant FUNCTION_REVOKE = 1;
     uint256 public constant FUNCTION_UPDATE = 2;
-    uint256 public constant FUNCTION_EXECUTE = 3;
-    uint256 public constant TRANSFER_TOKEN = 4;
-    uint256 public constant FUNCTION_COUNT = 5; // Total number of function types
+    uint256 public constant TRANSFER_TOKEN = 3;
+    uint256 public constant FUNCTION_COUNT = 4; // Total number of function types
 
     // Recursion control
-    uint256 public constant MAX_DEPTH = 3;
+    uint256 public constant MAX_DEPTH = 10;
 
     address private immutable _tokenA;
     address private immutable _tokenB;
@@ -89,14 +89,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         );
     }
 
-    function _getRevokableKeyHash(uint256 seed) internal view returns (bytes32) {
-        if (_ghostKeyHashes.values().length == 0) {
-            return bytes32(0);
-        }
-        return _ghostKeyHashes.values()[seed % _ghostKeyHashes.values().length];
-    }
-
-    function _getUpdatableKeyHash(uint256 seed) internal view returns (bytes32) {
+    function _getRandomKeyHash(uint256 seed) internal view returns (bytes32) {
         if (_ghostKeyHashes.values().length == 0) {
             return bytes32(0);
         }
@@ -117,7 +110,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         uint256 functionType = bound(randomSeed, 0, FUNCTION_COUNT - 1);
 
         // REGISTER
-        if (functionType == FUNCTION_REGISTER) {
+        if (functionType == FUNCTION_REGISTER || _ghostKeyHashes.values().length == 0) {
             TestKey memory newKey = _randomTestKey();
             if(newKey.toKeyHash() != bytes32(0)) {
                 return _registerCall(newKey);
@@ -125,14 +118,14 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         }
         // REVOKE
         else if (functionType == FUNCTION_REVOKE) {
-            bytes32 keyHashToRevoke = _getRevokableKeyHash(randomSeed);
+            bytes32 keyHashToRevoke = _getRandomKeyHash(randomSeed);
             if (keyHashToRevoke != bytes32(0)) {
                 return _revokeCall(keyHashToRevoke);
             }
         }
         // UPDATE
         else if (functionType == FUNCTION_UPDATE) {
-            bytes32 keyHashToUpdate = _getUpdatableKeyHash(randomSeed);
+            bytes32 keyHashToUpdate = _getRandomKeyHash(randomSeed);
             Settings settings = _getSettingsForKeyHash(keyHashToUpdate);
             if (keyHashToUpdate != bytes32(0)) {
                 return _updateCall(keyHashToUpdate, settings);
@@ -142,20 +135,18 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         else if (functionType == TRANSFER_TOKEN) {
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
-        // If no conditions are met, increase the depth and recurse
-        else {
-            // Only recurse if we're not too deep
-            if (depth < MAX_DEPTH) {
-                HandlerCall[] memory innerCalls = _generateRandomHandlerCalls(randomSeed + 1, depth + 1);
 
-                return HandlerCallLib.initDefault().withCall(
-                    CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-                        abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, innerCalls.toCalls())
-                    )
-                ).withCallback(
-                    abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls)
-                );
-            }
+        // Always recurse
+        if (depth < MAX_DEPTH) {
+            HandlerCall[] memory innerCalls = _generateRandomHandlerCalls(randomSeed + 1, depth + 1);
+
+            return HandlerCallLib.initDefault().withCall(
+                CallBuilder.initDefault().withTo(address(signerAccount)).withData(
+                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, innerCalls.toCalls())
+                )
+            ).withCallback(
+                abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls)
+            );
         }
     }
 
@@ -167,7 +158,9 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
      */
     function _generateRandomHandlerCalls(uint256 seed, uint256 depth) internal returns (HandlerCall[] memory) {
         // How many calls to generate (more at lower depths)
-        uint256 cnt = bound(seed % 7, 1, MAX_DEPTH - depth + 1);
+        uint256 cnt = bound(seed % 3, 1, (MAX_DEPTH - depth + 1) ** 2);
+        console2.log("cnt");
+        console2.logUint(cnt);
 
         HandlerCall[] memory handlerCalls = new HandlerCall[](cnt);
         for (uint256 i = 0; i < cnt; i++) {

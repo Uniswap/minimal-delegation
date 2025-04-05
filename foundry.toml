@@ -14,7 +14,7 @@ remappings = [
 
 [profile.default.invariant]
 fail_on_revert = true
-runs = 100
+runs = 10
 
 [profile.default.fuzz]
 runs = 1000

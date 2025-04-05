@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
@@ -85,6 +86,13 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
         return vm.addr(key.privateKey) == address(signerAccount);
     }
 
+    function _registerSigningKeyIfNotRegistered(TestKey memory key) internal {
+        if (!_ghostKeyHashes.contains(key.toKeyHash())) {
+            vm.prank(address(signerAccount));
+            signerAccount.register(key.toKey());
+        }
+    }
+
     /// @notice Executes a batched call with the current caller
     function executeBatchedCall(uint256 seed) public useCaller(seed) {
         HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
@@ -102,10 +110,14 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
 
     /// @notice Executes a call with operation data (with signature)
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
-        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
-        
-        bytes32 currentKeyHash = _signingKeyIsRootEOA(currentSigningKey) ? bytes32(0) : currentSigningKey.toKeyHash();
+        bytes32 currentKeyHash = currentSigningKey.toKeyHash();
+        if(_signingKeyIsRootEOA(currentSigningKey)) {
+            currentKeyHash = bytes32(0);
+        } else {
+            _registerSigningKeyIfNotRegistered(currentSigningKey);
+        }
 
+        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         SignedCalls memory signedCalls = SignedCalls({calls: handlerCalls.toCalls(), nonce: nonce});
@@ -116,17 +128,14 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
         bytes memory wrappedSignature = abi.encode(currentKeyHash, signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
 
-        bool keyExists = _ghostKeyHashes.contains(currentKeyHash);
+        bytes memory debugCalldata = abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData));
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData)) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            // Must be in order of occurrence
-            if (!keyExists) {
-                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-            } else {
-                revert("uncaught revert");
-            }
+            console2.logBytes(debugCalldata);
+            console2.logBytes(revertData);
+            revert("uncaught revert");
         }
     }
 }
