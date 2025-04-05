@@ -201,7 +201,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         uint256 nonceKey = 0;
-        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
@@ -223,7 +223,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         uint256 nonceKey = 0;
-        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});

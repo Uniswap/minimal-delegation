@@ -26,6 +26,14 @@ library HandlerCallLib {
         return newCalls;
     }
 
+    function toCalls(HandlerCall[] memory handlerCalls) internal pure returns (Call[] memory) {
+        Call[] memory calls = new Call[](handlerCalls.length);
+        for (uint256 i = 0; i < handlerCalls.length; i++) {
+            calls[i] = handlerCalls[i].call;
+        }
+        return calls;
+    }
+
     function initDefault() internal pure returns (HandlerCall memory) {
         return HandlerCall({call: Call({to: address(0), value: 0, data: ""}), callback: ""});
     }

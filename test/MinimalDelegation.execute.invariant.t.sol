@@ -20,6 +20,8 @@ import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {HandlerCall, HandlerCallLib} from "./utils/HandlerCallLib.sol";
+import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
+import {IHandlerGhostCallbacks} from "./utils/GhostStateTracker.sol";
 
 struct SetupParams {
     IMinimalDelegation _signerAccount;
@@ -29,11 +31,7 @@ struct SetupParams {
     address _tokenB;
 }
 
-interface IHandlerGhostCallbacks {
-    function ghost_RegisterCallback(Key memory key) external;
-}
-
-contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
+contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     using TestKeyManager for TestKey;
     using KeyLib for Key;
     using ModeDecoder for bytes32;
@@ -44,22 +42,16 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
     using HandlerCallLib for HandlerCall;
     using HandlerCallLib for HandlerCall[];
 
-    IMinimalDelegation public signerAccount;
-
     address[] public callers;
     address public currentCaller;
 
     TestKey[] public keys;
     TestKey public currentSigningKey;
 
-    // Ghost variables to track registered keys
-    EnumerableSetLib.Bytes32Set internal _ghostKeyHashes;
-
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    constructor(SetupParams memory _params) {
-        signerAccount = _params._signerAccount;
+    constructor(SetupParams memory _params) FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB) {
         for (uint256 i = 0; i < _params._keys.length; i++) {
             keys.push(_params._keys[i]);
         }
@@ -82,27 +74,6 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
         vm.stopPrank();
     }
 
-    /// @notice Bounds call value to the account balance
-    function _boundCall(Call memory call) internal view returns (Call memory) {
-        call.value = bound(call.value, 0, address(signerAccount).balance);
-        return call;
-    }
-
-    /// @notice Selects a random element from an array
-    function _randFromArray(bytes32[] memory array) internal view returns (bytes32) {
-        return array[bound(uint256(0), 0, array.length - 1)];
-    }
-
-    /// @notice Selects a random element from an array
-    function _randFromArray(Key[] memory array) internal view returns (Key memory) {
-        return array[bound(uint256(0), 0, array.length - 1)];
-    }
-
-    /// @notice Selects a random element from an array
-    function _randFromArray(HandlerCall[] memory array) internal view returns (HandlerCall memory) {
-        return array[bound(uint256(0), 0, array.length - 1)];
-    }
-
     /// @notice Builds the next valid nonce for the given key
     function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
         seq = uint64(signerAccount.getSeq(key));
@@ -114,75 +85,12 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
         return vm.addr(key.privateKey) == address(signerAccount);
     }
 
-    /// @notice Executes registered callbacks for handler calls
-    function _doCallbacks(HandlerCall[] memory handlerCalls) internal {
-        for (uint256 i = 0; i < handlerCalls.length; i++) {
-            if (handlerCalls[i].callback.length > 0) {
-                (bool success,) = address(this).call(handlerCalls[i].callback);
-                assertEq(success, true);
-            }
-        }
-    }
-
-    /// @notice Ghost callback to track registered keys
-    function ghost_RegisterCallback(Key memory key) public {
-        _ghostKeyHashes.add(key.hash());
-    }
-
-    /// @notice Creates handler calls for the test
-    function _getHandlerCalls() internal returns (HandlerCall[] memory) {
-        HandlerCall[] memory handlerCalls = HandlerCallLib.init();
-
-        // Add register calls for all tracked keys
-        Key[] memory _keys = _getKeys();
-        for (uint256 i = 0; i < _keys.length; i++) {
-            handlerCalls = handlerCalls.push(
-                HandlerCallLib.initDefault().withCall(
-                    CallBuilder.initDefault().withTo(address(signerAccount)).withData(_dataRegister(_keys[i]))
-                ).withCallback(abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RegisterCallback.selector, _keys[i]))
-            );
-        }
-
-        // Add transfer calls for all tracked tokens
-        handlerCalls = handlerCalls.push(
-            HandlerCallLib.initDefault().withCall(
-                CallBuilder.initDefault().withTo(address(tokenA)).withData(
-                    abi.encodeWithSelector(ERC20.transfer.selector, vm.randomAddress(), 1)
-                )
-            )
-        );
-        handlerCalls = handlerCalls.push(
-            HandlerCallLib.initDefault().withCall(
-                CallBuilder.initDefault().withTo(address(tokenB)).withData(
-                    abi.encodeWithSelector(ERC20.transfer.selector, vm.randomAddress(), 1)
-                )
-            )
-        );
-
-        return handlerCalls;
-    }
-
-    /// @notice Loads keys into memory
-    function _getKeys() internal view returns (Key[] memory) {
-        Key[] memory _keys = new Key[](keys.length);
-        for (uint256 i = 0; i < keys.length; i++) {
-            _keys[i] = keys[i].toKey();
-        }
-        return _keys;
-    }
-
     /// @notice Executes a batched call with the current caller
-    function executeBatchedCall(uint256 callerIndexSeed) public useCaller(callerIndexSeed) {
-        HandlerCall[] memory handlerCalls = _getHandlerCalls();
-        HandlerCall memory handlerCall = _randFromArray(handlerCalls);
+    function executeBatchedCall(uint256 seed) public useCaller(seed) {
+        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
 
-        Call[] memory calls = new Call[](1);
-        calls[0] = handlerCall.call;
-
-        try signerAccount.execute(BATCHED_CALL, abi.encode(calls)) {
-            HandlerCall[] memory _callbacks = new HandlerCall[](1);
-            _callbacks[0] = handlerCall;
-            _doCallbacks(_callbacks);
+        try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
+            _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (currentCaller != address(signerAccount)) {
                 assertEq(bytes4(revertData), IERC7821.Unauthorized.selector);
@@ -193,18 +101,14 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
     }
 
     /// @notice Executes a call with operation data (with signature)
-    function executeWithOpData(uint192 nonceKey, uint256 keyIndexSeed) public useSigningKey(keyIndexSeed) {
-        HandlerCall[] memory handlerCalls = _getHandlerCalls();
-        HandlerCall memory handlerCall = _randFromArray(handlerCalls);
-
-        Call[] memory calls = new Call[](1);
-        calls[0] = handlerCall.call;
-
+    function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
+        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, MAX_DEPTH);
+        
         bytes32 currentKeyHash = _signingKeyIsRootEOA(currentSigningKey) ? bytes32(0) : currentSigningKey.toKeyHash();
 
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: handlerCalls.toCalls(), nonce: nonce});
         // Compute digest
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
 
@@ -214,10 +118,8 @@ contract MinimalDelegationExecuteInvariantHandler is Test, ExecuteHandler {
 
         bool keyExists = _ghostKeyHashes.contains(currentKeyHash);
 
-        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(calls, opData)) {
-            HandlerCall[] memory _callbacks = new HandlerCall[](1);
-            _callbacks[0] = handlerCall;
-            _doCallbacks(_callbacks);
+        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData)) {
+            _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             // Must be in order of occurrence
             if (!keyExists) {
@@ -236,7 +138,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     using CallBuilder for Call[];
     using WrappedDataHash for bytes32;
 
-    MinimalDelegationExecuteInvariantHandler public invariantHandler;
+    MinimalDelegationExecuteInvariantHandler internal invariantHandler;
 
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
@@ -253,6 +155,10 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     function setUp() public {
         setUpDelegation();
         setUpTokens();
+
+        vm.deal(address(signerAccount), 100e18);
+        tokenA.mint(address(signerAccount), 100e18);
+        tokenB.mint(address(signerAccount), 100e18);
 
         address[] memory callers = new address[](2);
         // Add trusted root caller
@@ -278,13 +184,13 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         });
         invariantHandler = new MinimalDelegationExecuteInvariantHandler(params);
 
+        bytes4[] memory selectors = new bytes4[](2);
+        selectors[0] = MinimalDelegationExecuteInvariantHandler.executeBatchedCall.selector;
+        selectors[1] = MinimalDelegationExecuteInvariantHandler.executeWithOpData.selector;
+        FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
+        targetSelector(selector);
         targetContract(address(invariantHandler));
         targetSender(sender);
-
-        bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = IHandlerGhostCallbacks.ghost_RegisterCallback.selector;
-        FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
-        excludeSelector(selector);
     }
 
     /// @notice Verifies that the root key can always revoke other keys
