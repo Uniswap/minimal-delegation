@@ -49,6 +49,8 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     address private immutable _tokenA;
     address private immutable _tokenB;
 
+    EnumerableSetLib.Bytes32Set internal _revokedKeyHashes;
+
     constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
         _tokenA = tokenA;
@@ -89,7 +91,8 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         );
     }
 
-    function _getRandomKeyHash(uint256 seed) internal view returns (bytes32) {
+    // Ghost keys are persisted after the callbacks are triggered
+    function _getRandomGhostKeyHash(uint256 seed) internal view returns (bytes32) {
         if (_ghostKeyHashes.values().length == 0) {
             return bytes32(0);
         }
@@ -120,16 +123,17 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         }
         // REVOKE
         else if (functionType == FUNCTION_REVOKE) {
-            bytes32 keyHashToRevoke = _getRandomKeyHash(randomSeed);
-            if (keyHashToRevoke != bytes32(0)) {
+            bytes32 keyHashToRevoke = _getRandomGhostKeyHash(randomSeed);
+            if (keyHashToRevoke != bytes32(0) && !_revokedKeyHashes.contains(keyHashToRevoke)) {
+                _revokedKeyHashes.add(keyHashToRevoke);
                 return _revokeCall(keyHashToRevoke);
             }
         }
         // UPDATE
         else if (functionType == FUNCTION_UPDATE) {
-            bytes32 keyHashToUpdate = _getRandomKeyHash(randomSeed);
-            Settings settings = _getSettingsForKeyHash(keyHashToUpdate);
-            if (keyHashToUpdate != bytes32(0)) {
+            bytes32 keyHashToUpdate = _getRandomGhostKeyHash(randomSeed);
+            if (keyHashToUpdate != bytes32(0) && !_revokedKeyHashes.contains(keyHashToUpdate)) {
+                Settings settings = _getSettingsForKeyHash(keyHashToUpdate);
                 return _updateCall(keyHashToUpdate, settings);
             }
         }
@@ -143,7 +147,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
                     abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, abi.encode(innerCalls.toCalls()))
                 )
             ).withCallback(
-                abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls)
+                abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls.toCalls())
             );
         } else {
             // Transfer is default

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.29;
 
 import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
@@ -14,19 +14,20 @@ interface IHandlerGhostCallbacks {
     function ghost_ExecuteCallback(Call[] memory calls) external;
 }
 
+/// Base contract for mirroring the state of signerAccount
 abstract contract GhostStateTracker {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     EnumerableSetLib.Bytes32Set internal _ghostKeyHashes;
-
+    
     function _addKeyHash(bytes32 keyHash) internal {
         _ghostKeyHashes.add(keyHash);
     }
 
     /// @notice Ghost callback to track registered keys
-    function ghost_RegisterCallback(Key memory key) public {
+    function ghost_RegisterCallback(Key memory key) external {
         _addKeyHash(key.hash());
     }
 
@@ -34,14 +35,14 @@ abstract contract GhostStateTracker {
         _ghostKeyHashes.remove(keyHash);
     }
 
-    function ghost_RevokeCallback(bytes32 keyHash) public {
+    function ghost_RevokeCallback(bytes32 keyHash) external {
         _removeKeyHash(keyHash);
     }
 
     // Noop
-    function ghost_UpdateCallback(bytes32 keyHash) public {}
+    function ghost_UpdateCallback(bytes32 keyHash) external {}
 
-    function ghost_ExecuteCallback(Call[] memory calls) public {
+    function ghost_ExecuteCallback(Call[] memory calls) external {
         console2.log("ghost_ExecuteCallback");
         console2.log("calls.length");
         console2.logUint(calls.length);
