@@ -25,7 +25,7 @@ import {CallEncoder} from "./CallEncoder.sol";
  * @title FunctionCallGenerator
  * @dev Helper contract to generate random function calls for MinimalDelegation invariant testing
  */
-abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTracker {
+abstract contract FunctionCallGenerator is Test, GhostStateTracker {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallBuilder for Call;

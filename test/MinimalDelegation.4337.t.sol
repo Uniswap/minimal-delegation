@@ -15,7 +15,7 @@ import {KeyType} from "../src/libraries/KeyLib.sol";
 import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 
-contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHandler {
+contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHandler {
     using CallBuilder for Call[];
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;

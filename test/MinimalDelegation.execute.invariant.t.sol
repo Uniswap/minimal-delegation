@@ -24,16 +24,18 @@ import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {IHandlerGhostCallbacks} from "./utils/GhostStateTracker.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
+import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 
 // To avoid stack to deep
 struct SetupParams {
+    IMinimalDelegation _signerAccount;
     TestKey[] _keys;
     address[] _callers;
     address _tokenA;
     address _tokenB;
 }
 
-contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
+contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCallGenerator {
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
@@ -41,6 +43,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     using CallBuilder for Call[];
     using HandlerCallLib for HandlerCall;
     using HandlerCallLib for HandlerCall[];
+    using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
 
     address[] public callers;
@@ -52,7 +55,10 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
+    IMinimalDelegation public signerAccount;
+
     constructor(SetupParams memory _params) FunctionCallGenerator(_params._tokenA, _params._tokenB) {
+        signerAccount = _params._signerAccount;
         for (uint256 i = 0; i < _params._keys.length; i++) {
             keys.push(_params._keys[i]);
         }
@@ -73,6 +79,21 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
         vm.startPrank(currentCaller);
         _;
         vm.stopPrank();
+    }
+
+    function _hash(Call[] memory calls, uint256 nonce) internal view returns (bytes32 digest) {
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        digest = signerAccount.hashTypedData(signedCalls.hash());
+    }
+
+    /// Helper function to get the next available nonce
+    function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
+        seq = uint64(signerAccount.getSeq(key));
+        nonce = key << 64 | seq;
+    }
+
+    function _signingKeyIsRootEOA(TestKey memory key) internal view returns (bool) {
+        return vm.addr(key.privateKey) == address(signerAccount);
     }
 
     function _registerSigningKeyIfNotRegistered(TestKey memory key) internal {
@@ -116,14 +137,14 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
 
         Call[] memory calls = handlerCalls.toCalls();
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(calls, currentSigningKey, nonce));
+        bytes memory executionData =
+            abi.encode(calls, _signAndPack(_hash(calls, nonce), currentSigningKey, nonce, currentKeyHash));
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            bytes memory debugCalldata = abi.encodeWithSelector(
-                IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData
-            );
+            bytes memory debugCalldata =
+                abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
             console2.logBytes(debugCalldata);
             console2.logBytes(revertData);
             revert("uncaught revert");
@@ -132,7 +153,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
 }
 
 /// @title MinimalDelegationExecuteInvariantTest
-contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandler, ExecuteHandler {
+contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using CallBuilder for Call;
@@ -172,8 +193,13 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         // Add untrusted key
         _keys.push(untrustedKey);
 
-        SetupParams memory params =
-            SetupParams({_keys: _keys, _callers: callers, _tokenA: address(tokenA), _tokenB: address(tokenB)});
+        SetupParams memory params = SetupParams({
+            _signerAccount: signerAccount,
+            _keys: _keys,
+            _callers: callers,
+            _tokenA: address(tokenA),
+            _tokenB: address(tokenB)
+        });
         invariantHandler = new MinimalDelegationExecuteInvariantHandler(params);
 
         // Explicitly target the wrapped execute functions in the handler

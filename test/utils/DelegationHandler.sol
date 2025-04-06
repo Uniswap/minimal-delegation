@@ -21,7 +21,6 @@ contract DelegationHandler is Test {
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
     TestKey signerTestKey = TestKey(KeyType.Secp256k1, abi.encodePacked(signer), signerPrivateKey);
-    IMinimalDelegation public signerAccount;
     uint256 DEFAULT_KEY_EXPIRY = 10 days;
 
     address mockSecp256k1PublicKey = makeAddr("mockSecp256k1PublicKey");
@@ -34,6 +33,7 @@ contract DelegationHandler is Test {
     Settings public mockSecp256k1Key2Settings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
 
     EntryPoint public entryPoint;
+    IMinimalDelegation public signerAccount;
 
     function setUpDelegation() public {
         minimalDelegation = new MinimalDelegation();
