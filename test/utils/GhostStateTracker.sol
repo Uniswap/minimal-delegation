@@ -21,7 +21,7 @@ abstract contract GhostStateTracker {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     EnumerableSetLib.Bytes32Set internal _ghostKeyHashes;
-    
+
     function _addKeyHash(bytes32 keyHash) internal {
         _ghostKeyHashes.add(keyHash);
     }
@@ -42,15 +42,5 @@ abstract contract GhostStateTracker {
     // Noop
     function ghost_UpdateCallback(bytes32 keyHash) external {}
 
-    function ghost_ExecuteCallback(Call[] memory calls) external {
-        console2.log("ghost_ExecuteCallback");
-        console2.log("calls.length");
-        console2.logUint(calls.length);
-        for (uint256 i = 0; i < calls.length; i++) {
-            console2.log("call.to");
-            console2.logAddress(calls[i].to);
-            console2.log("call.data");
-            console2.logBytes(calls[i].data);
-        }
-    }
+    function ghost_ExecuteCallback(Call[] memory calls) external {}
 }

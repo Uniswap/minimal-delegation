@@ -26,8 +26,8 @@ import {IHandlerGhostCallbacks} from "./utils/GhostStateTracker.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 
+// To avoid stack to deep
 struct SetupParams {
-    IMinimalDelegation _signerAccount;
     TestKey[] _keys;
     address[] _callers;
     address _tokenA;
@@ -55,7 +55,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    constructor(SetupParams memory _params) FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB) {
+    constructor(SetupParams memory _params) FunctionCallGenerator(_params._tokenA, _params._tokenB) {
         for (uint256 i = 0; i < _params._keys.length; i++) {
             keys.push(_params._keys[i]);
         }
@@ -76,17 +76,6 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
         vm.startPrank(currentCaller);
         _;
         vm.stopPrank();
-    }
-
-    /// @notice Builds the next valid nonce for the given key
-    function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
-        seq = uint64(signerAccount.getSeq(key));
-        nonce = key << 64 | seq;
-    }
-
-    /// @notice Checks if the signing key is the root EOA
-    function _signingKeyIsRootEOA(TestKey memory key) internal view returns (bool) {
-        return vm.addr(key.privateKey) == address(signerAccount);
     }
 
     function _registerSigningKeyIfNotRegistered(TestKey memory key) internal {
@@ -114,7 +103,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     /// @notice Executes a call with operation data (with signature)
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
-        if(_signingKeyIsRootEOA(currentSigningKey)) {
+        if (_signingKeyIsRootEOA(currentSigningKey)) {
             currentKeyHash = bytes32(0);
         } else {
             _registerSigningKeyIfNotRegistered(currentSigningKey);
@@ -131,7 +120,9 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
         bytes memory wrappedSignature = abi.encode(currentKeyHash, signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
 
-        bytes memory debugCalldata = abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData));
+        bytes memory debugCalldata = abi.encodeWithSelector(
+            IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData)
+        );
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData)) {
             _processCallbacks(handlerCalls);
@@ -187,13 +178,8 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         // Add untrusted key
         _keys.push(untrustedKey);
 
-        SetupParams memory params = SetupParams({
-            _signerAccount: signerAccount,
-            _keys: _keys,
-            _callers: callers,
-            _tokenA: address(tokenA),
-            _tokenB: address(tokenB)
-        });
+        SetupParams memory params =
+            SetupParams({_keys: _keys, _callers: callers, _tokenA: address(tokenA), _tokenB: address(tokenB)});
         invariantHandler = new MinimalDelegationExecuteInvariantHandler(params);
 
         bytes4[] memory selectors = new bytes4[](2);

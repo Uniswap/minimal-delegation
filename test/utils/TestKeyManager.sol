@@ -41,11 +41,7 @@ library TestKeyManager {
             return TestKey({keyType: keyType, publicKey: abi.encodePacked(x, y), privateKey: DEFAULT_SECP256R1_PK});
         } else if (keyType == KeyType.Secp256k1) {
             address defaultAddress = vm.addr(DEFAULT_SECP256K1_PK);
-            return TestKey({
-                keyType: keyType,
-                publicKey: abi.encode(defaultAddress),
-                privateKey: DEFAULT_SECP256K1_PK
-            });
+            return TestKey({keyType: keyType, publicKey: abi.encode(defaultAddress), privateKey: DEFAULT_SECP256K1_PK});
         } else if (keyType == KeyType.WebAuthnP256) {
             return TestKey({
                 keyType: keyType,

@@ -19,6 +19,7 @@ import {GhostStateTracker} from "./GhostStateTracker.sol";
 import {HandlerCall, HandlerCallLib} from "./HandlerCallLib.sol";
 import {IHandlerGhostCallbacks} from "./GhostStateTracker.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
+import {CallEncoder} from "./CallEncoder.sol";
 
 /**
  * @title FunctionCallGenerator
@@ -29,21 +30,17 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     using KeyLib for Key;
     using CallBuilder for Call;
     using CallBuilder for Call[];
+    using CallEncoder for Call[];
     using HandlerCallLib for HandlerCall;
     using HandlerCallLib for HandlerCall[];
     using TestKeyManager for TestKey;
 
-    // The contract instance to generate calls for
-    IMinimalDelegation public immutable signerAccount;
-
-    // Function type constants for selection (equal weighting)
     uint256 public constant FUNCTION_REGISTER = 0;
     uint256 public constant FUNCTION_REVOKE = 1;
     uint256 public constant FUNCTION_UPDATE = 2;
     uint256 public constant TRANSFER_TOKEN = 3;
-    uint256 public constant FUNCTION_COUNT = 4; // Total number of function types
+    uint256 public constant FUNCTION_COUNT = 4;
 
-    // Recursion control
     uint256 public constant MAX_DEPTH = 5;
 
     address private immutable _tokenA;
@@ -51,8 +48,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
 
     EnumerableSetLib.Bytes32Set internal _revokedKeyHashes;
 
-    constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
-        signerAccount = _signerAccount;
+    constructor(address tokenA, address tokenB) {
         _tokenA = tokenA;
         _tokenB = tokenB;
     }
@@ -62,32 +58,32 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     }
 
     function _registerCall(TestKey memory newKey) internal virtual returns (HandlerCall memory) {
-        return HandlerCallLib.initDefault().withCall(
-            CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-                abi.encodeWithSelector(IKeyManagement.register.selector, newKey.toKey())
-            )
-        ).withCallback(abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RegisterCallback.selector, newKey.toKey()));
+        return HandlerCallLib.initDefault().withCall(CallEncoder.encodeRegisterCall(newKey)).withCallback(
+            abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RegisterCallback.selector, newKey.toKey())
+        );
     }
 
     function _revokeCall(bytes32 keyHash) internal virtual returns (HandlerCall memory) {
-        return HandlerCallLib.initDefault().withCall(
-            CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-                abi.encodeWithSelector(IKeyManagement.revoke.selector, keyHash)
-            )
-        ).withCallback(abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RevokeCallback.selector, keyHash));
+        return HandlerCallLib.initDefault().withCall(CallEncoder.encodeRevokeCall(keyHash)).withCallback(
+            abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RevokeCallback.selector, keyHash)
+        );
     }
 
     function _updateCall(bytes32 keyHash, Settings settings) internal virtual returns (HandlerCall memory) {
-        return HandlerCallLib.initDefault().withCall(
-            CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-                abi.encodeWithSelector(IKeyManagement.update.selector, keyHash, settings)
-            )
-        ).withCallback(abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_UpdateCallback.selector, keyHash));
+        return HandlerCallLib.initDefault().withCall(CallEncoder.encodeUpdateCall(keyHash, settings)).withCallback(
+            abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_UpdateCallback.selector, keyHash)
+        );
     }
 
-    function _tokenTransferCall(address token, address to, uint256 amount) internal virtual returns (HandlerCall memory) {
+    function _tokenTransferCall(address token, address to, uint256 amount)
+        internal
+        virtual
+        returns (HandlerCall memory)
+    {
         return HandlerCallLib.initDefault().withCall(
-            CallBuilder.initDefault().withTo(token).withData(abi.encodeWithSelector(ERC20.transfer.selector, to, amount))
+            CallBuilder.initDefault().withTo(token).withData(
+                abi.encodeWithSelector(ERC20.transfer.selector, to, amount)
+            )
         );
     }
 
@@ -100,8 +96,6 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
     }
 
     function _getSettingsForKeyHash(bytes32 keyHash) internal virtual returns (Settings) {}
-
-    // TODO: add transient tracking of ghost key hashes to avoid revoking a key that was already revoked in different recursion depths 
 
     /**
      * @notice Generate a random function call with equal weighting between function types
@@ -117,7 +111,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         // REGISTER
         if (functionType == FUNCTION_REGISTER || _ghostKeyHashes.values().length == 0) {
             TestKey memory newKey = _randomTestKey();
-            if(newKey.toKeyHash() != bytes32(0)) {
+            if (newKey.toKeyHash() != bytes32(0)) {
                 return _registerCall(newKey);
             }
         }
@@ -136,21 +130,20 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
                 Settings settings = _getSettingsForKeyHash(keyHashToUpdate);
                 return _updateCall(keyHashToUpdate, settings);
             }
+        } else if (functionType == TRANSFER_TOKEN) {
+            return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
 
         // If no matches above, recurse
         if (depth < MAX_DEPTH) {
             HandlerCall[] memory innerCalls = _generateRandomHandlerCalls(randomSeed + 1, depth + 1);
 
-            return HandlerCallLib.initDefault().withCall(
-                CallBuilder.initDefault().withTo(address(signerAccount)).withData(
-                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, abi.encode(innerCalls.toCalls()))
-                )
-            ).withCallback(
+            return HandlerCallLib.initDefault().withCall(CallEncoder.encodeExecuteCall(innerCalls.toCalls()))
+                .withCallback(
                 abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls.toCalls())
             );
         } else {
-            // Transfer is default
+            // If at max depth, add a transfer call to the end of the calls list so we don't have an unintialized call
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
     }
@@ -178,7 +171,7 @@ abstract contract FunctionCallGenerator is Test, ExecuteHandler, GhostStateTrack
         for (uint256 i = 0; i < handlerCalls.length; i++) {
             if (handlerCalls[i].callback.length > 0) {
                 (bool success, bytes memory revertData) = address(this).call(handlerCalls[i].callback);
-                if(!success) {
+                if (!success) {
                     console2.log("revertData");
                     console2.logBytes(revertData);
                 }
