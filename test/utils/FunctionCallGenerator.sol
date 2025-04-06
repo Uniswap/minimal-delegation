@@ -6,19 +6,17 @@ import {Test} from "forge-std/Test.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {IKeyManagement} from "../../src/interfaces/IKeyManagement.sol";
 import {IERC7821} from "../../src/interfaces/IERC7821.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 import {Call} from "../../src/libraries/CallLib.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
-import {Settings} from "../../src/libraries/SettingsLib.sol";
+import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {CallBuilder} from "./CallBuilder.sol";
 import {ExecuteHandler} from "./ExecuteHandler.sol";
 import {GhostStateTracker} from "./GhostStateTracker.sol";
 import {HandlerCall, HandlerCallLib} from "./HandlerCallLib.sol";
 import {IHandlerGhostCallbacks} from "./GhostStateTracker.sol";
-import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {CallEncoder} from "./CallEncoder.sol";
 
 /**

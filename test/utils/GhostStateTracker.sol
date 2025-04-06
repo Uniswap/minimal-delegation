@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Key, KeyLib} from "../../src/libraries/KeyLib.sol";
 import {TestKey, TestKeyManager} from "./TestKeyManager.sol";
