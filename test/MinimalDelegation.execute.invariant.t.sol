@@ -16,7 +16,6 @@ import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {ModeDecoder} from "../src/libraries/ModeDecoder.sol";
 import {Call, CallLib} from "../src/libraries/CallLib.sol";
-import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
@@ -36,10 +35,8 @@ struct SetupParams {
 
 contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     using TestKeyManager for TestKey;
-    using KeyLib for Key;
-    using ModeDecoder for bytes32;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using SignedCallsLib for SignedCalls;
+    using KeyLib for Key;
     using CallBuilder for Call;
     using CallBuilder for Call[];
     using HandlerCallLib for HandlerCall;
@@ -86,6 +83,8 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     }
 
     /// @notice Executes a batched call with the current caller
+    /// @dev Handler function meant to be called during invariant tests
+    /// Generates random handler calls, executes them, then processes any registeredcallbacks
     function executeBatchedCall(uint256 seed) public useCaller(seed) {
         HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
 
@@ -101,6 +100,8 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     }
 
     /// @notice Executes a call with operation data (with signature)
+    /// @dev Handler function meant to be called during invariant tests
+    /// Generates random handler calls, executes them, then processes any registeredcallbacks
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
         if (_signingKeyIsRootEOA(currentSigningKey)) {
@@ -110,23 +111,19 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
         }
 
         HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
+
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        SignedCalls memory signedCalls = SignedCalls({calls: handlerCalls.toCalls(), nonce: nonce});
-        // Compute digest
-        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
+        Call[] memory calls = handlerCalls.toCalls();
 
-        bytes memory signature = currentSigningKey.sign(digest);
-        bytes memory wrappedSignature = abi.encode(currentKeyHash, signature);
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, _signAndPack(calls, currentSigningKey, nonce));
 
-        bytes memory debugCalldata = abi.encodeWithSelector(
-            IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData)
-        );
-
-        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, abi.encode(handlerCalls.toCalls(), opData)) {
+        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
+            bytes memory debugCalldata = abi.encodeWithSelector(
+                IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData
+            );
             console2.logBytes(debugCalldata);
             console2.logBytes(revertData);
             revert("uncaught revert");
@@ -134,6 +131,7 @@ contract MinimalDelegationExecuteInvariantHandler is FunctionCallGenerator {
     }
 }
 
+/// @title MinimalDelegationExecuteInvariantTest
 contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandler, ExecuteHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
@@ -143,13 +141,9 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
 
     MinimalDelegationExecuteInvariantHandler internal invariantHandler;
 
-    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
-    bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
-
     address public untrustedCaller = makeAddr("untrustedCaller");
     uint256 public untrustedPrivateKey = 0xdead;
 
-    // Address calling the invariantHandler
     address internal sender = makeAddr("sender");
 
     TestKey[] internal _keys;
@@ -182,12 +176,16 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
             SetupParams({_keys: _keys, _callers: callers, _tokenA: address(tokenA), _tokenB: address(tokenB)});
         invariantHandler = new MinimalDelegationExecuteInvariantHandler(params);
 
+        // Explicitly target the wrapped execute functions in the handler
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = MinimalDelegationExecuteInvariantHandler.executeBatchedCall.selector;
         selectors[1] = MinimalDelegationExecuteInvariantHandler.executeWithOpData.selector;
         FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
+
         targetSelector(selector);
         targetContract(address(invariantHandler));
+
+        // Sender is the address used to call the invariantHandler, not important
         targetSender(sender);
     }
 
@@ -203,6 +201,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         }
     }
 
+    /// @notice Verifies that the root key can always update other keys
     function invariant_rootKeyCanAlwaysUpdateOtherSigningKeys() public {
         bytes32 keyHash = untrustedKey.toKeyHash();
         try signerAccount.getKey(keyHash) {
@@ -213,6 +212,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         }
     }
 
+    /// @notice Verifies that the root key can always register other signing keys
     function invariant_rootKeyCanAlwaysRegisterOtherSigningKeys() public {
         TestKey memory newKey = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
         vm.prank(address(signerAccount));
