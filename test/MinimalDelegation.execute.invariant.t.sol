@@ -16,9 +16,8 @@ import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {Call, CallLib} from "../src/libraries/CallLib.sol";
 import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
-import {CallBuilder} from "./utils/CallBuilder.sol";
+import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
-import {HandlerCall, HandlerCallLib} from "./utils/HandlerCallLib.sol";
 import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
@@ -37,10 +36,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
-    using CallBuilder for Call;
-    using CallBuilder for Call[];
-    using HandlerCallLib for HandlerCall;
-    using HandlerCallLib for HandlerCall[];
+    using CallUtils for Call;
+    using CallUtils for Call[];
+    using CallUtils for HandlerCall;
+    using CallUtils for HandlerCall[];
     using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
 
@@ -154,8 +153,8 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
-    using CallBuilder for Call;
-    using CallBuilder for Call[];
+    using CallUtils for Call;
+    using CallUtils for Call[];
     using WrappedDataHash for bytes32;
 
     MinimalDelegationExecuteInvariantHandler internal invariantHandler;

@@ -12,12 +12,10 @@ import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 import {Call} from "../../src/libraries/CallLib.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
-import {CallBuilder} from "./CallBuilder.sol";
+import {HandlerCall, CallUtils} from "./CallUtils.sol";
 import {ExecuteHandler} from "./ExecuteHandler.sol";
 import {GhostStateTracker} from "./GhostStateTracker.sol";
-import {HandlerCall, HandlerCallLib} from "./HandlerCallLib.sol";
 import {IHandlerGhostCallbacks} from "./GhostStateTracker.sol";
-import {CallEncoder} from "./CallEncoder.sol";
 
 /**
  * @title FunctionCallGenerator
@@ -26,11 +24,10 @@ import {CallEncoder} from "./CallEncoder.sol";
 abstract contract FunctionCallGenerator is Test, GhostStateTracker {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
-    using CallBuilder for Call;
-    using CallBuilder for Call[];
-    using CallEncoder for Call[];
-    using HandlerCallLib for HandlerCall;
-    using HandlerCallLib for HandlerCall[];
+    using CallUtils for Call;
+    using CallUtils for Call[];
+    using CallUtils for HandlerCall;
+    using CallUtils for HandlerCall[];
     using TestKeyManager for TestKey;
 
     uint256 public constant FUNCTION_REGISTER = 0;
@@ -56,19 +53,19 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
     }
 
     function _registerCall(TestKey memory newKey) internal virtual returns (HandlerCall memory) {
-        return HandlerCallLib.initDefault().withCall(CallEncoder.encodeRegisterCall(newKey)).withCallback(
+        return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRegisterCall(newKey)).withCallback(
             abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RegisterCallback.selector, newKey.toKey())
         );
     }
 
     function _revokeCall(bytes32 keyHash) internal virtual returns (HandlerCall memory) {
-        return HandlerCallLib.initDefault().withCall(CallEncoder.encodeRevokeCall(keyHash)).withCallback(
+        return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRevokeCall(keyHash)).withCallback(
             abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RevokeCallback.selector, keyHash)
         );
     }
 
     function _updateCall(bytes32 keyHash, Settings settings) internal virtual returns (HandlerCall memory) {
-        return HandlerCallLib.initDefault().withCall(CallEncoder.encodeUpdateCall(keyHash, settings)).withCallback(
+        return CallUtils.initHandlerDefault().withCall(CallUtils.encodeUpdateCall(keyHash, settings)).withCallback(
             abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_UpdateCallback.selector, keyHash)
         );
     }
@@ -78,8 +75,8 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
         virtual
         returns (HandlerCall memory)
     {
-        return HandlerCallLib.initDefault().withCall(
-            CallBuilder.initDefault().withTo(token).withData(
+        return CallUtils.initHandlerDefault().withCall(
+            CallUtils.initDefault().withTo(token).withData(
                 abi.encodeWithSelector(ERC20.transfer.selector, to, amount)
             )
         );
@@ -136,7 +133,7 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
         if (depth < MAX_DEPTH) {
             HandlerCall[] memory innerCalls = _generateRandomHandlerCalls(randomSeed + 1, depth + 1);
 
-            return HandlerCallLib.initDefault().withCall(CallEncoder.encodeExecuteCall(innerCalls.toCalls()))
+            return CallUtils.initHandlerDefault().withCall(CallUtils.encodeExecuteCall(innerCalls.toCalls()))
                 .withCallback(
                 abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls.toCalls())
             );
