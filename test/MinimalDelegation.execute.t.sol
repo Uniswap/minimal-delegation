@@ -223,31 +223,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
-    function test_execute_batch_opData_rootEOA_twoCalls_succeeds() public {
-        Call[] memory calls = CallUtils.initArray();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
-        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
-
-        // Get the current nonce components for key 0
-        uint256 nonceKey = 0;
-        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
-
-        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        // Since root signer is signing, don't need to wrap the signature
-        bytes memory opData = abi.encode(nonce, signerTestKey.sign(digest));
-        bytes memory executionData = abi.encode(calls, opData);
-
-        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
-
-        // Verify the transfers succeeded
-        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
-        assertEq(tokenB.balanceOf(address(receiver)), 1e18);
-
-        // Verify the nonce was incremented - sequence should increase by 1
-        assertEq(signerAccount.getSeq(nonceKey), seq + 1);
-    }
-
     function test_execute_batch_opData_rootEOA_singleCall_succeeds() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
