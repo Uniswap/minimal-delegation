@@ -522,13 +522,17 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
+        // Get the current nonce components for key 0
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(0, signature);
+        bytes memory opData = abi.encode(nonce, signature);
         // 2. Encode the calls and opData together
         bytes memory executionData1 = abi.encode(calls, opData);
 
@@ -536,13 +540,14 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 2e18)); // Transfer 2 tokenA
 
         // Create hash of the calls + nonce and sign it
-        execute = ExecutionData({calls: calls, nonce: 1});
-        hashToSign = signerAccount.hashTypedData(execute.hash());
+        nonce++; // increment the nonce since first one hasnt been used yet
+        signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         signature = signerTestKey.sign(hashToSign);
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        opData = abi.encode(1, signature);
+        opData = abi.encode(nonce, signature);
         // 2. Encode the calls and opData together
         bytes memory executionData2 = abi.encode(calls, opData);
 
@@ -557,22 +562,26 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         // Verify the transfers succeeded
         assertEq(tokenA.balanceOf(address(receiver)), 3e18);
 
-        // Verify the nonce was incremented - sequence should increase by 2
-        assertEq(signerAccount.getNonce(0), 2);
+        // Verify the seq was incremented - sequence should increase by 2
+        assertEq(signerAccount.getSeq(0), 2);
     }
 
     function test_execute_batchOfBatches_revertsWithCallFailed() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
+        // Get the current nonce components for key 0
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(0, signature);
+        bytes memory opData = abi.encode(nonce, signature);
         // 2. Encode the calls and opData together
         bytes memory executionData1 = abi.encode(calls, opData);
 
@@ -581,14 +590,14 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 101e18));
 
         // Create hash of the calls + nonce and sign it
-        // nonce is invalid so should silently revert
-        execute = ExecutionData({calls: calls, nonce: 1});
-        hashToSign = signerAccount.hashTypedData(execute.hash());
+        nonce++; // increment the nonce since first one hasnt been used yet
+        signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         signature = signerTestKey.sign(hashToSign);
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        opData = abi.encode(1, signature);
+        opData = abi.encode(nonce, signature);
         // 2. Encode the calls and opData together
         bytes memory executionData2 = abi.encode(calls, opData);
 
@@ -607,6 +616,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(tokenA.balanceOf(address(receiver)), 0);
 
         // Verify the nonce was not incremented
-        assertEq(signerAccount.getNonce(0), 0);
+        assertEq(signerAccount.getSeq(0), 0);
     }
 }
