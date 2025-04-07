@@ -535,6 +535,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // execute the batch of batches
         signerAccount.execute(BATCH_OF_BATCHES_CALL, abi.encode(executionDataArray));
+        vm.snapshotGasLastCall("execute_BATCH_OF_BATCHES_twoBatches_oneCallEach");
 
         // Verify the transfers succeeded
         assertEq(tokenA.balanceOf(address(receiver)), 3e18);
