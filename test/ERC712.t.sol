@@ -14,6 +14,7 @@ import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
+import {KeyLib} from "../src/libraries/KeyLib.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using WrappedDataHash for bytes32;
@@ -41,7 +42,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         // Ensure that verifying contract is the signer
         assertEq(verifyingContract, address(signerAccount));
         assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
-        assertEq(salt, bytes32(0));
+        assertEq(salt, KeyLib.ROOT_KEY_HASH);
         assertEq(name, "Uniswap Minimal Delegation");
         assertEq(version, "1");
         bytes32 expected = keccak256(

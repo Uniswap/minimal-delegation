@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {KeyLib} from "../../src/libraries/KeyLib.sol";
 
 library UserOpBuilder {
     using UserOperationLib for PackedUserOperation;
@@ -19,12 +20,12 @@ library UserOpBuilder {
 
     /// @dev Override initcode hash set to default of 0
     function encode(PackedUserOperation calldata userOp) internal pure returns (bytes memory) {
-        return userOp.encode(bytes32(0));
+        return userOp.encode(KeyLib.ROOT_KEY_HASH);
     }
 
     /// @dev Override initcode hash set to default of 0
     function hash(PackedUserOperation calldata userOp) internal pure returns (bytes32) {
-        return userOp.hash(bytes32(0));
+        return userOp.hash(KeyLib.ROOT_KEY_HASH);
     }
 
     function withSender(PackedUserOperation memory userOp, address sender)
