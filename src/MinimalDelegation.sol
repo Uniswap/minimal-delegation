@@ -62,7 +62,7 @@ contract MinimalDelegation is
         } else if (mode.supportsOpData()) {
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
             (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-            
+
             _useNonce(nonce);
 
             bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
@@ -82,7 +82,7 @@ contract MinimalDelegation is
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
-        
+
         (bytes32 keyHash,) = userOp.signature.unwrap();
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
@@ -108,18 +108,18 @@ contract MinimalDelegation is
     function _execute(Call calldata _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
         // Per ERC7821, replace address(0) with address(this)
         address to = _call.to == address(0) ? address(this) : _call.to;
-        
+
         // TODO: check key admin functionality
 
         IHook hook = keySettings[keyHash].hook();
         bytes memory beforeExecuteData;
-        if(hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
+        if (hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
             beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
         }
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        if(hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
+        if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
