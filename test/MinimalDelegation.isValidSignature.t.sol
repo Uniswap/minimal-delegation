@@ -61,7 +61,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory signature = key.sign(hashTypedData);
 
         // ensure the call returns the ERC1271 magic value
-        assertEq(signerAccount.isValidSignature(data, abi.encode(key.toKeyHash(), signature)), _1271_MAGIC_VALUE);
+        assertEq(signerAccount.isValidSignature(data, abi.encode(bytes32(0), signature)), _1271_MAGIC_VALUE);
     }
 
     function test_isValidSignature_sep256k1_expiredKey() public {
@@ -112,7 +112,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory signature = key.sign(hashTypedData);
 
         // ensure the call returns the ERC1271 invalid magic value
-        assertEq(signerAccount.isValidSignature(data, abi.encode(key.toKeyHash(), signature)), _1271_INVALID_VALUE);
+        assertEq(signerAccount.isValidSignature(data, abi.encode(bytes32(0), signature)), _1271_INVALID_VALUE);
     }
 
     function test_isValidSignature_WebAuthnP256_noWrappedData_invalidSigner() public {

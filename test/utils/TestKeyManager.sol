@@ -100,10 +100,6 @@ library TestKeyManager {
     }
 
     function toKeyHash(TestKey memory key) internal pure returns (bytes32) {
-        /// If the key is the root user return a hash of 0 to signify the root user.
-        if (key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == signerTestKeyAddress) {
-            return bytes32(0);
-        }
         return toKey(key).hash();
     }
 }

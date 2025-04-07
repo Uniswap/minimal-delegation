@@ -165,7 +165,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signature);
+        bytes memory wrappedSignature = abi.encode(bytes32(0), signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
 
@@ -216,7 +216,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(signerTestKey.toKeyHash(), signature));
+        bytes memory opData = abi.encode(nonce, abi.encode(bytes32(0), signature));
         // 2. Encode the calls and opData together
         bytes memory executionData = abi.encode(calls, opData);
 
@@ -246,7 +246,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(signerTestKey.toKeyHash(), signature));
+        bytes memory opData = abi.encode(nonce, abi.encode(bytes32(0), signature));
         // 2. Encode the calls and opData together
         bytes memory executionData = abi.encode(calls, opData);
 
@@ -307,7 +307,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(signerTestKey.toKeyHash(), signature));
+        bytes memory opData = abi.encode(nonce, abi.encode(bytes32(0), signature));
         // 2. Encode the calls and opData together
         bytes memory executionData = abi.encode(calls, opData);
 
@@ -388,7 +388,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
-        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signature);
+        bytes memory wrappedSignature = abi.encode(bytes32(0), signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
 
         bytes memory executionData = abi.encode(calls, opData);
@@ -434,7 +434,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
-        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signature);
+        bytes memory wrappedSignature = abi.encode(bytes32(0), signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
 
         bytes memory executionData = abi.encode(calls, opData);
@@ -455,7 +455,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signature);
+        bytes memory wrappedSignature = abi.encode(bytes32(0), signature);
 
         bytes memory executionData = abi.encode(calls, abi.encode(nonce, wrappedSignature));
 
@@ -480,7 +480,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(signerTestKey.toKeyHash(), signature));
+        bytes memory opData = abi.encode(nonce, abi.encode(bytes32(0), signature));
         // 2. Encode the calls and opData together
         bytes memory executionData = abi.encode(calls, opData);
 
@@ -508,7 +508,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(signerTestKey.toKeyHash(), signature));
+        bytes memory opData = abi.encode(nonce, abi.encode(bytes32(0), signature));
         // 2. Encode the calls and opData together
         bytes memory executionData = abi.encode(calls, opData);
 
