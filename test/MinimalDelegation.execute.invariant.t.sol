@@ -90,17 +90,6 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         nonce = key << 64 | seq;
     }
 
-    function _signingKeyIsRootEOA(TestKey memory key) internal view returns (bool) {
-        return vm.addr(key.privateKey) == address(signerAccount);
-    }
-
-    function _registerSigningKeyIfNotRegistered(TestKey memory key) internal {
-        if (!_ghostKeyHashes.contains(key.toKeyHash())) {
-            vm.prank(address(signerAccount));
-            signerAccount.register(key.toKey());
-        }
-    }
-
     /// @notice Executes a batched call with the current caller
     /// @dev Handler function meant to be called during invariant tests
     /// Generates random handler calls, executes them, then processes any registeredcallbacks
@@ -122,11 +111,17 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     /// @dev Handler function meant to be called during invariant tests
     /// Generates random handler calls, executes them, then processes any registeredcallbacks
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
-        bytes32 currentKeyHash = currentSigningKey.toKeyHash();
-        if (_signingKeyIsRootEOA(currentSigningKey)) {
-            currentKeyHash = bytes32(0);
-        } else {
-            _registerSigningKeyIfNotRegistered(currentSigningKey);
+        bytes32 currentKeyHash; // defaults to bytes32(0) if root EOA
+
+        if (vm.addr(currentSigningKey.privateKey) != address(signerAccount)) {
+            currentKeyHash = currentSigningKey.toKeyHash();
+
+            // If not already registered, register the key
+            if (!_ghostKeyHashes.contains(currentKeyHash)) {
+                vm.prank(address(signerAccount));
+                signerAccount.register(currentSigningKey.toKey());
+                assertEq(signerAccount.getKey(currentKeyHash).hash(), currentKeyHash);
+            }
         }
 
         HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
@@ -222,6 +217,9 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         try signerAccount.getKey(keyHash) {
             vm.prank(address(signerAccount));
             signerAccount.revoke(keyHash);
+
+            vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+            signerAccount.getKey(keyHash);
         } catch (bytes memory revertData) {
             assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
         }
@@ -233,6 +231,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         try signerAccount.getKey(keyHash) {
             vm.prank(address(signerAccount));
             signerAccount.update(keyHash, SettingsBuilder.init());
+            assertEq(Settings.unwrap(signerAccount.getKeySettings(keyHash)), 0);
         } catch (bytes memory revertData) {
             assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
         }
