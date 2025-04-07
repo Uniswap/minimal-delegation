@@ -21,6 +21,9 @@ interface IKeyManagement {
     /// @dev Cannot apply restrictions to the root key.
     error CannotUpdateRootKey();
 
+    /// @dev Cannot register the root key.
+    error CannotRegisterSelf();
+
     /// @dev Registers the `key`.
     function register(Key memory key) external;
 

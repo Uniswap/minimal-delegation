@@ -291,9 +291,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     }
 
     function test_execute_batch_opData_revertsWithInvalidNonce() public {
-        vm.prank(address(signer));
-        signerAccount.register(signerTestKey.toKey());
-
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB

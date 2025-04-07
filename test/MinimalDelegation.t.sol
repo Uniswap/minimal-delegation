@@ -124,7 +124,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         address mockSecp256k1PublicKey;
         for (uint256 i = 0; i < numKeys; i++) {
             mockSecp256k1PublicKey = makeAddr(string(abi.encodePacked(publicKey, i)));
-            mockSecp256k1Key = Key(KeyType.Secp256k1, abi.encodePacked(mockSecp256k1PublicKey));
+            mockSecp256k1Key = Key(KeyType.Secp256k1, abi.encode(mockSecp256k1PublicKey));
             vm.prank(address(signerAccount));
             signerAccount.register(mockSecp256k1Key);
         }
