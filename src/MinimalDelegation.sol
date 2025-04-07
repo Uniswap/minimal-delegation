@@ -151,11 +151,12 @@ contract MinimalDelegation is
 
         Settings settings = keySettings[keyHash];
         if (settings.isExpired()) revert IKeyManagement.KeyExpired();
+        uint40 expiry = settings.expiration();
 
         IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
-            ? hook.validateUserOp(keyHash, userOp, userOpHash)
-            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash);
+            ? hook.validateUserOp(keyHash, userOp, userOpHash, expiry)
+            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash, expiry);
     }
 
     /// TODO: This is left as an internal function to handle wrapping the returned validation data accoring to ERC-4337 spec.
@@ -163,14 +164,18 @@ contract MinimalDelegation is
         bytes32 keyHash,
         bytes calldata signature,
         PackedUserOperation calldata,
-        bytes32 userOpHash
+        bytes32 userOpHash,
+        uint40 expiry
     ) private view returns (uint256 validationData) {
         Key memory key = _getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
-        if (key.verify(userOpHash, signature)) return SIG_VALIDATION_SUCCEEDED;
-        else return SIG_VALIDATION_FAILED;
+
+        /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
+        /// `validAfter` is always 0.
+        if (key.verify(userOpHash, signature)) return uint256(expiry) << 160 | SIG_VALIDATION_SUCCEEDED;
+        else return uint256(expiry) << 160 | SIG_VALIDATION_FAILED;
     }
 
     function _onlyThis() internal view override(KeyManagement, NonceManager) {

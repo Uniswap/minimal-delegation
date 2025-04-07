@@ -237,6 +237,45 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(valid, 0); // 0 is valid
     }
 
+    function test_validateUserOp_validSignature_withExpiration() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = p256Key.sign(userOpHash);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
+
+        vm.prank(address(entryPoint));
+        signerAccount.validateUserOp(userOp, userOpHash, uint256(block.timestamp + 3600) << 160 | 0);
+    }
+
+    function test_validateUserOp_invalidSignature_withExpiration() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        // incorrect private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
+        userOp.signature = abi.encodePacked(r, s, v);
+
+        vm.prank(address(entryPoint));
+        signerAccount.validateUserOp(userOp, userOpHash, uint256(block.timestamp + 3600) << 160 | 1);
+    }
+
     function test_validateUserOp_withHook_validSignature() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         bytes memory signature = p256Key.sign(bytes32(0));

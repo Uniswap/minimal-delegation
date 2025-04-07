@@ -34,7 +34,7 @@ contract MultiSignerValidatorHook is IHook {
         requiredSigners[_accountKeyHash(keyHash)].add(signerKeyHash);
     }
 
-    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
+    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, uint40)
         external
         pure
         returns (bytes4, uint256)
