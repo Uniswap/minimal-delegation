@@ -11,6 +11,7 @@ import {TestKeyManager} from "./utils/TestKeyManager.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {IValidationHook} from "../src/interfaces/IValidationHook.sol";
+import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler {
     using TestKeyManager for TestKey;
@@ -62,6 +63,46 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // ensure the call returns the ERC1271 magic value
         assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_sep256k1_expiredKey() public {
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data);
+
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        bytes memory signature = key.sign(hashTypedData);
+        bytes memory wrappedSignature = abi.encode(key.toKeyHash(), signature);
+
+        vm.warp(100);
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1));
+
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(key.toKey());
+        signerAccount.update(key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        signerAccount.isValidSignature(data, wrappedSignature);
+    }
+
+    function test_isValidSignature_P256_expiredKey() public {
+        bytes32 data = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(data);
+
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes memory signature = p256Key.sign(hashTypedData);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature);
+
+        vm.warp(100);
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1));
+
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        signerAccount.isValidSignature(data, wrappedSignature);
     }
 
     function test_isValidSignature_sep256k1_noWrappedData_invalidSigner() public view {

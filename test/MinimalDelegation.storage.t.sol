@@ -36,28 +36,28 @@ contract MinimalDelegationStorageTest is DelegationHandler {
     }
 
     /// @dev Sanity check tests for changes in namespace and version
-    function test_erc7201_namespaceAndVersion() public {
+    function test_erc7201_namespaceAndVersion() public view {
         assertEq(signerAccount.namespaceAndVersion(), "Uniswap.MinimalDelegation.1.0.0");
     }
 
     /// @dev Sanity check tests for changes in the calculated custom storage root
-    function test_erc7201_customStorageRoot() public {
+    function test_erc7201_customStorageRoot() public view {
         bytes32 customStorageRoot =
             keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(signerAccount.CUSTOM_STORAGE_ROOT(), customStorageRoot);
     }
 
     function test_nonceSequenceNumber_nested_key() public {
-        uint256 key = 1;
+        uint256 nonceKey = 1;
 
         vm.record();
-        signerAccount.getSeq(key);
+        signerAccount.getSeq(nonceKey);
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
         assertEq(readSlots.length, 1);
         assertEq(writeSlots.length, 0);
 
         bytes32 mappingRootSlot = _addOffset(signerAccount.CUSTOM_STORAGE_ROOT(), NONCE_SEQUENCE_NUMBER_SLOT);
-        bytes32 nestedSlot = _calculateNestedMappingSlot(key, mappingRootSlot);
+        bytes32 nestedSlot = _calculateNestedMappingSlot(nonceKey, mappingRootSlot);
         assertEq(readSlots[0], nestedSlot);
     }
 

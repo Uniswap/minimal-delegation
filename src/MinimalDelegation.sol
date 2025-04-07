@@ -30,10 +30,16 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
-/// @notice Uses custom storage layout according to ERC7201
-/// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
-/// @dev keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff))
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200 { 
+contract MinimalDelegation is
+    IERC7821,
+    ERC1271,
+    EIP712,
+    ERC4337Account,
+    Receiver,
+    KeyManagement,
+    NonceManager,
+    ERC7201
+{
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -56,6 +62,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         } else if (mode.supportsOpData()) {
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
             (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
+            
             _useNonce(nonce);
 
             bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
@@ -140,9 +147,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
-        /// TODO: Handle key expiry check.
+        IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
             ? hook.validateUserOp(keyHash, userOp, userOpHash)
             : _handleValidateUserOp(keyHash, signature, userOp, userOpHash);
@@ -167,7 +175,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function _handleVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata signature) private view {
         Key memory key = _getKey(keyHash);
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
+
+        IHook hook = settings.hook();
 
         /// TODO: Handle key expiry check.
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
@@ -190,8 +201,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     {
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
+        IHook hook = settings.hook();
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
             ? hook.isValidSignature(keyHash, data, signature)
             : _handleIsValidSignature(keyHash, data, signature);
