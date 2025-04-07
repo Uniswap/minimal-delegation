@@ -78,7 +78,7 @@ contract MinimalDelegation is
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
-        Call[] calldata calls = executionData.decodeCalls();
+        Call[] memory calls = abi.decode(executionData, (Call[]));
 
         _dispatch(mode, calls);
     }
