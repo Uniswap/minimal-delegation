@@ -21,6 +21,8 @@ struct Key {
 }
 
 library KeyLib {
+    bytes32 public constant ROOT_KEY_HASH = bytes32(0);
+
     function hash(Key memory key) internal pure returns (bytes32) {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
     }

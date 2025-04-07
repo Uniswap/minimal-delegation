@@ -33,6 +33,7 @@ abstract contract KeyManagement is IKeyManagement {
 
     function update(bytes32 keyHash, Settings settings) external {
         _onlyThis();
+        if (keyHash == KeyLib.ROOT_KEY_HASH) revert CannotUpdateRootKey();
         if (!keyHashes.contains(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
     }
@@ -60,8 +61,10 @@ abstract contract KeyManagement is IKeyManagement {
     }
 
     /// @inheritdoc IKeyManagement
-    function getKeySettings(bytes32 keyHash) external view returns (Settings) {
-        return keySettings[keyHash];
+    function getKeySettings(bytes32 keyHash) public view returns (Settings) {
+        if (keyHash == KeyLib.ROOT_KEY_HASH) return Settings.wrap(0);
+        if (keyHashes.contains(keyHash)) return keySettings[keyHash];
+        revert KeyDoesNotExist();
     }
 
     function _revoke(bytes32 keyHash) internal {

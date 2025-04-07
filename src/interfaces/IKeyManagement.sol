@@ -18,6 +18,9 @@ interface IKeyManagement {
     /// @dev The key has expired.
     error KeyExpired();
 
+    /// @dev Cannot apply restrictions to the root key.
+    error CannotUpdateRootKey();
+
     /// @dev Registers the `key`.
     function register(Key memory key) external;
 

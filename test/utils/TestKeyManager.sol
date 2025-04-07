@@ -19,6 +19,9 @@ library TestKeyManager {
 
     error KeyNotSupported();
 
+    // vm.addr(0xa11ce)
+    address constant signerTestKeyAddress = 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7;
+
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     // 0 = never expires
@@ -38,18 +41,14 @@ library TestKeyManager {
     function initDefault(KeyType keyType) internal pure returns (TestKey memory) {
         if (keyType == KeyType.P256) {
             (uint256 x, uint256 y) = vm.publicKeyP256(DEFAULT_SECP256R1_PK);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(x, y), privateKey: DEFAULT_SECP256R1_PK});
+            return TestKey({keyType: keyType, publicKey: abi.encode(x, y), privateKey: DEFAULT_SECP256R1_PK});
         } else if (keyType == KeyType.Secp256k1) {
             address defaultAddress = vm.addr(DEFAULT_SECP256K1_PK);
-            return TestKey({
-                keyType: keyType,
-                publicKey: abi.encodePacked(defaultAddress),
-                privateKey: DEFAULT_SECP256K1_PK
-            });
+            return TestKey({keyType: keyType, publicKey: abi.encode(defaultAddress), privateKey: DEFAULT_SECP256K1_PK});
         } else if (keyType == KeyType.WebAuthnP256) {
             return TestKey({
                 keyType: keyType,
-                publicKey: abi.encodePacked(DEFAULT_WEBAUTHN_P256_PUBLIC_X, DEFAULT_WEBAUTHN_P256_PUBLIC_Y),
+                publicKey: abi.encode(DEFAULT_WEBAUTHN_P256_PUBLIC_X, DEFAULT_WEBAUTHN_P256_PUBLIC_Y),
                 privateKey: DEFAULT_WEBAUTHN_P256_PK
             });
         } else {
@@ -62,10 +61,10 @@ library TestKeyManager {
     function withSeed(KeyType keyType, uint256 seed) internal pure returns (TestKey memory) {
         if (keyType == KeyType.P256) {
             (uint256 x, uint256 y) = vm.publicKeyP256(seed);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(x, y), privateKey: seed});
+            return TestKey({keyType: keyType, publicKey: abi.encode(x, y), privateKey: seed});
         } else if (keyType == KeyType.Secp256k1) {
             address addr = vm.addr(seed);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(addr), privateKey: seed});
+            return TestKey({keyType: keyType, publicKey: abi.encode(addr), privateKey: seed});
         } else {
             revert KeyNotSupported();
         }
@@ -101,6 +100,10 @@ library TestKeyManager {
     }
 
     function toKeyHash(TestKey memory key) internal pure returns (bytes32) {
+        /// If the key is the root user return a hash of 0 to signify the root user.
+        if (key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == signerTestKeyAddress) {
+            return bytes32(0);
+        }
         return toKey(key).hash();
     }
 }
