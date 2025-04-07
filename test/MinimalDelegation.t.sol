@@ -13,6 +13,8 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract MinimalDelegationTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;

@@ -91,7 +91,7 @@ contract MinimalDelegation is
         bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
 
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
-        Key memory key = _getKey(keyHash);
+        Key memory key = getKey(keyHash);
         Settings settings = getKeySettings(keyHash);
         if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
@@ -161,7 +161,7 @@ contract MinimalDelegation is
         PackedUserOperation memory,
         bytes32 userOpHash
     ) private view returns (uint256 validationData) {
-        Key memory key = _getKey(keyHash);
+        Key memory key = getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
@@ -182,11 +182,8 @@ contract MinimalDelegation is
     {
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
 
-        // TODO: Realistically, we should never access settings without checking first if the key exists.
-        Settings settings = keySettings[keyHash];
-        bool valid = _isRegisteredKeyHash(keyHash);
-        bool expired = settings.isExpired();
-        if (!valid || expired) return _1271_INVALID_VALUE;
+        Settings settings = getKeySettings(keyHash);
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
         IHook hook = settings.hook();
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
@@ -194,17 +191,12 @@ contract MinimalDelegation is
             : _handleIsValidSignature(keyHash, data, signature);
     }
 
-    function _isRegisteredKeyHash(bytes32 keyHash) private view returns (bool) {
-        if (keyHashes.contains(keyHash)) return true;
-        return keyHash == KeyLib.ROOT_KEY_HASH;
-    }
-
     function _handleIsValidSignature(bytes32 keyHash, bytes32 data, bytes memory signature)
         private
         view
         returns (bytes4 result)
     {
-        Key memory key = _getKey(keyHash);
+        Key memory key = getKey(keyHash);
         if (key.verify(_hashTypedData(data.hashWithWrappedType()), signature)) {
             return _1271_MAGIC_VALUE;
         }

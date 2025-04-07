@@ -80,7 +80,8 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.update(key.toKeyHash(), keySettings);
         vm.stopPrank();
 
-        assertEq(signerAccount.isValidSignature(data, wrappedSignature), _1271_INVALID_VALUE);
+        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        signerAccount.isValidSignature(data, wrappedSignature);
     }
 
     function test_isValidSignature_P256_expiredKey() public {
@@ -99,7 +100,8 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         vm.stopPrank();
 
-        assertEq(signerAccount.isValidSignature(data, wrappedSignature), _1271_INVALID_VALUE);
+        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        signerAccount.isValidSignature(data, wrappedSignature);
     }
 
     function test_isValidSignature_sep256k1_noWrappedData_invalidSigner() public view {
@@ -128,18 +130,18 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(signerAccount.isValidSignature(data, wrappedSignature), _1271_INVALID_VALUE);
     }
 
-    function test_isValidSignature_validSep256k1_invalidSigner() public view {
+    function test_isValidSignature_validSep256k1_reverts_keyDoesNotExist() public {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash.hashWithWrappedType());
 
-        // sign with a different private key
+        // sign with an unregistered private key
         uint256 invalidPrivateKey = 0xdeadbeef;
         TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
         bytes memory signature = invalidSigner.sign(hashTypedData);
         bytes memory wrappedSignature = abi.encode(invalidSigner.toKeyHash(), signature);
 
-        // ensure the call returns the ERC1271 invalid magic value
-        assertEq(signerAccount.isValidSignature(hash, wrappedSignature), _1271_INVALID_VALUE);
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.isValidSignature(hash, wrappedSignature);
     }
 
     function test_isValidSignature_sep256k1_invalidWrappedSignature_invalidSigner() public view {
