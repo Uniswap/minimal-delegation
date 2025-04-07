@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.29;
 
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {MinimalDelegationStorage, MinimalDelegationStorageLib} from "./libraries/MinimalDelegationStorage.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {Call, CallLib} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
@@ -13,6 +12,7 @@ import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {EIP712} from "./EIP712.sol";
+import {ERC7201} from "./ERC7201.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -21,7 +21,7 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
-import {ExecutionDataLib, ExecutionData} from "./libraries/ExecuteLib.sol";
+import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
@@ -31,17 +31,29 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager {
+contract MinimalDelegation is
+    IERC7821,
+    ERC1271,
+    EIP712,
+    ERC4337Account,
+    Receiver,
+    KeyManagement,
+    NonceManager,
+    ERC7201
+{
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
-    using ExecutionDataLib for ExecutionData;
+    using CallLib for Call[];
+    using SignedCallsLib for SignedCalls;
     using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
+    using EntrypointLib for *;
     using SettingsLib for Settings;
-    using EntrypointLib for uint256;
+
+    uint256 public packedEntrypoint;
 
     function execute(bytes32 mode, bytes calldata executionData) public payable override {
         if (mode.isBatchedCall()) {
@@ -84,15 +96,16 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
         (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
         _useNonce(nonce);
-        ExecutionData memory executionData = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 digest = _hashTypedData(executionData.hash());
+
+        bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
 
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
         Key memory key = _getKey(keyHash);
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
-        /// TODO: Handle key expiry check.
+        IHook hook = settings.hook();
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
             ? hook.verifySignature(keyHash, digest, signature)
             : key.verify(digest, signature);
@@ -124,14 +137,13 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     /// @inheritdoc IERC4337Account
     function updateEntryPoint(address entryPoint) external {
         _onlyThis();
-        MinimalDelegationStorageLib.get().entryPoint = EntrypointLib.pack(entryPoint);
+        packedEntrypoint = entryPoint.pack();
         emit EntryPointUpdated(entryPoint);
     }
 
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
-        uint256 packedEntryPoint = MinimalDelegationStorageLib.get().entryPoint;
-        return packedEntryPoint.isOverriden() ? packedEntryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
+        return packedEntrypoint.isOverriden() ? packedEntrypoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
@@ -143,9 +155,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
-        /// TODO: Handle key expiry check.
+        IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
             ? hook.validateUserOp(keyHash, userOp, userOpHash)
             : _handleValidateUserOp(keyHash, signature, userOp, userOpHash);
@@ -179,8 +192,10 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     {
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
-        IHook hook = MinimalDelegationStorageLib.get().keySettings[keyHash].hook();
+        Settings settings = keySettings[keyHash];
+        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
+        IHook hook = settings.hook();
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
             ? hook.isValidSignature(keyHash, data, signature)
             : _handleIsValidSignature(keyHash, data, signature);

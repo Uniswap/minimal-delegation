@@ -18,7 +18,7 @@ import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType, KeyLib, Key} from "../src/libraries/KeyLib.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
-import {ExecutionDataLib, ExecutionData} from "../src/libraries/ExecuteLib.sol";
+import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 
@@ -27,7 +27,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     using KeyLib for Key;
     using CallBuilder for Call[];
     using CallLib for Call[];
-    using ExecutionDataLib for ExecutionData;
+    using SignedCallsLib for SignedCalls;
     using SettingsLib for Settings;
     using SettingsBuilder for Settings;
 
@@ -41,6 +41,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         vm.deal(address(signerAccount), 100e18);
         tokenA.mint(address(signerAccount), 100e18);
         tokenB.mint(address(signerAccount), 100e18);
+    }
+
+    /// Helper function to get the next available nonce
+    function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
+        seq = uint64(signerAccount.getSeq(key));
+        nonce = key << 64 | seq;
     }
 
     function test_execute_reverts_withUnsupportedExecutionMode() public {
@@ -150,10 +156,13 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call memory registerCall =
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, p256Key.toKey()));
         calls = calls.push(registerCall);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
 
-        // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
         bytes memory executionData = abi.encode(calls, signature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -171,12 +180,15 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call memory registerCall =
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, secp256k1Key.toKey()));
         calls = calls.push(registerCall);
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
         // Sign using the registered P256 key
-        // TODO: remove 0 nonce
-        bytes memory packedSignature =
-            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(execute.hash()))));
+        bytes memory packedSignature = abi.encode(
+            nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash())))
+        );
         bytes memory executionData = abi.encode(calls, packedSignature);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -189,13 +201,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         // Get the current nonce components for key 0
-        uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
-        uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
+        uint256 nonceKey = 0;
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -215,8 +226,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(tokenB.balanceOf(address(receiver)), 1e18);
 
         // Verify the nonce was incremented - sequence should increase by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
     function test_execute_batch_opData_singeCall_succeeds() public {
@@ -224,13 +234,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // Get the current nonce components for key 0
-        uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
-        uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
+        uint256 nonceKey = 0;
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -248,8 +257,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
 
         // Verify the nonce was incremented - sequence should increase by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
     function test_execute_batch_opData_withHook_succeeds() public {
@@ -261,8 +269,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Signature over a wrong digest
         bytes memory signature = p256Key.sign(bytes32(0));
@@ -289,13 +297,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         // Get the current nonce components for key 0
-        uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
-        uint64 sequence = uint64(nonce); // Extract sequence (low 64 bits)
+        uint256 nonceKey = 0;
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -310,8 +317,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
 
         // Verify the nonce was incremented - sequence should increase by 1
-        uint256 expectedNextNonce = (uint256(key) << 64) | (sequence + 1);
-        assertEq(signerAccount.getNonce(key), expectedNextNonce);
+        assertEq(signerAccount.getSeq(nonceKey), seq + 1);
 
         // Try to execute again with same nonce - should revert
         vm.expectRevert(INonceManager.InvalidNonce.selector);
@@ -378,9 +384,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     function test_execute_single_batchedCall_opData_eoaSigner_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
-        // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -395,14 +404,17 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
 
         vm.startPrank(address(signer));
         signerAccount.register(p256Key.toKey());
 
-        // TODO: remove 0 nonce
-        bytes memory packedSignature =
-            abi.encode(0, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(execute.hash()))));
+        bytes memory packedSignature = abi.encode(
+            nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash())))
+        );
 
         bytes memory executionData = abi.encode(calls, packedSignature);
 
@@ -416,10 +428,13 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+
         // sign via EOA
-        // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -432,10 +447,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     function test_execute_native_single_batchedCall_opData_eoaSigner_gas() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: 0});
 
-        // TODO: remove 0 nonce
-        bytes memory signature = abi.encode(0, signerTestKey.sign(signerAccount.hashTypedData(execute.hash())));
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+
+        bytes memory signature = abi.encode(nonce, signerTestKey.sign(signerAccount.hashTypedData(signedCalls.hash())));
 
         bytes memory executionData = abi.encode(calls, signature);
 
@@ -451,12 +468,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // Get the current nonce components for key 0
-        uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -480,12 +497,12 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         // Get the current nonce components for key 0
-        uint192 key = 0;
-        uint256 nonce = signerAccount.getNonce(key);
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        ExecutionData memory execute = ExecutionData({calls: calls, nonce: nonce});
-        bytes32 hashToSign = signerAccount.hashTypedData(execute.hash());
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
 
