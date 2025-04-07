@@ -176,7 +176,6 @@ contract MinimalDelegation is
 
         bytes32 digest = _hashTypedData(signedCalls.hash());
 
-        /// TODO: Handle key expiry check.
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
             ? hook.verifySignature(keyHash, digest, signature)
             : key.verify(digest, signature);
