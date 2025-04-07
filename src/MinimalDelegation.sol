@@ -52,7 +52,7 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         if (mode.isBatchedCall()) {
             Call[] calldata calls = executionData.decodeCalls();
             _onlyThis();
-            _dispatch(mode, calls, SignatureUnwrapper.ROOT_KEY_HASH);
+            _dispatch(mode, calls, KeyLib.ROOT_KEY_HASH);
         } else if (mode.supportsOpData()) {
             (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
             (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
@@ -101,11 +101,13 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function _execute(Call calldata _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
         // Per ERC7821, replace address(0) with address(this)
         address to = _call.to == address(0) ? address(this) : _call.to;
+        
+        // TODO: check key admin functionality
 
         IHook hook = keySettings[keyHash].hook();
         bytes memory beforeExecuteData;
         if(hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
-            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.data);
+            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
         }
 
         (success, output) = to.call{value: _call.value}(_call.data);

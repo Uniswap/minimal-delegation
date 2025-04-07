@@ -53,12 +53,12 @@ library HooksLib {
         return result;
     }
 
-    function handleBeforeExecute(IHook self, bytes32 keyHash, address to, bytes calldata data)
+    function handleBeforeExecute(IHook self, bytes32 keyHash, address to, uint256 value, bytes calldata data)
         internal
         returns (bytes memory result)
     {
         bytes4 hookSelector;
-        (hookSelector, result) = self.beforeExecute(keyHash, to, data);
+        (hookSelector, result) = self.beforeExecute(keyHash, to, value, data);
         if (hookSelector != IExecutionHook.beforeExecute.selector) revert InvalidHookResponse();
         return result;
     }

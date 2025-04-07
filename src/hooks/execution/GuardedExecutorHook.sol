@@ -79,12 +79,13 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         return false;
     }
 
-    function beforeExecute(bytes32 keyHash, address to, bytes calldata data)
+    function beforeExecute(bytes32 keyHash, address to, uint256 value,bytes calldata data)
         external
         view
         override
         returns (bytes4, bytes memory)
     {
+        // TODO: check value
         if (!_canExecute(keyHash, to, data)) revert IERC7821.Unauthorized();
         return (IExecutionHook.beforeExecute.selector, bytes(""));
     }
