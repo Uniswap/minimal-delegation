@@ -12,6 +12,7 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {IValidationHook} from "../src/interfaces/IValidationHook.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
+import {KeyLib} from "../src/libraries/KeyLib.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler {
     using TestKeyManager for TestKey;
@@ -62,14 +63,14 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory signature = key.sign(hashTypedData);
 
         // ensure the call returns the ERC1271 magic value
-        assertEq(signerAccount.isValidSignature(data, signature), _1271_MAGIC_VALUE);
+        assertEq(signerAccount.isValidSignature(data, abi.encode(KeyLib.ROOT_KEY_HASH, signature)), _1271_MAGIC_VALUE);
     }
 
     function test_isValidSignature_sep256k1_expiredKey() public {
         bytes32 data = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(data);
 
-        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, 0xb0b);
         bytes memory signature = key.sign(hashTypedData);
         bytes memory wrappedSignature = abi.encode(key.toKeyHash(), signature);
 
@@ -113,7 +114,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory signature = key.sign(hashTypedData);
 
         // ensure the call returns the ERC1271 invalid magic value
-        assertEq(signerAccount.isValidSignature(data, signature), _1271_INVALID_VALUE);
+        assertEq(signerAccount.isValidSignature(data, abi.encode(KeyLib.ROOT_KEY_HASH, signature)), _1271_INVALID_VALUE);
     }
 
     function test_isValidSignature_WebAuthnP256_noWrappedData_invalidSigner() public {
@@ -131,7 +132,21 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(signerAccount.isValidSignature(data, wrappedSignature), _1271_INVALID_VALUE);
     }
 
-    function test_isValidSignature_sep256k1_invalidSigner() public view {
+    function test_isValidSignature_validSep256k1_reverts_keyDoesNotExist() public {
+        bytes32 hash = keccak256("test");
+        bytes32 hashTypedData = signerAccount.hashTypedData(hash.hashWithWrappedType());
+
+        // sign with an unregistered private key
+        uint256 invalidPrivateKey = 0xdeadbeef;
+        TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
+        bytes memory signature = invalidSigner.sign(hashTypedData);
+        bytes memory wrappedSignature = abi.encode(invalidSigner.toKeyHash(), signature);
+
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.isValidSignature(hash, wrappedSignature);
+    }
+
+    function test_isValidSignature_sep256k1_invalidWrappedSignature_invalidSigner() public view {
         bytes32 hash = keccak256("test");
         bytes32 hashTypedData = signerAccount.hashTypedData(hash.hashWithWrappedType());
 
@@ -139,19 +154,19 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         uint256 invalidPrivateKey = 0xdeadbeef;
         TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
         bytes memory signature = invalidSigner.sign(hashTypedData);
+        // trying to spoof the root key hash still fails
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
 
         // ensure the call returns the ERC1271 invalid magic value
-        assertEq(signerAccount.isValidSignature(hash, signature), _1271_INVALID_VALUE);
+        assertEq(signerAccount.isValidSignature(hash, wrappedSignature), _1271_INVALID_VALUE);
     }
 
     function test_isValidSignature_invalidSignatureLength_reverts() public {
         bytes32 hash = keccak256("test");
         bytes memory signature = new bytes(63);
         vm.expectRevert();
-        signerAccount.isValidSignature(hash, signature);
+        signerAccount.isValidSignature(hash, abi.encode(KeyLib.ROOT_KEY_HASH, signature));
     }
-
-    // TODO: no test for P256 signatures without keyHash because the signatures are 64 bytes long
 
     function test_isValidSignature_WebAuthnP256_invalidWrappedSignatureLength_reverts() public {
         TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
@@ -163,7 +178,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.prank(address(signer));
         signerAccount.register(webAuthnP256Key.toKey());
 
-        // Don't wrap the signature with the key hash
+        // Intentionally don't wrap the signature with the key hash.
         vm.expectRevert();
         signerAccount.isValidSignature(testDigest, signature);
     }
