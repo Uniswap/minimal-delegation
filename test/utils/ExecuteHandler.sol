@@ -31,16 +31,7 @@ abstract contract ExecuteHandler {
         view
         returns (bytes memory packedSignature)
     {
-        bytes memory signature = _sign(digest, key);
+        bytes memory signature = key.sign(digest);
         packedSignature = abi.encode(nonce, abi.encode(keyHash, signature));
-    }
-
-    /// @notice Base function for signing calls
-    /// @dev Assume that the digest is either:
-    /// - SignedCalls if using internal verification
-    /// - Wrapped if using 1271
-    /// - The userOpHash if using ERC-4337
-    function _sign(bytes32 digest, TestKey memory key) internal view returns (bytes memory signature) {
-        signature = key.sign(digest);
     }
 }

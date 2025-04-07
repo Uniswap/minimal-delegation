@@ -35,7 +35,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_handleOps_single_eoaSigner_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
@@ -62,7 +62,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
     }
 
     function test_handleOps_single_eoaSigner_emits_UserOperationRevertReason() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         bytes memory executionData = abi.encode(calls);
@@ -96,7 +96,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         bytes memory opData = bytes("");

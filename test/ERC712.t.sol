@@ -58,7 +58,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
 
     /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: 0});
         bytes32 hashTypedData = signerAccount.hashTypedData(signedCalls.hash());
         // re-implement 712 hash
@@ -67,7 +67,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     }
 
     function test_hashTypedData_matches_signedTypedData_ffi() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});

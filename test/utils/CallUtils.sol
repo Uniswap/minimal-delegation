@@ -28,7 +28,7 @@ library CallUtils {
     // Call array operations
 
     /// @dev Create empty Call array
-    function init() internal pure returns (Call[] memory) {
+    function initArray() internal pure returns (Call[] memory) {
         return new Call[](0);
     }
 

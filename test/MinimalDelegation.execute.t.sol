@@ -69,7 +69,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         for (uint256 i = 0; i < modes.length; i++) {
             bytes32 mode = modes[i];
             vm.expectRevert(IERC7821.UnsupportedExecutionMode.selector);
-            signerAccount.execute(mode, abi.encode(CallUtils.init()));
+            signerAccount.execute(mode, abi.encode(CallUtils.initArray()));
         }
         vm.stopPrank();
     }
@@ -81,16 +81,16 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         if (mode != BATCHED_CALL && mode != BATCHED_CAN_REVERT_CALL) {
             vm.expectRevert(IERC7821.UnsupportedExecutionMode.selector);
         }
-        signerAccount.execute(mode, abi.encode(CallUtils.init()));
+        signerAccount.execute(mode, abi.encode(CallUtils.initArray()));
     }
 
     function test_execute_auth_reverts() public {
         vm.expectRevert(IERC7821.Unauthorized.selector);
-        signerAccount.execute(BATCHED_CALL, abi.encode(CallUtils.init()));
+        signerAccount.execute(BATCHED_CALL, abi.encode(CallUtils.initArray()));
     }
 
     function test_execute() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
@@ -110,7 +110,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_native() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
@@ -124,7 +124,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batch_reverts() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         // this call should cause the entire batch to revert
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 101e18));
@@ -140,7 +140,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batch_canRevert_succeeds() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         // this call reverts but the batch should succeed
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 101e18));
@@ -159,7 +159,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     function test_execute_opData_eoaSigner_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         Call memory registerCall =
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, p256Key.toKey()));
         calls = calls.push(registerCall);
@@ -177,7 +177,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         Call memory registerCall =
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, secp256k1Key.toKey()));
         calls = calls.push(registerCall);
@@ -191,7 +191,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
     // Root EOA using key.hash() will revert with KeyDoesNotExist
     function test_execute_batch_opData_rootEOA_withKeyHash_reverts() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         uint256 nonceKey = 0;
@@ -205,7 +205,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
     // Root EOA must use bytes32(0) as their keyHash
     function test_execute_batch_opData_rootEOA_withKeyHashZero_succeeds() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         uint256 nonceKey = 0;
@@ -218,7 +218,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batch_opData_rootEOA_twoCalls_succeeds() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
@@ -240,7 +240,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batch_opData_rootEOA_singleCall_succeeds() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         uint256 nonceKey = 0;
@@ -262,7 +262,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         uint256 nonceKey = 0;
@@ -286,7 +286,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batch_opData_revertsWithInvalidNonce() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
@@ -312,7 +312,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     function test_execute_reverts_withUnsupportedExecutionMode_gas() public {
         bytes32 invalid_mode = 0x0101100000000000000000000000000000000000000000000000000000000000;
         vm.prank(address(signerAccount));
-        try signerAccount.execute(invalid_mode, abi.encode(CallUtils.init())) {}
+        try signerAccount.execute(invalid_mode, abi.encode(CallUtils.initArray())) {}
         catch {
             vm.snapshotGasLastCall("execute_invalidMode_reverts");
         }
@@ -321,7 +321,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_single_batchedCall_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         bytes memory executionData = abi.encode(calls);
@@ -334,7 +334,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_twoCalls_batchedCall_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
@@ -351,7 +351,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_native_single_batchedCall_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
         bytes memory executionData = abi.encode(calls);
@@ -364,7 +364,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_single_batchedCall_opData_rootSigner_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
@@ -378,7 +378,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     function test_execute_single_batchedCall_opData_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         vm.prank(address(signerAccount));
@@ -393,7 +393,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_twoCalls_batchedCall_opData_rootSigner_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
@@ -406,7 +406,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_native_single_batchedCall_opData_eoaSigner_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
         bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
@@ -418,7 +418,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_batch_opData_singeCall_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
@@ -430,7 +430,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_batch_opData_twoCalls_gas() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
@@ -444,13 +444,13 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
      * Edge case tests
      */
     function test_execute_batch_emptyCalls_succeeds() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
     }
 
     function test_execute_batch_emptyCalls_revertsWhenUnauthorized() public {
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         vm.expectRevert(IERC7821.Unauthorized.selector);
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
     }
@@ -460,7 +460,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
      */
     function test_execute_register_update_asRoot_succeeds() public {
         TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = CallUtils.addRegister(calls, newKey);
         calls = CallUtils.addUpdate(calls, newKey.toKeyHash(), Settings.wrap(0));
 
@@ -470,7 +470,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
     function test_execute_register_update_asNonRoot_reverts() public {
         TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = CallUtils.addRegister(calls, newKey);
         calls = CallUtils.addUpdate(calls, newKey.toKeyHash(), Settings.wrap(0));
 
@@ -479,13 +479,15 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_register_update_withRootSignature_succeeds() public {
+        // Generate a test key to register
         TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
-        Call[] memory calls = CallUtils.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = CallUtils.addRegister(calls, newKey);
         calls = CallUtils.addUpdate(calls, newKey.toKeyHash(), Settings.wrap(0));
 
         bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(Settings.unwrap(signerAccount.getKeySettings(newKey.toKeyHash())), 0);
     }
 }
