@@ -42,13 +42,15 @@ contract SettingsLibTest is Test {
     function test_isExpired_expiryOfZero_isNotExpired() public {
         Settings settings = SettingsBuilder.init().fromExpiration(0);
         vm.warp(1);
-        assertEq(settings.isExpired(), false);
+        (bool expired,) = settings.isExpired();
+        assertEq(expired, false);
     }
 
     function test_isExpired_fuzz(uint40 expiration) public {
         vm.assume(expiration > 0 && expiration < type(uint40).max);
         Settings settings = SettingsBuilder.init().fromExpiration(expiration);
         vm.warp(expiration + 1);
-        assertEq(settings.isExpired(), true);
+        (bool expired,) = settings.isExpired();
+        assertEq(expired, true);
     }
 }

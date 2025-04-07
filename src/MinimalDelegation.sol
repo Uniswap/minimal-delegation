@@ -97,7 +97,8 @@ contract MinimalDelegation is
         Key memory key = _getKey(keyHash);
 
         Settings settings = keySettings[keyHash];
-        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
         IHook hook = settings.hook();
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
@@ -150,8 +151,8 @@ contract MinimalDelegation is
         (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
 
         Settings settings = keySettings[keyHash];
-        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
-        uint40 expiry = settings.expiration();
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
         IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
@@ -192,7 +193,8 @@ contract MinimalDelegation is
         (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
 
         Settings settings = keySettings[keyHash];
-        if (settings.isExpired()) revert IKeyManagement.KeyExpired();
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
         IHook hook = settings.hook();
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)

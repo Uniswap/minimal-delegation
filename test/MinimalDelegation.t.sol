@@ -328,7 +328,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
 
         vm.prank(address(entryPoint));
-        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
         signerAccount.validateUserOp(userOp, userOpHash, 0);
     }
 
