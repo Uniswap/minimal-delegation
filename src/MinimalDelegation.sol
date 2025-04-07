@@ -63,7 +63,6 @@ contract MinimalDelegation is
             (bytes32 keyHash,) = abi.decode(wrappedSignature, (bytes32, bytes));
 
             SignedCalls memory signedCalls = calls.toSignedCalls(nonce);
-
             _handleVerifySignature(_hashTypedData(signedCalls.hash()), nonce, wrappedSignature);
             _dispatch(mode, calls, keyHash);
         } else {
@@ -167,8 +166,9 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(bytes32 digest, uint256 nonce, bytes memory wrappedSignature) private view {
+    function _handleVerifySignature(bytes32 digest, uint256 nonce, bytes memory wrappedSignature) private {
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+        _useNonce(nonce);
 
         Key memory key = getKey(keyHash);
         Settings settings = getKeySettings(keyHash);
