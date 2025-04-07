@@ -159,8 +159,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(registerCall);
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -215,8 +215,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(nonce, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -233,8 +233,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(nonce, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -256,8 +256,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
         
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(nonce, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -311,8 +311,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(nonce, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -387,8 +387,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -423,8 +423,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -438,8 +438,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -453,8 +453,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
         
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -469,8 +469,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
         
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -523,8 +523,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
-        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        // Since root signer is signing, don't need to wrap the signature
+        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
