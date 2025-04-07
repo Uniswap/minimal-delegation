@@ -13,8 +13,6 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract MinimalDelegationTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
@@ -27,19 +25,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     function setUp() public {
         setUpDelegation();
         setUpHooks();
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_register_gas() public {
-        bytes32 keyHash = mockSecp256k1Key.hash();
-
-        vm.expectEmit(true, false, false, true);
-        emit Registered(keyHash, mockSecp256k1Key);
-
-        vm.prank(address(signerAccount));
-        signerAccount.register(mockSecp256k1Key);
-        vm.snapshotGasLastCall("register");
     }
 
     function test_register() public {
@@ -88,23 +73,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(fetchedKey.publicKey, abi.encode(mockSecp256k1PublicKey));
         // key count should remain the same
         assertEq(signerAccount.keyCount(), 1);
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_revoke_gas() public {
-        // first register the key
-        vm.startPrank(address(signerAccount));
-        signerAccount.register(mockSecp256k1Key);
-        bytes32 keyHash = mockSecp256k1Key.hash();
-        assertEq(signerAccount.keyCount(), 1);
-
-        vm.expectEmit(true, false, false, true);
-        emit Revoked(keyHash);
-
-        // then revoke the key
-        signerAccount.revoke(keyHash);
-        vm.snapshotGasLastCall("revoke");
     }
 
     function test_revoke() public {
@@ -227,18 +195,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.ENTRY_POINT(), newEntryPoint);
     }
 
-    function test_validateUserOp_validSignature() public {
-        PackedUserOperation memory userOp;
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        bytes memory signature = signerTestKey.sign(userOpHash);
-        userOp.signature = abi.encode(signerTestKey.toKeyHash(), signature);
-
-        vm.prank(address(entryPoint));
-        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
-        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
-        assertEq(valid, 0); // 0 is valid
-    }
-
     function test_validateUserOp_withHook_validSignature() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         bytes memory signature = p256Key.sign(bytes32(0));
@@ -259,19 +215,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
         assertEq(valid, 0);
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_validateUserOp_validSignature_gas() public {
-        PackedUserOperation memory userOp;
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        bytes memory signature = signerTestKey.sign(userOpHash);
-        userOp.signature = abi.encode(signerTestKey.toKeyHash(), signature);
-
-        vm.prank(address(entryPoint));
-        signerAccount.validateUserOp(userOp, userOpHash, 0);
-        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
     }
 
     function test_validateUserOp_expiredKey() public {
@@ -325,6 +268,65 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         // account sent in 1e18 to the entry point and their deposit was updated
         assertEq(address(signerAccount).balance, 0);
         assertEq(entryPoint.getDepositInfo(address(signerAccount)).deposit, beforeDeposit + 1e18);
+    }
+
+    /// GAS TESTS
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_register_gas() public {
+        bytes32 keyHash = mockSecp256k1Key.hash();
+
+        vm.expectEmit(true, false, false, true);
+        emit Registered(keyHash, mockSecp256k1Key);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(mockSecp256k1Key);
+        vm.snapshotGasLastCall("register");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_revoke_gas() public {
+        // first register the key
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(mockSecp256k1Key);
+        bytes32 keyHash = mockSecp256k1Key.hash();
+        assertEq(signerAccount.keyCount(), 1);
+
+        vm.expectEmit(true, false, false, true);
+        emit Revoked(keyHash);
+
+        // then revoke the key
+        signerAccount.revoke(keyHash);
+        vm.snapshotGasLastCall("revoke");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_validSignature() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = signerTestKey.sign(userOpHash);
+        userOp.signature = abi.encode(signerTestKey.toKeyHash(), signature);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
+        assertEq(valid, 0); // 0 is valid
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_validSignature_gas() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = signerTestKey.sign(userOpHash);
+        userOp.signature = abi.encode(signerTestKey.toKeyHash(), signature);
+
+        vm.prank(address(entryPoint));
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_no_missingAccountFunds");
     }
 
     /// forge-config: default.isolate = true
