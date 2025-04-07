@@ -37,10 +37,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallLib for Call[];
-    using CallUtils for Call;
-    using CallUtils for Call[];
-    using CallUtils for HandlerCall;
-    using CallUtils for HandlerCall[];
+    using CallUtils for *;
     using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
 
@@ -77,11 +74,6 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         vm.startPrank(currentCaller);
         _;
         vm.stopPrank();
-    }
-
-    function _hash(Call[] memory calls, uint256 nonce) internal view returns (bytes32 digest) {
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
-        digest = signerAccount.hashTypedData(signedCalls.hash());
     }
 
     /// Helper function to get the next available nonce
