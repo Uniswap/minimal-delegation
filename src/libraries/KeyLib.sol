@@ -21,7 +21,7 @@ struct Key {
 }
 
 library KeyLib {
-    bytes32 internal constant ROOT_KEY_HASH = bytes32(0);
+    bytes32 public constant ROOT_KEY_HASH = bytes32(0);
 
     function hash(Key memory key) internal pure returns (bytes32) {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
@@ -30,6 +30,10 @@ library KeyLib {
     /// @notice A helper function to get the root key object.
     function toRootKey() internal view returns (Key memory) {
         return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
+    }
+
+    function isRootKey(Key memory key) internal view returns (bool) {
+        return key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == address(this);
     }
 
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {

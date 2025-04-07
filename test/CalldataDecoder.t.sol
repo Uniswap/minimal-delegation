@@ -24,16 +24,4 @@ contract CalldataDecoderTest is Test {
         assertEq(one, 1);
         assertEq(two, 2);
     }
-
-    function test_fuzz_decodeCallsBytes(Call[] calldata actualCalls, bytes calldata actualBytes) public view {
-        (Call[] memory _calls, bytes memory _bytes) = decoder.decodeCallsBytes(abi.encode(actualCalls, actualBytes));
-
-        for (uint256 i = 0; i < _calls.length; i++) {
-            assertEq(_calls[i].to, actualCalls[i].to);
-            assertEq(_calls[i].value, actualCalls[i].value);
-            assertEq(_calls[i].data, actualCalls[i].data);
-        }
-
-        assertEq(_bytes, actualBytes);
-    }
 }

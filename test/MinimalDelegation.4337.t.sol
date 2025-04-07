@@ -14,6 +14,7 @@ import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
 import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {KeyLib} from "../src/libraries/KeyLib.sol";
 
 contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHandler {
     using CallUtils for Call[];
@@ -47,7 +48,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(signerTestKey.sign(digest));
+        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;
@@ -73,7 +74,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(signerTestKey.sign(digest));
+        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;
@@ -108,6 +109,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
+
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), p256Key.sign(digest));
         userOp.withSignature(wrappedSignature);
 
