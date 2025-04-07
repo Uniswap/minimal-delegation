@@ -36,12 +36,12 @@ contract MinimalDelegationStorageTest is DelegationHandler {
     }
 
     /// @dev Sanity check tests for changes in namespace and version
-    function test_erc7201_namespaceAndVersion() public {
+    function test_erc7201_namespaceAndVersion() public view {
         assertEq(signerAccount.namespaceAndVersion(), "Uniswap.MinimalDelegation.1.0.0");
     }
 
     /// @dev Sanity check tests for changes in the calculated custom storage root
-    function test_erc7201_customStorageRoot() public {
+    function test_erc7201_customStorageRoot() public view {
         bytes32 customStorageRoot =
             keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(signerAccount.CUSTOM_STORAGE_ROOT(), customStorageRoot);
