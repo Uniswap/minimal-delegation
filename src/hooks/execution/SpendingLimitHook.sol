@@ -34,6 +34,7 @@ interface ISpendingLimitHook is IExecutionHook {
     function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external;
 }
 
+/// @title SpendingLimitHook
 /// @author modified from https://github.com/ithacaxyz/account/blob/main/src/GuardedExecutor.sol
 contract SpendingLimitHook is ISpendingLimitHook {
     using EnumerableSetLib for *;
