@@ -60,10 +60,9 @@ contract MinimalDelegation is
         } else if (mode.supportsOpData()) {
             (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
             (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
-            (bytes32 keyHash,) = abi.decode(wrappedSignature, (bytes32, bytes));
+            (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
 
-            SignedCalls memory signedCalls = calls.toSignedCalls(nonce);
-            _handleVerifySignature(_hashTypedData(signedCalls.hash()), nonce, wrappedSignature);
+            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce), signature);
             _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
@@ -166,15 +165,16 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(bytes32 digest, uint256 nonce, bytes memory wrappedSignature) private {
-        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
-        _useNonce(nonce);
+    function _handleVerifySignature(bytes32 keyHash, SignedCalls memory signedCalls, bytes memory signature) private {
+        _useNonce(signedCalls.nonce);
 
         Key memory key = getKey(keyHash);
         Settings settings = getKeySettings(keyHash);
         if (settings.isExpired()) revert IKeyManagement.KeyExpired();
 
         IHook hook = settings.hook();
+
+        bytes32 digest = _hashTypedData(signedCalls.hash());
 
         /// TODO: Handle key expiry check.
         bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
