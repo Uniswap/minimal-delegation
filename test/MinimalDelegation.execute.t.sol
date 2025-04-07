@@ -43,12 +43,6 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         tokenB.mint(address(signerAccount), 100e18);
     }
 
-    /// @notice Hash the calls and nonce to get the digest for use in internal verification flow
-    function hash(Call[] memory calls, uint256 nonce) public view returns (bytes32 digest) {
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
-        digest = signerAccount.hashTypedData(signedCalls.hash());
-    }
-
     /// Helper function to get the next available nonce
     function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
         seq = uint64(signerAccount.getSeq(key));
@@ -164,7 +158,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, p256Key.toKey()));
         calls = calls.push(registerCall);
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
@@ -183,7 +180,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(registerCall);
 
         // Sign using the registered P256 key
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), p256Key, DEFAULT_NONCE));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = _signAndPack(digest, p256Key);
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         assertEq(signerAccount.getKey(secp256k1Key.toKeyHash()).hash(), secp256k1Key.toKeyHash());
@@ -197,7 +197,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, nonce, signerTestKey.toKeyHash()));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -211,7 +214,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, nonce, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
@@ -226,7 +232,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, nonce, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
@@ -245,7 +254,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
         uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, nonce, ROOT_KEY_HASH));
+        
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
 
@@ -269,7 +282,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Signature over a wrong digest
-        bytes memory executionData = abi.encode(calls, _signAndPack(bytes32(0), p256Key, nonce));
+        bytes32 digest = bytes32(0);
+        bytes memory wrappedSignature = _signAndPack(digest, p256Key);
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         // Expect the signature to be invalid (because it is)
         vm.expectRevert(IERC7821.InvalidSignature.selector);
@@ -294,7 +310,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, nonce, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
 
@@ -367,7 +386,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
@@ -384,7 +406,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), p256Key, DEFAULT_NONCE));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = _signAndPack(digest, p256Key);
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_P256_singleCall");
@@ -397,7 +422,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_twoCalls");
@@ -409,7 +437,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
@@ -421,8 +452,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
-
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
+        
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall");
     }
@@ -434,8 +468,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
-
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
+        
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
     }
@@ -461,8 +498,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     function test_execute_register_update_asRoot_succeeds() public {
         TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
         Call[] memory calls = CallUtils.initArray();
-        calls = CallUtils.addRegister(calls, newKey);
-        calls = CallUtils.addUpdate(calls, newKey.toKeyHash(), Settings.wrap(0));
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
+        calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
@@ -471,8 +508,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     function test_execute_register_update_asNonRoot_reverts() public {
         TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
         Call[] memory calls = CallUtils.initArray();
-        calls = CallUtils.addRegister(calls, newKey);
-        calls = CallUtils.addUpdate(calls, newKey.toKeyHash(), Settings.wrap(0));
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
+        calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
         vm.expectRevert(IERC7821.Unauthorized.selector);
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
@@ -482,10 +519,13 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         // Generate a test key to register
         TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
         Call[] memory calls = CallUtils.initArray();
-        calls = CallUtils.addRegister(calls, newKey);
-        calls = CallUtils.addUpdate(calls, newKey.toKeyHash(), Settings.wrap(0));
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
+        calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
-        bytes memory executionData = abi.encode(calls, _signAndPack(hash(calls, DEFAULT_NONCE), signerTestKey, DEFAULT_NONCE, ROOT_KEY_HASH));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         assertEq(Settings.unwrap(signerAccount.getKeySettings(newKey.toKeyHash())), 0);

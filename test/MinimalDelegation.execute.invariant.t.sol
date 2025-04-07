@@ -36,6 +36,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
+    using CallLib for Call[];
     using CallUtils for Call;
     using CallUtils for Call[];
     using CallUtils for HandlerCall;
@@ -134,8 +135,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 
         Call[] memory calls = handlerCalls.toCalls();
 
-        bytes memory executionData =
-            abi.encode(calls, _signAndPack(_hash(calls, nonce), currentSigningKey, nonce, currentKeyHash));
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes memory wrappedSignature = abi.encode(currentKeyHash, currentSigningKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, wrappedSignature);
+        bytes memory executionData = abi.encode(calls, opData);
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);

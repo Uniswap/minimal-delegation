@@ -64,23 +64,11 @@ library CallUtils {
         return call;
     }
 
-    // Call encoding for specific operations
-
-    /// @dev Add execute call to array
-    function addExecute(Call[] memory calls, Call[] memory innerCalls) internal pure returns (Call[] memory) {
-        return push(calls, encodeExecuteCall(innerCalls));
-    }
-
     /// @dev Create call to execute a batch
     function encodeExecuteCall(Call[] memory calls) internal pure returns (Call memory) {
         return initDefault().withTo(SELF_CALL).withData(
             abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, abi.encode(calls))
         );
-    }
-
-    /// @dev Add register key call
-    function addRegister(Call[] memory calls, TestKey memory newKey) internal pure returns (Call[] memory) {
-        return push(calls, encodeRegisterCall(newKey));
     }
 
     /// @dev Create call to register key
@@ -90,19 +78,9 @@ library CallUtils {
         );
     }
 
-    /// @dev Add revoke key call
-    function addRevoke(Call[] memory calls, bytes32 keyHash) internal pure returns (Call[] memory) {
-        return push(calls, encodeRevokeCall(keyHash));
-    }
-
     /// @dev Create call to revoke key
     function encodeRevokeCall(bytes32 keyHash) internal pure returns (Call memory) {
         return initDefault().withTo(SELF_CALL).withData(abi.encodeWithSelector(IKeyManagement.revoke.selector, keyHash));
-    }
-
-    /// @dev Add update key settings call
-    function addUpdate(Call[] memory calls, bytes32 keyHash, Settings settings) internal pure returns (Call[] memory) {
-        return push(calls, encodeUpdateCall(keyHash, settings));
     }
 
     /// @dev Create call to update key settings

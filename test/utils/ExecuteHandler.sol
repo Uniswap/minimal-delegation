@@ -17,21 +17,14 @@ abstract contract ExecuteHandler {
         0x0101000000007821000100000000000000000000000000000000000000000000;
 
     uint256 internal constant DEFAULT_NONCE = 0;
-    bytes32 internal constant ROOT_KEY_HASH = bytes32(0);
 
-    /// @notice Sign calls and pack them for internal verification path
-    function _signAndPack(bytes32 digest, TestKey memory key, uint256 nonce) internal view returns (bytes memory) {
-        bytes32 keyHash = key.toKeyHash();
-        return _signAndPack(digest, key, nonce, keyHash);
-    }
-
-    /// @dev If the signing key is the root EOA, pass bytes32(0) for keyHash
-    function _signAndPack(bytes32 digest, TestKey memory key, uint256 nonce, bytes32 keyHash)
+    /// @notice Generate a signature over the digest and pack it with the keyHash
+    function _signAndPack(bytes32 digest, TestKey memory key)
         internal
-        view
+        pure
         returns (bytes memory packedSignature)
     {
         bytes memory signature = key.sign(digest);
-        packedSignature = abi.encode(nonce, abi.encode(keyHash, signature));
+        packedSignature = abi.encode(key.toKeyHash(), signature);
     }
 }
