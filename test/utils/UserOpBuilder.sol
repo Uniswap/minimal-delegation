@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {KeyLib} from "../../src/libraries/KeyLib.sol";
 
 library UserOpBuilder {
     using UserOperationLib for PackedUserOperation;
