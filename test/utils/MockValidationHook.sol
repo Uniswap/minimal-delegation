@@ -21,7 +21,7 @@ contract MockValidationHook is IHook {
         _validateUserOpReturnValue = returnValue;
     }
 
-    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, uint40)
+    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
         external
         view
         returns (bytes4, uint256)

@@ -18,15 +18,13 @@ library HooksLib {
         return uint160(address(self)) & flag != 0;
     }
 
-    function validateUserOp(
-        IHook self,
-        bytes32 keyHash,
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint40 expiry
-    ) internal view returns (uint256 validationData) {
+    function validateUserOp(IHook self, bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash)
+        internal
+        view
+        returns (uint256 validationData)
+    {
         bytes4 hookSelector;
-        (hookSelector, validationData) = self.overrideValidateUserOp(keyHash, userOp, userOpHash, expiry);
+        (hookSelector, validationData) = self.overrideValidateUserOp(keyHash, userOp, userOpHash);
         if (hookSelector != IHook.overrideValidateUserOp.selector) revert InvalidHookResponse();
         return validationData;
     }

@@ -6,7 +6,7 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 interface IHook {
     /// @notice Validates a user operation
     /// Does not require passing in missingAccountFunds like the IAccount interface
-    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata, bytes32, uint40)
+    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata, bytes32)
         external
         view
         returns (bytes4, uint256);

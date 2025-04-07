@@ -155,7 +155,7 @@ contract MinimalDelegation is
 
         IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
-            ? hook.validateUserOp(keyHash, userOp, userOpHash, expiry)
+            ? hook.validateUserOp(keyHash, userOp, userOpHash)
             : _handleValidateUserOp(keyHash, signature, userOp, userOpHash, expiry);
     }
 
