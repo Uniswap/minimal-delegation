@@ -134,8 +134,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
             }
         }
 
-        uint256 totalNativeSpend;
-        if (value != 0) totalNativeSpend += value;
+        if (value != 0) tempStorage.totalNativeSpend += value;
 
         uint256[] memory balancesBefore = DynamicArrayLib.malloc(erc20s.length());
 
@@ -162,12 +161,9 @@ contract SpendingLimitHook is ISpendingLimitHook {
             balancesBefore.set(i, SafeTransferLib.balanceOf(token, msg.sender));
         }
 
-        tempStorage = TempStorage({
-            totalNativeSpend: totalNativeSpend,
-            erc20s: erc20s.asAddressArray(),
-            transferAmounts: transferAmounts.asUint256Array(),
-            balancesBefore: balancesBefore
-        });
+        tempStorage.erc20s = erc20s.asAddressArray();
+        tempStorage.transferAmounts = transferAmounts.asUint256Array();
+        tempStorage.balancesBefore = balancesBefore;
 
         return (IExecutionHook.beforeExecute.selector, abi.encode(tempStorage));
     }

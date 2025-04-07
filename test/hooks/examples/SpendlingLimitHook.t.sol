@@ -43,12 +43,44 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         spendingLimitHook.setSpendLimit(p256Key.toKeyHash(), address(tokenA), SpendPeriod.Minute, 100);
     }
 
-    function test_beforeExecute_noSpendLimit_succeeds() public {
+    function test_setSpendLimit_native_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        AccountKeyHash accountKeyHash = p256Key.toKeyHash().wrap(address(signerAccount));
+        // check that the spend limit is set
+        vm.expectEmit(true, true, true, true);
+        emit ISpendingLimitHook.SpendLimitSet(accountKeyHash, address(0), SpendPeriod.Minute, 100);
+
+        vm.prank(address(signerAccount));
+        spendingLimitHook.setSpendLimit(p256Key.toKeyHash(), address(0), SpendPeriod.Minute, 100);
+
+    }
+
+    function test_afterExecute_noSpendLimit_succeeds() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 100, "");
+        assertEq(fnSel, IExecutionHook.beforeExecute.selector);
+
+        fnSel = spendingLimitHook.afterExecute(p256Key.toKeyHash(), beforeExecuteData);
+        assertEq(fnSel, IExecutionHook.afterExecute.selector);
+        vm.stopPrank();
+    }
+
+    function test_afterExecute_native_reverts_withExceededSpendLimit() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 100, "");
+        spendingLimitHook.setSpendLimit(p256Key.toKeyHash(), address(0), SpendPeriod.Minute, 1);
+
+        vm.startPrank(address(signerAccount));
+        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(0), 100, "");
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
+
+        vm.expectRevert(ISpendingLimitHook.ExceededSpendLimit.selector);
+        fnSel = spendingLimitHook.afterExecute(p256Key.toKeyHash(), beforeExecuteData);
+        vm.stopPrank();
     }
 
     function test_afterExecute_reverts_withExceededSpendLimit() public {
