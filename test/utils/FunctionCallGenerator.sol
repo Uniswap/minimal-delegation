@@ -37,6 +37,7 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
     uint256 public constant FUNCTION_COUNT = 4;
 
     uint256 public constant MAX_DEPTH = 5;
+    uint256 public constant MAX_KEYS = 10;
 
     address private immutable _tokenA;
     address private immutable _tokenB;
@@ -66,7 +67,7 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
 
     function _updateCall(bytes32 keyHash, Settings settings) internal virtual returns (HandlerCall memory) {
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeUpdateCall(keyHash, settings)).withCallback(
-            abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_UpdateCallback.selector, keyHash)
+            abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_UpdateCallback.selector, keyHash, settings)
         );
     }
 
@@ -102,7 +103,7 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
         uint256 functionType = _bound(randomSeed, 0, FUNCTION_COUNT - 1);
 
         // REGISTER
-        if (functionType == FUNCTION_REGISTER || _ghostKeyHashes.values().length == 0) {
+        if (functionType == FUNCTION_REGISTER && _ghostKeyHashes.values().length < MAX_KEYS) {
             TestKey memory newKey = _randomTestKey();
             if (newKey.toKeyHash() != bytes32(0)) {
                 return _registerCall(newKey);

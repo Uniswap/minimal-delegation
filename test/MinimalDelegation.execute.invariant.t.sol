@@ -236,4 +236,16 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         signerAccount.register(newKey.toKey());
         assertEq(signerAccount.getKey(newKey.toKeyHash()).hash(), newKey.toKeyHash());
     }
+
+    function invariant_keyStateIsConsistent() public view {
+        // Iterate over keyHashes
+        uint256 keyCount = signerAccount.keyCount();
+        for (uint256 i = 0; i < keyCount; i++) {
+            // Will revert if key does not exist
+            Key memory key = signerAccount.keyAt(i);
+            bytes32 keyHash = key.hash();
+            // Will be false if the stored encoded data is wrong
+            assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
+        }
+    }
 }
