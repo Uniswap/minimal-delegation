@@ -53,7 +53,7 @@ contract EIP712 is IEIP712, IERC5267 {
         (name, version) = _domainNameAndVersion();
         chainId = block.chainid;
         verifyingContract = address(this);
-        salt = salt; // `KeyLib.ROOT_KEY_HASH`.
+        salt = salt; // bytes32(0)
         extensions = extensions; // `new uint256[](0)`.
     }
 

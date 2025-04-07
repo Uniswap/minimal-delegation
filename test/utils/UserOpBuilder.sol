@@ -20,12 +20,12 @@ library UserOpBuilder {
 
     /// @dev Override initcode hash set to default of 0
     function encode(PackedUserOperation calldata userOp) internal pure returns (bytes memory) {
-        return userOp.encode(KeyLib.ROOT_KEY_HASH);
+        return userOp.encode(bytes32(0));
     }
 
     /// @dev Override initcode hash set to default of 0
     function hash(PackedUserOperation calldata userOp) internal pure returns (bytes32) {
-        return userOp.hash(KeyLib.ROOT_KEY_HASH);
+        return userOp.hash(bytes32(0));
     }
 
     function withSender(PackedUserOperation memory userOp, address sender)
