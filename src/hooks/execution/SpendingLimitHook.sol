@@ -22,6 +22,15 @@ enum SpendPeriod {
 }
 
 interface ISpendingLimitHook is IExecutionHook {
+    /// @dev Exceeded the spend limit.
+    error ExceededSpendLimit();
+
+    /// @dev Emitted when a spend limit is set.
+    event SpendLimitSet(AccountKeyHash accountKeyHash, address token, SpendPeriod period, uint256 limit);
+
+    /// @dev Emitted when a spend limit is removed.
+    event SpendLimitRemoved(AccountKeyHash accountKeyHash, address token, SpendPeriod period);
+
     function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external;
 }
 
@@ -30,16 +39,6 @@ contract SpendingLimitHook is ISpendingLimitHook {
     using EnumerableSetLib for *;
     using DynamicArrayLib for *;
     using AccountKeyHashLib for bytes32;
-
-    /// @dev Exceeded the spend limit.
-    error ExceededSpendLimit();
-
-    /// @dev Emitted when a spend limit is set.
-    event SpendLimitSet(bytes32 keyHash, address token, SpendPeriod period, uint256 limit);
-
-    /// @dev Emitted when a spend limit is removed.
-    event SpendLimitRemoved(bytes32 keyHash, address token, SpendPeriod period);
-
 
     ////////////////////////////////////////////////////////////////////////
     // Structs
@@ -111,7 +110,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         tokenSpends.periods.add(uint8(period));
 
         tokenSpends.spends[uint8(period)].limit = limit;
-        emit SpendLimitSet(keyHash, token, period, limit);
+        emit SpendLimitSet(accountKeyHash, token, period, limit);
     }
 
     function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data) external returns (bytes4, bytes memory beforeExecuteData) {
@@ -119,7 +118,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         DynamicArrayLib.DynamicArray memory transferAmounts;
 
         SpendStorage storage spends = spendStorage[keyHash.wrap(msg.sender)];
-
+        TempStorage memory tempStorage;
         // Collect all ERC20 tokens that need to be guarded,
         // and initialize their transfer amounts as zero.
         // Used for the check on their before and after balances, in case the batch calls
@@ -139,7 +138,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         uint256[] memory balancesBefore = DynamicArrayLib.malloc(erc20s.length());
 
         if (data.length < 4) {
-            return (IExecutionHook.beforeExecute.selector, abi.encode(totalNativeSpend, balancesBefore));
+            return (IExecutionHook.beforeExecute.selector, abi.encode(tempStorage));
         }
 
         // We will only filter based on functions that are known to use `msg.sender`.
@@ -158,10 +157,17 @@ contract SpendingLimitHook is ISpendingLimitHook {
         // Collect the ERC20 balances before the batch execution.
         for (uint256 i; i < erc20s.length(); ++i) {
             address token = erc20s.getAddress(i);
-            balancesBefore.set(i, SafeTransferLib.balanceOf(token, address(this)));
+            balancesBefore.set(i, SafeTransferLib.balanceOf(token, msg.sender));
         }
 
-        return (IExecutionHook.beforeExecute.selector, abi.encode(totalNativeSpend, balancesBefore));
+        tempStorage = TempStorage({
+            totalNativeSpend: totalNativeSpend,
+            erc20s: erc20s.asAddressArray(),
+            transferAmounts: transferAmounts.asUint256Array(),
+            balancesBefore: balancesBefore
+        });
+
+        return (IExecutionHook.beforeExecute.selector, abi.encode(tempStorage));
     }
 
     function afterExecute(bytes32 keyHash, bytes memory beforeExecuteData) external returns (bytes4) {
@@ -192,7 +198,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
                 Math.max(
                     tempStorage.transferAmounts[i],
                     Math.saturatingSub(
-                        tempStorage.balancesBefore[i], SafeTransferLib.balanceOf(token, address(this))
+                        tempStorage.balancesBefore[i], SafeTransferLib.balanceOf(token, msg.sender)
                     )
                 )
             );
@@ -218,7 +224,8 @@ contract SpendingLimitHook is ISpendingLimitHook {
         revert(); // We shouldn't hit here.
     }
 
-    /// @dev Increments the amount spent.
+    /// @notice Increments the amount spent.
+    /// @dev reverts if the amount spent exceeds the limit.
     function _incrementSpent(TokenSpendStorage storage s, uint256 amount) internal {
         if (amount == uint256(0)) return; // Early return.
         uint8[] memory periods = s.periods.values();
