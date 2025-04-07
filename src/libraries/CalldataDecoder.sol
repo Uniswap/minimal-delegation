@@ -25,55 +25,11 @@ library CalldataDecoder {
         }
     }
 
-    /// @notice equivalent to abi.decode(data, (uint256, bytes)) in calldata
-    /// @return _value A uint256 value
-    /// @return _data Bytes data following the uint256 value.
-    function decodeUint256Bytes(bytes calldata data) internal pure returns (uint256 _value, bytes calldata _data) {
-        assembly {
-            _value := calldataload(data.offset)
-        }
-        _data = data.toBytes(1);
-    }
-
     function decodeBytes32Bytes(bytes calldata data) internal pure returns (bytes32 _value, bytes calldata _data) {
         assembly {
             _value := calldataload(data.offset)
         }
         _data = data.toBytes(1);
-    }
-
-    // TODO length check
-    function decodeCalls(bytes calldata data) internal pure returns (Call[] calldata calls) {
-        assembly {
-            let lengthPtr := add(data.offset, calldataload(data.offset))
-            calls.offset := add(lengthPtr, 0x20)
-            calls.length := calldataload(lengthPtr)
-        }
-    }
-
-    // TODO: Length check
-    function decodeCallsBytes(bytes calldata data)
-        internal
-        pure
-        returns (Call[] calldata calls, bytes calldata opData)
-    {
-        assembly {
-            let lengthPtr := add(data.offset, calldataload(data.offset))
-            calls.offset := add(lengthPtr, 0x20)
-            calls.length := calldataload(lengthPtr)
-
-            let opLengthPtr := add(data.offset, calldataload(add(data.offset, 0x20)))
-            opData.offset := add(opLengthPtr, 0x20)
-            opData.length := calldataload(opLengthPtr)
-        }
-    }
-
-    function decodeBytesArray(bytes calldata data) internal pure returns (bytes[] calldata bytesArray) {
-        assembly {
-            let lengthPtr := add(data.offset, calldataload(data.offset))
-            bytesArray.offset := add(lengthPtr, 0x20)
-            bytesArray.length := calldataload(lengthPtr)
-        }
     }
 
     /// TODO: Import CalldataDecoder.sol, has been previously audited.

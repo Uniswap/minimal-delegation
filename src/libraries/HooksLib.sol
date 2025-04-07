@@ -18,7 +18,7 @@ library HooksLib {
         return uint160(address(self)) & flag != 0;
     }
 
-    function validateUserOp(IHook self, bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash)
+    function validateUserOp(IHook self, bytes32 keyHash, PackedUserOperation memory userOp, bytes32 userOpHash)
         internal
         view
         returns (uint256 validationData)
@@ -29,7 +29,7 @@ library HooksLib {
         return validationData;
     }
 
-    function isValidSignature(IHook self, bytes32 keyHash, bytes32 data, bytes calldata signature)
+    function isValidSignature(IHook self, bytes32 keyHash, bytes32 data, bytes memory signature)
         internal
         view
         returns (bytes4 result)
@@ -40,7 +40,7 @@ library HooksLib {
         return result;
     }
 
-    function verifySignature(IHook self, bytes32 keyHash, bytes32 data, bytes calldata signature)
+    function verifySignature(IHook self, bytes32 keyHash, bytes32 data, bytes memory signature)
         internal
         view
         returns (bool result)
