@@ -53,7 +53,7 @@ library HooksLib {
         return result;
     }
 
-    function handleBeforeExecute(IHook self, bytes32 keyHash, address to, uint256 value, bytes calldata data)
+    function handleBeforeExecute(IHook self, bytes32 keyHash, address to, uint256 value, bytes memory data)
         internal
         returns (bytes memory result)
     {

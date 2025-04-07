@@ -60,14 +60,11 @@ contract MinimalDelegation is
         } else if (mode.supportsOpData()) {
             (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
             (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
+            (bytes32 keyHash,) = abi.decode(wrappedSignature, (bytes32, bytes));
 
-            _useNonce(nonce);
+            SignedCalls memory signedCalls = calls.toSignedCalls(nonce);
 
-            bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
-
-            (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-
-            _handleVerifySignature(keyHash, digest, signature);
+            _handleVerifySignature(_hashTypedData(signedCalls.hash()), nonce, wrappedSignature);
             _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
@@ -81,7 +78,7 @@ contract MinimalDelegation is
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
 
-        (bytes32 keyHash,) = userOp.signature.unwrap();
+        (bytes32 keyHash,) = abi.decode(userOp.signature, (bytes32, bytes));
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
@@ -92,7 +89,7 @@ contract MinimalDelegation is
     }
 
     /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] calldata calls, bytes32 keyHash) private {
+    function _dispatch(bytes32 mode, Call[] memory calls, bytes32 keyHash) private {
         bool shouldRevert = mode.shouldRevert();
 
         for (uint256 i = 0; i < calls.length; i++) {
@@ -170,7 +167,9 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata signature) private view {
+    function _handleVerifySignature(bytes32 digest, uint256 nonce, bytes memory wrappedSignature) private view {
+        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+
         Key memory key = getKey(keyHash);
         Settings settings = getKeySettings(keyHash);
         if (settings.isExpired()) revert IKeyManagement.KeyExpired();
