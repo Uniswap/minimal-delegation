@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
-import {MinimalDelegation} from "../../src/MinimalDelegation.sol";
+import {MinimalDelegationEntry} from "../../src/MinimalDelegationEntry.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -17,7 +17,7 @@ contract DelegationHandler is Test {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
 
-    MinimalDelegation public minimalDelegation;
+    MinimalDelegationEntry public minimalDelegation;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
     TestKey signerTestKey = TestKey(KeyType.Secp256k1, abi.encodePacked(signer), signerPrivateKey);
@@ -36,7 +36,7 @@ contract DelegationHandler is Test {
     IMinimalDelegation public signerAccount;
 
     function setUpDelegation() public {
-        minimalDelegation = new MinimalDelegation();
+        minimalDelegation = new MinimalDelegationEntry();
         _delegate(signer, address(minimalDelegation));
         signerAccount = IMinimalDelegation(signer);
 
