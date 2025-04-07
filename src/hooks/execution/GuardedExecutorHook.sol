@@ -47,7 +47,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
 
     /// @dev This will hash the keyHash with the sender's account address
     function _setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) internal {
-        canExecute[keyHash.wrap()].update(_packCanExecute(to, selector), can, 2048);
+        canExecute[keyHash.wrap(msg.sender)].update(_packCanExecute(to, selector), can, 2048);
     }
 
     /// @dev Returns true if the key has the required permissions to execute the call.
@@ -68,7 +68,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         // or any target will still NOT allow for self execution.
         if (_isSelfExecute(to, fnSel)) return false;
 
-        EnumerableSetLib.Bytes32Set storage c = canExecute[keyHash.wrap()];
+        EnumerableSetLib.Bytes32Set storage c = canExecute[keyHash.wrap(msg.sender)];
         if (c.length() != 0) {
             if (c.contains(_packCanExecute(to, fnSel))) return true;
             if (c.contains(_packCanExecute(to, ANY_FN_SEL))) return true;

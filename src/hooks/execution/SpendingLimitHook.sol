@@ -10,27 +10,36 @@ import {DateTimeLib} from "solady/utils/DateTimeLib.sol";
 import {DynamicArrayLib} from "solady/utils/DynamicArrayLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
+import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
+
+enum SpendPeriod {
+    Minute,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year
+}
 
 interface ISpendingLimitHook is IExecutionHook {
-    function setSpendingLimit(uint256 limit) external;
+    function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external;
 }
 
 /// @author modified from https://github.com/ithacaxyz/account/blob/main/src/GuardedExecutor.sol
 contract SpendingLimitHook is ISpendingLimitHook {
     using EnumerableSetLib for *;
     using DynamicArrayLib for *;
+    using AccountKeyHashLib for bytes32;
 
     /// @dev Exceeded the spend limit.
     error ExceededSpendLimit();
 
-    enum SpendPeriod {
-        Minute,
-        Hour,
-        Day,
-        Week,
-        Month,
-        Year
-    }
+    /// @dev Emitted when a spend limit is set.
+    event SpendLimitSet(bytes32 keyHash, address token, SpendPeriod period, uint256 limit);
+
+    /// @dev Emitted when a spend limit is removed.
+    event SpendLimitRemoved(bytes32 keyHash, address token, SpendPeriod period);
+
 
     ////////////////////////////////////////////////////////////////////////
     // Structs
@@ -55,7 +64,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         uint256 current;
     }
 
-        /// @dev Holds the storage for the token period spend limits.
+    /// @dev Holds the storage for the token period spend limits.
     /// All timestamp related values are Unix timestamps in seconds.
     struct TokenPeriodSpendStorage {
         /// @dev The maximum spend limit for the period.
@@ -82,7 +91,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         mapping(address => TokenSpendStorage) spends;
     }
 
-    SpendStorage public spendStorage;
+    mapping(AccountKeyHash => SpendStorage) public spendStorage;
 
     struct TempStorage {
         uint256 totalNativeSpend;
@@ -91,11 +100,25 @@ contract SpendingLimitHook is ISpendingLimitHook {
         uint256[] balancesBefore;
     }
 
+    /// @dev Set the spend limit for a key hash.
+    /// Uses msg.sender to compute the accountKeyHash.
+    function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external {
+        AccountKeyHash accountKeyHash = keyHash.wrap(msg.sender);
+        SpendStorage storage spends = spendStorage[accountKeyHash];
+        spends.tokens.add(token, 64); // Max capacity of 64.
+
+        TokenSpendStorage storage tokenSpends = spends.spends[token];
+        tokenSpends.periods.add(uint8(period));
+
+        tokenSpends.spends[uint8(period)].limit = limit;
+        emit SpendLimitSet(keyHash, token, period, limit);
+    }
+
     function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data) external returns (bytes4, bytes memory beforeExecuteData) {
         DynamicArrayLib.DynamicArray memory erc20s;
         DynamicArrayLib.DynamicArray memory transferAmounts;
 
-        SpendStorage storage spends = spendStorage;
+        SpendStorage storage spends = spendStorage[keyHash.wrap(msg.sender)];
 
         // Collect all ERC20 tokens that need to be guarded,
         // and initialize their transfer amounts as zero.
@@ -144,18 +167,19 @@ contract SpendingLimitHook is ISpendingLimitHook {
     function afterExecute(bytes32 keyHash, bytes memory beforeExecuteData) external returns (bytes4) {
         // Ensure spends in beforeExecuteData are within limits, revert if not.
         TempStorage memory tempStorage = abi.decode(beforeExecuteData, (TempStorage));
+        SpendStorage storage spends = spendStorage[keyHash.wrap(msg.sender)];
 
         // Ensure spends in beforeExecuteData are within limits, revert if not.
         // Perform after the `_execute`, so that in the case where `calls`
         // contain a `setSpendLimit`, it will affect the `_incrementSpent`.
         
         // `_incrementSpent` is an no-op if the token does not have an active spend limit.
-        _incrementSpent(spendStorage.spends[address(0)], tempStorage.totalNativeSpend);
+        _incrementSpent(spends.spends[address(0)], tempStorage.totalNativeSpend);
 
         // Increments the spent amounts.
         for (uint256 i; i < tempStorage.erc20s.length; ++i) {
             address token = tempStorage.erc20s[i];
-            TokenSpendStorage storage tokenSpends = spendStorage.spends[token];
+            TokenSpendStorage storage tokenSpends = spends.spends[token];
             if (tokenSpends.periods.length() == uint256(0)) continue;
             _incrementSpent(
                 tokenSpends,
