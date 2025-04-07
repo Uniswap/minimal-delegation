@@ -63,6 +63,40 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         assertEq(tokenBalanceAfter, tokenBalanceBefore + 1e18);
     }
 
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_handleOps_single_P256_gas() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
+        bytes memory executionData = abi.encode(calls);
+        bytes memory callData =
+            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
+
+        PackedUserOperation memory userOp =
+            UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
+
+        bytes32 digest = entryPoint.getUserOpHash(userOp);
+        userOp.withSignature(abi.encode(p256Key.toKeyHash(), p256Key.sign(digest)));
+
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+
+        uint256 tokenBalanceBefore = tokenA.balanceOf(address(receiver));
+
+        entryPoint.handleOps(userOps, bundler);
+        vm.snapshotGasLastCall("hanldeOps_BATCHED_CALL_singleCall_P256");
+
+        uint256 tokenBalanceAfter = tokenA.balanceOf(address(receiver));
+        assertEq(tokenBalanceAfter, tokenBalanceBefore + 1e18);
+    }
+
     function test_handleOps_single_eoaSigner_emits_UserOperationRevertReason() public {
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
@@ -88,11 +122,5 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
             abi.encodeWithSelector(IERC7821.UnsupportedExecutionMode.selector)
         );
         entryPoint.handleOps(userOps, bundler);
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_handleOps_single_P256_gas() public {
-        // TODO:
     }
 }
