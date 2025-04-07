@@ -97,9 +97,7 @@ library CallUtils {
 
     /// @dev Create call to revoke key
     function encodeRevokeCall(bytes32 keyHash) internal pure returns (Call memory) {
-        return initDefault().withTo(SELF_CALL).withData(
-            abi.encodeWithSelector(IKeyManagement.revoke.selector, keyHash)
-        );
+        return initDefault().withTo(SELF_CALL).withData(abi.encodeWithSelector(IKeyManagement.revoke.selector, keyHash));
     }
 
     /// @dev Add update key settings call

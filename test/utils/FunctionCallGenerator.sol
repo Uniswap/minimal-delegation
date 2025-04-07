@@ -76,9 +76,7 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
         returns (HandlerCall memory)
     {
         return CallUtils.initHandlerDefault().withCall(
-            CallUtils.initDefault().withTo(token).withData(
-                abi.encodeWithSelector(ERC20.transfer.selector, to, amount)
-            )
+            CallUtils.initDefault().withTo(token).withData(abi.encodeWithSelector(ERC20.transfer.selector, to, amount))
         );
     }
 
