@@ -53,8 +53,8 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         }
     }
 
-    function _rand(TestKey[] storage keys, uint256 seed) internal view returns (TestKey memory) {
-        return keys[seed % keys.length];
+    function _rand(TestKey[] storage keys, uint256 seed) internal view returns (TestKey memory, uint256) {
+        return (keys[seed % keys.length], seed % keys.length);
     }
 
     function _wrapCallFailedRevertData(bytes4 selector) internal pure returns (bytes memory) {
@@ -108,7 +108,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
      * @return A call object for the generated function
      */
     function _generateHandlerCall(uint256 randomSeed) public returns (HandlerCall memory) {
-        TestKey memory testKey = _rand(fixture_testKeys, randomSeed);
+        (TestKey memory testKey, uint256 index) = _rand(fixture_testKeys, randomSeed);
         bytes32 keyHash = testKey.toKeyHash();
 
         bool isRegistered;
@@ -123,6 +123,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
 
         // REGISTER == 0
         if (randomSeed % FUZZED_FUNCTION_COUNT == 0) {
+            console2.log("register key #%s", index);
             return _registerCall(testKey, revertData);
         }
         // REVOKE == 1
@@ -130,6 +131,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
             if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
+            console2.log("revoke key #%s, expecting revert %s", index, revertData.length > 0);
             return _revokeCall(keyHash, revertData);
         }
         // UPDATE == 2
@@ -137,9 +139,11 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
             if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
+            console2.log("update key #%s, expecting revert %s", index, revertData.length > 0);
             // TODO: fuzz settings
             return _updateCall(keyHash, Settings.wrap(0), revertData);
         } else {
+            console2.log("token transfer key #%s", index);
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
     }

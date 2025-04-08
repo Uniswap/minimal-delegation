@@ -89,7 +89,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     function executeBatchedCall(uint256 seed) public useCaller(seed) {
         HandlerCall memory handlerCall = _generateHandlerCall(seed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
-
+        
         try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
