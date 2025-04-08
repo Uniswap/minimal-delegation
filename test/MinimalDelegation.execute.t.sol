@@ -189,7 +189,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
         // Sign using the registered P256 key
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = _signAndPack(digest, p256Key);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), p256Key.sign(digest));
         bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
 
@@ -451,7 +451,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         signerAccount.register(p256Key.toKey());
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
-        bytes memory wrappedSignature = _signAndPack(digest, p256Key);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), p256Key.sign(digest));
         bytes memory opData = abi.encode(DEFAULT_NONCE, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
 

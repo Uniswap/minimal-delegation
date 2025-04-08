@@ -17,10 +17,4 @@ abstract contract ExecuteHandler {
         0x0101000000007821000100000000000000000000000000000000000000000000;
 
     uint256 internal constant DEFAULT_NONCE = 0;
-
-    /// @notice Generate a signature over the digest and pack it with the keyHash
-    function _signAndPack(bytes32 digest, TestKey memory key) internal pure returns (bytes memory packedSignature) {
-        bytes memory signature = key.sign(digest);
-        packedSignature = abi.encode(key.toKeyHash(), signature);
-    }
 }
