@@ -84,7 +84,9 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 
     /// @notice Executes a batched call with the current caller
     /// @dev Handler function meant to be called during invariant tests
-    /// Generates random handler calls, executes them, then processes any registeredcallbacks
+    /// TODO: only supports single call arrays for now
+    /// - Generates a random call, executes it, then processes any registered callbacks
+    /// - Any reverts are expected by the generated handler call
     function executeBatchedCall(uint256 seed) public useCaller(seed) {
         HandlerCall memory handlerCall = _generateHandlerCall(seed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
@@ -104,13 +106,21 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 
     /// @notice Executes a call with operation data (with signature)
     /// @dev Handler function meant to be called during invariant tests
-    /// Generates random handler calls, executes them, then processes any registeredcallbacks
+    /// TODO: only supports single call arrays for now
+    /// - If the signing key is not registered on the account, expect the call to revert
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
 
-        bytes32 currentKeyHash; // defaults to bytes32(0) if root EOA
+        bytes32 currentKeyHash = currentSigningKey.toKeyHash();
+        bool signatureIsValid;
         if (!isRootKey) {
-            currentKeyHash = currentSigningKey.toKeyHash();
+            // TODO: check expiry here, settings, etc.
+            try signerAccount.getKey(currentKeyHash) {} catch (bytes memory revertData) {
+                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+                signatureIsValid = false;
+            }
+        } else {
+            signatureIsValid = true;
         }
 
         HandlerCall memory handlerCall = _generateHandlerCall(seed);
@@ -121,14 +131,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         Call[] memory calls = handlerCalls.toCalls();
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature = abi.encode(currentKeyHash, currentSigningKey.sign(digest));
+        bytes memory wrappedSignature = abi.encode(isRootKey ? bytes32(0) : currentKeyHash, currentSigningKey.sign(digest));
         bytes memory opData = abi.encode(nonce, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (!isRootKey) {
+            if (!signatureIsValid) {
                 assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
