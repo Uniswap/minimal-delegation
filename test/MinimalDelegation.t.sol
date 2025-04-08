@@ -27,6 +27,15 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         setUpHooks();
     }
 
+    function test_signerAccount_codeSize() public view {
+        // length of the code is 23 as specified by ERC-7702
+        assertEq(address(signerAccount).code.length, 0x17);
+    }
+
+    function test_minimalDelegationEntry_codeSize() public {
+        vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
