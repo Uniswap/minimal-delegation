@@ -29,11 +29,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     using CallUtils for HandlerCall[];
     using TestKeyManager for TestKey;
 
-    uint256 public constant FUNCTION_REGISTER = 0;
-    uint256 public constant FUNCTION_REVOKE = 1;
-    uint256 public constant FUNCTION_UPDATE = 2;
-    uint256 public constant TRANSFER_TOKEN = 3;
-    uint256 public constant FUNCTION_COUNT = 4;
+    uint256 public constant FUZZED_FUNCTION_COUNT = 3;
 
     uint256 public constant MAX_DEPTH = 5;
     uint256 public constant MAX_KEYS = 10;
@@ -112,8 +108,6 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
      */
     function _generateHandlerCall(uint256 randomSeed) public returns (HandlerCall memory) {
         vm.assume(randomSeed < type(uint256).max);
-        // Select function type with equal weighting
-        uint256 functionType = _bound(randomSeed, 0, FUNCTION_COUNT - 1);
 
         TestKey memory testKey = _rand(fixture_testKeys, randomSeed);
         bytes32 keyHash = testKey.toKeyHash();
@@ -125,21 +119,21 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
 
         bytes memory revertData;
 
-        // REGISTER
-        if (functionType == FUNCTION_REGISTER) {
+        // REGISTER == 0
+        if (randomSeed % FUZZED_FUNCTION_COUNT == 0) {
             pendingRegisteredKeys.add(keyHash);
             return _registerCall(testKey, revertData);
         }
-        // REVOKE
-        else if (functionType == FUNCTION_REVOKE) {
+        // REVOKE == 1 
+        else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
             if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
             pendingRegisteredKeys.remove(keyHash);
             return _revokeCall(keyHash, revertData);
         }
-        // UPDATE
-        else if (functionType == FUNCTION_UPDATE) {
+        // UPDATE == 2
+        else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
             if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }

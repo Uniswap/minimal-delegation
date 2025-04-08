@@ -216,6 +216,12 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         targetSender(sender);
     }
 
+    /// Function called after each invariant test
+    function afterInvariant() public {
+        console2.log("Number of persisted registered keys");
+        console2.logUint(signerAccount.keyCount());
+    }
+
     /// @notice Verifies that the root key can always revoke other keys
     function invariant_rootKeyCanAlwaysRevokeOtherSigningKeys() public {
         // Ensure key exists
@@ -249,11 +255,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         vm.prank(address(signerAccount));
         signerAccount.register(newKey.toKey());
         assertEq(signerAccount.getKey(newKey.toKeyHash()).hash(), newKey.toKeyHash());
-    }
-
-    function afterInvariant() public {
-        console2.log("Number of persisted registered keys");
-        console2.logUint(signerAccount.keyCount());
     }
 
     function invariant_keyStateIsConsistent() public view {
