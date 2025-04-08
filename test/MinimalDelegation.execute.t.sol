@@ -211,21 +211,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        // Pack the execution data:
-        // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signature));
-        // 2. Encode the calls and opData together
+        bytes memory opData = abi.encode(nonce, abi.encode(signerTestKey.toKeyHash(), signature));
         bytes memory executionData = abi.encode(calls, opData);
 
-        // Execute the batch of calls with the signature
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-
-        // Verify the transfers succeeded
-        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
-        assertEq(tokenB.balanceOf(address(receiver)), 1e18);
-
-        // Verify the nonce was incremented - sequence should increase by 1
-        assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
     // Root EOA must use bytes32(0) as their keyHash
@@ -237,8 +227,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        // Since root signer is signing, don't need to wrap the signature
-        bytes memory opData = abi.encode(nonce, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -309,7 +298,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         uint192 key = 0;
@@ -611,7 +600,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(DEFAULT_NONCE).hash());
         // Since root signer is signing, don't need to wrap the signature
-        bytes memory opData = abi.encode(DEFAULT_NONCE, signerTestKey.sign(digest));
+        bytes memory opData = abi.encode(DEFAULT_NONCE, abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
         bytes memory executionData = abi.encode(calls, opData);
 
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);

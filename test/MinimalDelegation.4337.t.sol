@@ -67,11 +67,11 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
     /// forge-config: ci.isolate = true
     function test_handleOps_single_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        
+
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
