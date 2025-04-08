@@ -14,6 +14,8 @@ library SettingsLib {
     uint40 constant MASK_5_BYTES = uint40(0xFFFFFFFFFF);
 
     Settings constant DEFAULT = Settings.wrap(0);
+    // RootKey has the settings: (isAdmin = true, 0 expiration, no hook)
+    Settings constant ROOT_KEY_SETTINGS = Settings.wrap(uint256(1) << 200);
 
     function isAdmin(Settings settings) internal pure returns (bool _isAdmin) {
         assembly {

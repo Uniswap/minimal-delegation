@@ -150,7 +150,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
     }
 
     // Execute can contain a self call which registers a new key even if the caller is untrusted as long as the signature is valid
-    function test_execute_opData_eoaSigner_selfCall_succeeds() public {
+    function test_execute_opData_rootSigner_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         Call[] memory calls = CallBuilder.init();
@@ -174,12 +174,15 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
 
-    function test_execute_opData_P256_selfCall_succeeds() public {
+    function test_execute_opData_P256_isAdmin_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
 
-        vm.prank(address(signerAccount));
+        vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
+        Settings settings = SettingsBuilder.init().fromIsAdmin(true);
+        signerAccount.update(p256Key.toKeyHash(), settings);
+        vm.stopPrank();
 
         Call[] memory calls = CallBuilder.init();
         Call memory registerCall =
