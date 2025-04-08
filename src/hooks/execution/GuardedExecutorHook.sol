@@ -79,7 +79,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         return false;
     }
 
-    function beforeExecute(bytes32 keyHash, address to, uint256 value,bytes calldata data)
+    function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data)
         external
         view
         override

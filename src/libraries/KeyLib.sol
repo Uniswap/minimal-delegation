@@ -32,6 +32,10 @@ library KeyLib {
         return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
     }
 
+    function isRootKey(Key memory key) internal view returns (bool) {
+        return key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == address(this);
+    }
+
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
             isValid = ECDSA.recover(_hash, signature) == abi.decode(key.publicKey, (address));
