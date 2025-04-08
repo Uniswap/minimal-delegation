@@ -27,6 +27,15 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         setUpHooks();
     }
 
+    function test_signerAccount_codeSize() public view {
+        // length of the code is 23 as specified by ERC-7702
+        assertEq(address(signerAccount).code.length, 0x17);
+    }
+
+    function test_minimalDelegationEntry_codeSize() public {
+        vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
@@ -39,6 +48,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         Key memory fetchedKey = signerAccount.getKey(keyHash);
         Settings keySettings = signerAccount.getKeySettings(keyHash);
         assertEq(keySettings.expiration(), 0);
+        assertEq(keySettings.isAdmin(), false);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
         assertEq(fetchedKey.publicKey, abi.encode(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
@@ -57,6 +67,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         Key memory fetchedKey = signerAccount.getKey(keyHash);
         Settings keySettings = signerAccount.getKeySettings(keyHash);
         assertEq(keySettings.expiration(), 0);
+        assertEq(keySettings.isAdmin(), false);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
         assertEq(fetchedKey.publicKey, abi.encode(mockSecp256k1PublicKey));
         assertEq(signerAccount.keyCount(), 1);
@@ -69,10 +80,59 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         fetchedKey = signerAccount.getKey(keyHash);
         Settings fetchedKeySettings = signerAccount.getKeySettings(keyHash);
         assertEq(fetchedKeySettings.expiration(), uint40(block.timestamp + 3600));
+        assertEq(fetchedKeySettings.isAdmin(), false);
         assertEq(uint256(fetchedKey.keyType), uint256(KeyType.Secp256k1));
         assertEq(fetchedKey.publicKey, abi.encode(mockSecp256k1PublicKey));
         // key count should remain the same
         assertEq(signerAccount.keyCount(), 1);
+    }
+
+    function test_update_revertsWithUnauthorized() public {
+        bytes32 keyHash = mockSecp256k1Key.hash();
+        vm.expectRevert(IERC7821.Unauthorized.selector);
+        signerAccount.update(keyHash, mockSecp256k1KeySettings);
+    }
+
+    function test_update_revertsWithCannotUpdateRootKey() public {
+        vm.expectRevert(IKeyManagement.CannotUpdateRootKey.selector);
+        vm.prank(address(signerAccount));
+        signerAccount.update(KeyLib.ROOT_KEY_HASH, SettingsBuilder.init());
+    }
+
+    function test_update_expiryUpdated() public {
+        bytes32 keyHash = mockSecp256k1Key.hash();
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(mockSecp256k1Key);
+
+        Settings keySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(keySettings.expiration(), 0);
+        assertEq(keySettings.isAdmin(), false);
+
+        keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        signerAccount.update(keyHash, keySettings);
+
+        keySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        assertEq(keySettings.isAdmin(), false);
+
+        vm.stopPrank();
+    }
+
+    function test_update_adminUpdated() public {
+        bytes32 keyHash = mockSecp256k1Key.hash();
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(mockSecp256k1Key);
+
+        Settings keySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(keySettings.isAdmin(), false);
+
+        keySettings = SettingsBuilder.init().fromIsAdmin(true);
+        signerAccount.update(keyHash, keySettings);
+
+        keySettings = signerAccount.getKeySettings(keyHash);
+        assertEq(keySettings.isAdmin(), true);
+
+        vm.stopPrank();
     }
 
     function test_revoke() public {
@@ -145,12 +205,14 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         Key memory key = signerAccount.keyAt(0);
         Settings keySettings = signerAccount.getKeySettings(key.hash());
         assertEq(keySettings.expiration(), 0);
+        assertEq(keySettings.isAdmin(), false);
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
         assertEq(key.publicKey, abi.encode(mockSecp256k1PublicKey));
 
         key = signerAccount.keyAt(1);
         keySettings = signerAccount.getKeySettings(key.hash());
         assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        assertEq(keySettings.isAdmin(), false);
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
         assertEq(key.publicKey, abi.encode(mockSecp256k1PublicKey2));
 
@@ -163,11 +225,20 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         key = signerAccount.keyAt(0);
         keySettings = signerAccount.getKeySettings(key.hash());
         assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        assertEq(keySettings.isAdmin(), false);
         assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
         assertEq(key.publicKey, abi.encode(mockSecp256k1PublicKey2));
 
         // only one key should be left
         assertEq(signerAccount.keyCount(), 1);
+    }
+
+    function test_getKeySettings_returnsRootSettings() public view {
+        Settings keySettings = signerAccount.getKeySettings(KeyLib.ROOT_KEY_HASH);
+        assertEq(Settings.unwrap(keySettings), Settings.unwrap(SettingsLib.ROOT_KEY_SETTINGS));
+        assertEq(keySettings.isAdmin(), true);
+        assertEq(keySettings.expiration(), 0);
+        assertEq(address(keySettings.hook()), address(0));
     }
 
     function test_entryPoint_defaultValue() public view {
@@ -193,6 +264,50 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         signerAccount.updateEntryPoint(newEntryPoint);
 
         assertEq(signerAccount.ENTRY_POINT(), newEntryPoint);
+    }
+
+    function test_validateUserOp_validSignature_withExpiration() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = p256Key.sign(userOpHash);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
+
+        vm.prank(address(entryPoint));
+        uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // 0 is valid
+        assertEq(validationData, uint256(block.timestamp + 3600) << 160 | 0);
+    }
+
+    function test_validateUserOp_invalidSignature_withExpiration() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        // incorrect private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
+
+        vm.prank(address(entryPoint));
+        uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // 1 is invalid
+        assertEq(validationData, uint256(block.timestamp + 3600) << 160 | 1);
     }
 
     function test_validateUserOp_withHook_validSignature() public {
@@ -234,7 +349,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
 
         vm.prank(address(entryPoint));
-        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
         signerAccount.validateUserOp(userOp, userOpHash, 0);
     }
 

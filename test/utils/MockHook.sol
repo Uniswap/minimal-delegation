@@ -50,7 +50,7 @@ contract MockHook is IHook {
         return (IValidationHook.overrideVerifySignature.selector, _verifySignatureReturnValue);
     }
 
-    function beforeExecute(bytes32, address, uint256, bytes calldata) external returns (bytes4, bytes memory) {
+    function beforeExecute(bytes32, address, uint256, bytes calldata) external view returns (bytes4, bytes memory) {
         if (_beforeExecuteRevertData.length > 0) {
             bytes memory revertData = abi.encode(_beforeExecuteRevertData);
             assembly {
@@ -60,7 +60,7 @@ contract MockHook is IHook {
         return (IExecutionHook.beforeExecute.selector, _beforeExecuteReturnValue);
     }
 
-    function afterExecute(bytes32, bytes calldata) external returns (bytes4) {
+    function afterExecute(bytes32, bytes calldata) external pure returns (bytes4) {
         return (IExecutionHook.afterExecute.selector);
     }
 }

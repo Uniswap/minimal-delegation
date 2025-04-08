@@ -82,7 +82,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.update(key.toKeyHash(), keySettings);
         vm.stopPrank();
 
-        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
         signerAccount.isValidSignature(data, wrappedSignature);
     }
 
@@ -102,7 +102,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         vm.stopPrank();
 
-        vm.expectRevert(IKeyManagement.KeyExpired.selector);
+        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
         signerAccount.isValidSignature(data, wrappedSignature);
     }
 
