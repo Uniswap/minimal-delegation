@@ -200,7 +200,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes memory signature = p256Key.sign(KeyLib.ROOT_KEY_HASH);
 
         vm.startPrank(address(signerAccount));
-        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
         signerAccount.register(p256Key.toKey());
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         vm.stopPrank();
@@ -210,7 +210,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
         bytes32 userOpHash = KeyLib.ROOT_KEY_HASH;
 
-        mockValidationHook.setValidateUserOpReturnValue(0);
+        mockHook.setValidateUserOpReturnValue(0);
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
