@@ -104,7 +104,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
     /// @dev Set the spend limit for a key hash.
     /// Uses msg.sender to compute the accountKeyHash.
     function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external {
-        AccountKeyHash accountKeyHash = keyHash.wrap(msg.sender);
+        AccountKeyHash accountKeyHash = keyHash.hashSender(msg.sender);
         SpendStorage storage spends = spendStorage[accountKeyHash];
         spends.tokens.add(token, 64); // Max capacity of 64.
 
@@ -122,7 +122,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         DynamicArrayLib.DynamicArray memory erc20s;
         DynamicArrayLib.DynamicArray memory transferAmounts;
 
-        SpendStorage storage spends = spendStorage[keyHash.wrap(msg.sender)];
+        SpendStorage storage spends = spendStorage[keyHash.hashSender(msg.sender)];
         TempStorage memory tempStorage;
         // Collect all ERC20 tokens that need to be guarded,
         // and initialize their transfer amounts as zero.
@@ -174,7 +174,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
     function afterExecute(bytes32 keyHash, bytes memory beforeExecuteData) external returns (bytes4) {
         // Ensure spends in beforeExecuteData are within limits, revert if not.
         TempStorage memory tempStorage = abi.decode(beforeExecuteData, (TempStorage));
-        SpendStorage storage spends = spendStorage[keyHash.wrap(msg.sender)];
+        SpendStorage storage spends = spendStorage[keyHash.hashSender(msg.sender)];
 
         // Ensure spends in beforeExecuteData are within limits, revert if not.
         // Perform after the `_execute`, so that in the case where `calls`
