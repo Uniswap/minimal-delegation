@@ -24,6 +24,9 @@ interface IKeyManagement {
     /// @dev Cannot register the root key.
     error CannotRegisterSelf();
 
+    /// @dev Only admin keys can self-call.
+    error OnlyAdminCanSelfCall();
+
     /// @dev Registers the `key`.
     function register(Key memory key) external;
 

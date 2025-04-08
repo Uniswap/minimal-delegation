@@ -69,7 +69,7 @@ abstract contract KeyManagement is IKeyManagement {
 
     /// @inheritdoc IKeyManagement
     function getKeySettings(bytes32 keyHash) public view returns (Settings) {
-        if (keyHash == KeyLib.ROOT_KEY_HASH) return Settings.wrap(0);
+        if (keyHash == KeyLib.ROOT_KEY_HASH) return SettingsLib.ROOT_KEY_SETTINGS;
         if (keyHashes.contains(keyHash)) return keySettings[keyHash];
         revert KeyDoesNotExist();
     }
