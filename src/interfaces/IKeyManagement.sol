@@ -16,7 +16,7 @@ interface IKeyManagement {
     error KeyDoesNotExist();
 
     /// @dev The key has expired.
-    error KeyExpired();
+    error KeyExpired(uint40 expiration);
 
     /// @dev Cannot apply restrictions to the root key.
     error CannotUpdateRootKey();
