@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
@@ -56,11 +55,14 @@ contract MinimalDelegation is
         if (mode.isBatchedCall()) {
             Call[] memory calls = abi.decode(executionData, (Call[]));
             _onlyThis();
-            _dispatch(mode, calls);
+            _dispatch(mode, calls, KeyLib.ROOT_KEY_HASH);
         } else if (mode.supportsOpData()) {
             (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
-            _authorizeOpData(mode, calls, opData);
-            _dispatch(mode, calls);
+            (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
+            (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+
+            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce), signature);
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -72,53 +74,44 @@ contract MinimalDelegation is
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
-        // TODO: Handle keyHash authorization.
-        // (bytes32 keyHash,) = userOp.signature.unwrap();
+
+        (bytes32 keyHash,) = abi.decode(userOp.signature, (bytes32, bytes));
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
 
-        _dispatch(mode, calls);
-    }
-
-    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] memory calls, bytes memory opData) private {
-        (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
-        _useNonce(nonce);
-
-        bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
-
-        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
-        Key memory key = getKey(keyHash);
-        Settings settings = getKeySettings(keyHash);
-        (bool isExpired, uint40 expiry) = settings.isExpired();
-        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-
-        IHook hook = settings.hook();
-        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.verifySignature(keyHash, digest, signature)
-            : key.verify(digest, signature);
-
-        if (!isValid) revert IERC7821.InvalidSignature();
+        _dispatch(mode, calls, keyHash);
     }
 
     /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] memory calls) private {
+    function _dispatch(bytes32 mode, Call[] memory calls, bytes32 keyHash) private {
         bool shouldRevert = mode.shouldRevert();
 
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
+            (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
     }
 
-    // Execute a single call.
-    function _execute(Call memory _call) private returns (bool success, bytes memory output) {
+    /// @dev Executes a low level call using execution hooks if set
+    function _execute(Call memory _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
+        // Per ERC7821, replace address(0) with address(this)
         address to = _call.to == address(0) ? address(this) : _call.to;
+
+        // TODO: check key admin functionality
+
+        IHook hook = keySettings[keyHash].hook();
+        bytes memory beforeExecuteData;
+        if (hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
+            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
+        }
+
         (success, output) = to.call{value: _call.value}(_call.data);
+
+        if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -173,6 +166,26 @@ contract MinimalDelegation is
         /// `validAfter` is always 0.
         if (key.verify(userOpHash, signature)) return uint256(expiry) << 160 | SIG_VALIDATION_SUCCEEDED;
         else return uint256(expiry) << 160 | SIG_VALIDATION_FAILED;
+    }
+
+    /// @dev This function is used to handle the verification of signatures sent through execute()
+    function _handleVerifySignature(bytes32 keyHash, SignedCalls memory signedCalls, bytes memory signature) private {
+        _useNonce(signedCalls.nonce);
+
+        Key memory key = getKey(keyHash);
+        Settings settings = getKeySettings(keyHash);
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+
+        IHook hook = settings.hook();
+
+        bytes32 digest = _hashTypedData(signedCalls.hash());
+
+        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
+            ? hook.verifySignature(keyHash, digest, signature)
+            : key.verify(digest, signature);
+
+        if (!isValid) revert IERC7821.InvalidSignature();
     }
 
     function _onlyThis() internal view override(KeyManagement, NonceManager) {

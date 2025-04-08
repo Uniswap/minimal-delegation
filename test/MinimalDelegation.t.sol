@@ -27,6 +27,15 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         setUpHooks();
     }
 
+    function test_signerAccount_codeSize() public view {
+        // length of the code is 23 as specified by ERC-7702
+        assertEq(address(signerAccount).code.length, 0x17);
+    }
+
+    function test_minimalDelegationEntry_codeSize() public {
+        vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
@@ -212,6 +221,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
         vm.prank(address(entryPoint));
         uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // 0 is valid
         assertEq(validationData, uint256(block.timestamp + 3600) << 160 | 0);
     }
 
@@ -229,10 +239,12 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         // incorrect private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
-        userOp.signature = abi.encodePacked(r, s, v);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
 
         vm.prank(address(entryPoint));
         uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // 1 is invalid
         assertEq(validationData, uint256(block.timestamp + 3600) << 160 | 1);
     }
 
@@ -241,7 +253,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes memory signature = p256Key.sign(KeyLib.ROOT_KEY_HASH);
 
         vm.startPrank(address(signerAccount));
-        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
         signerAccount.register(p256Key.toKey());
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         vm.stopPrank();
@@ -251,7 +263,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
         bytes32 userOpHash = KeyLib.ROOT_KEY_HASH;
 
-        mockValidationHook.setValidateUserOpReturnValue(0);
+        mockHook.setValidateUserOpReturnValue(0);
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
