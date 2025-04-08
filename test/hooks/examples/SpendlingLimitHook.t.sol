@@ -34,7 +34,7 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
     function test_setSpendLimit_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
-        AccountKeyHash accountKeyHash = p256Key.toKeyHash().wrap(address(signerAccount));
+        AccountKeyHash accountKeyHash = p256Key.toKeyHash().hashSender(address(signerAccount));
         // check that the spend limit is set
         vm.expectEmit(true, true, true, true);
         emit ISpendingLimitHook.SpendLimitSet(accountKeyHash, address(tokenA), SpendPeriod.Minute, 100);
@@ -46,7 +46,7 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
     function test_setSpendLimit_native_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
-        AccountKeyHash accountKeyHash = p256Key.toKeyHash().wrap(address(signerAccount));
+        AccountKeyHash accountKeyHash = p256Key.toKeyHash().hashSender(address(signerAccount));
         // check that the spend limit is set
         vm.expectEmit(true, true, true, true);
         emit ISpendingLimitHook.SpendLimitSet(accountKeyHash, address(0), SpendPeriod.Minute, 100);
@@ -110,7 +110,7 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
 
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
-        AccountKeyHash accountKeyHash = p256Key.toKeyHash().wrap(address(signerAccount));
+        AccountKeyHash accountKeyHash = p256Key.toKeyHash().hashSender(address(signerAccount));
 
         vm.prank(address(signerAccount));
         // check that the spend limit is set
