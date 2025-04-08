@@ -343,7 +343,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         signerAccount.update(p256Key.toKeyHash(), SettingsBuilder.init().fromIsAdmin(false).fromHook(mockExecutionHook));
         vm.stopPrank();
 
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         uint192 key = 0;
