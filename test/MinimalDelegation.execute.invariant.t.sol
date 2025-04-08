@@ -106,17 +106,11 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     /// @dev Handler function meant to be called during invariant tests
     /// Generates random handler calls, executes them, then processes any registeredcallbacks
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
+        bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
+
         bytes32 currentKeyHash; // defaults to bytes32(0) if root EOA
-
-        if (vm.addr(currentSigningKey.privateKey) != address(signerAccount)) {
+        if (!isRootKey) {
             currentKeyHash = currentSigningKey.toKeyHash();
-
-            // If not already registered, register the key
-            if (!_lastKnownKeyHashes.contains(currentKeyHash)) {
-                vm.prank(address(signerAccount));
-                signerAccount.register(currentSigningKey.toKey());
-                assertEq(signerAccount.getKey(currentKeyHash).hash(), currentKeyHash);
-            }
         }
 
         HandlerCall memory handlerCall = _generateHandlerCall(seed);
@@ -134,7 +128,9 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (handlerCall.revertData.length > 0) {
+            if (!isRootKey) {
+                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+            } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {
                 bytes memory debugCalldata =
@@ -245,15 +241,20 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         assertEq(signerAccount.getKey(newKey.toKeyHash()).hash(), newKey.toKeyHash());
     }
 
-    // function invariant_keyStateIsConsistent() public view {
-    //     // Iterate over keyHashes
-    //     uint256 keyCount = signerAccount.keyCount();
-    //     for (uint256 i = 0; i < keyCount; i++) {
-    //         // Will revert if key does not exist
-    //         Key memory key = signerAccount.keyAt(i);
-    //         bytes32 keyHash = key.hash();
-    //         // Will be false if the stored encoded data is wrong
-    //         assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
-    //     }
-    // }
+    function afterInvariant() public {
+        console2.log("Number of persisted registered keys");
+        console2.logUint(signerAccount.keyCount());
+    }
+
+    function invariant_keyStateIsConsistent() public view {
+        // Iterate over keyHashes
+        uint256 keyCount = signerAccount.keyCount();
+        for (uint256 i = 0; i < keyCount; i++) {
+            // Will revert if key does not exist
+            Key memory key = signerAccount.keyAt(i);
+            bytes32 keyHash = key.hash();
+            // Will be false if the stored encoded data is wrong
+            assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
+        }
+    }
 }
