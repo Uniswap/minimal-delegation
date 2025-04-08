@@ -42,35 +42,60 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
     address private immutable _tokenA;
     address private immutable _tokenB;
 
-    EnumerableSetLib.Bytes32Set internal _revokedKeyHashes;
+    // Keys that will be operated over in generated calldata
+    TestKey[] public fixture_testKeys;
+
+    EnumerableSetLib.Bytes32Set internal pendingRegisteredKeys;
 
     constructor(address tokenA, address tokenB) {
         _tokenA = tokenA;
         _tokenB = tokenB;
+
+        // Generate MAX_KEYS and add to fixtureKey
+        for (uint256 i = 0; i < MAX_KEYS; i++) {
+            fixture_testKeys.push(TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint()));
+        }
     }
 
-    function _randomTestKey() internal returns (TestKey memory newKey) {
-        newKey = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
+    function _rand(TestKey[] storage keys, uint256 seed) internal view returns (TestKey memory) {
+        return keys[seed % keys.length];
     }
 
-    function _registerCall(TestKey memory newKey) internal virtual returns (HandlerCall memory) {
+    function _wrapCallFailedRevertData(bytes4 selector) internal pure returns (bytes memory) {
+        return abi.encodeWithSelector(IERC7821.CallFailed.selector, abi.encodePacked(selector));
+    }
+
+    /// @return calldata to register a new key along with its callback
+    function _registerCall(TestKey memory newKey, bool isRegistered) internal virtual returns (HandlerCall memory) {
+        // No error is thrown if the key is already registered, so ignore
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRegisterCall(newKey)).withCallback(
             abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RegisterCallback.selector, newKey.toKey())
         );
     }
 
-    function _revokeCall(bytes32 keyHash) internal virtual returns (HandlerCall memory) {
+    /// @return calldata to revoke a key along with its callback
+    function _revokeCall(bytes32 keyHash, bool isRegistered) internal virtual returns (HandlerCall memory) {
+        bytes memory revertData =
+            isRegistered ? bytes("") : _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRevokeCall(keyHash)).withCallback(
             abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_RevokeCallback.selector, keyHash)
-        );
+        ).withRevertData(revertData);
     }
 
-    function _updateCall(bytes32 keyHash, Settings settings) internal virtual returns (HandlerCall memory) {
+    /// @return calldata to update a key along with its callback
+    function _updateCall(bytes32 keyHash, Settings settings, bool isRegistered)
+        internal
+        virtual
+        returns (HandlerCall memory)
+    {
+        bytes memory revertData =
+            isRegistered ? bytes("") : _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeUpdateCall(keyHash, settings)).withCallback(
             abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_UpdateCallback.selector, keyHash, settings)
-        );
+        ).withRevertData(revertData);
     }
 
+    /// @return calldata to transfer tokens
     function _tokenTransferCall(address token, address to, uint256 amount)
         internal
         virtual
@@ -83,61 +108,45 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
 
     // Ghost keys are persisted after the callbacks are triggered
     function _getRandomGhostKeyHash(uint256 seed) internal view returns (bytes32) {
-        if (_ghostKeyHashes.values().length == 0) {
+        if (_lastKnownKeyHashes.values().length == 0) {
             return bytes32(0);
         }
-        return _ghostKeyHashes.values()[seed % _ghostKeyHashes.values().length];
+        return _lastKnownKeyHashes.values()[seed % _lastKnownKeyHashes.values().length];
     }
-
-    function _getSettingsForKeyHash(bytes32 keyHash) internal virtual returns (Settings) {}
 
     /**
      * @notice Generate a random function call with equal weighting between function types
      * @param randomSeed Random seed for generation
-     * @param depth Current recursion depth
      * @return A call object for the generated function
      */
-    function generateRandomFunctionHandlerCall(uint256 randomSeed, uint256 depth) public returns (HandlerCall memory) {
+    function _generateHandlerCall(uint256 randomSeed) public returns (HandlerCall memory) {
         vm.assume(randomSeed < type(uint256).max);
         // Select function type with equal weighting
         uint256 functionType = _bound(randomSeed, 0, FUNCTION_COUNT - 1);
 
+        TestKey memory testKey = _rand(fixture_testKeys, randomSeed);
+        bytes32 keyHash = testKey.toKeyHash();
+
+        bool isRegistered = _lastKnownKeyHashes.contains(keyHash);
+        if (!isRegistered) {
+            isRegistered = pendingRegisteredKeys.contains(keyHash);
+        }
+
         // REGISTER
-        if (functionType == FUNCTION_REGISTER && _ghostKeyHashes.values().length < MAX_KEYS) {
-            TestKey memory newKey = _randomTestKey();
-            if (newKey.toKeyHash() != bytes32(0)) {
-                return _registerCall(newKey);
-            }
+        if (functionType == FUNCTION_REGISTER) {
+            pendingRegisteredKeys.add(keyHash);
+            return _registerCall(testKey, isRegistered);
         }
         // REVOKE
         else if (functionType == FUNCTION_REVOKE) {
-            bytes32 keyHashToRevoke = _getRandomGhostKeyHash(randomSeed);
-            if (keyHashToRevoke != bytes32(0) && !_revokedKeyHashes.contains(keyHashToRevoke)) {
-                _revokedKeyHashes.add(keyHashToRevoke);
-                return _revokeCall(keyHashToRevoke);
-            }
+            pendingRegisteredKeys.remove(keyHash);
+            return _revokeCall(keyHash, isRegistered);
         }
         // UPDATE
         else if (functionType == FUNCTION_UPDATE) {
-            bytes32 keyHashToUpdate = _getRandomGhostKeyHash(randomSeed);
-            if (keyHashToUpdate != bytes32(0) && !_revokedKeyHashes.contains(keyHashToUpdate)) {
-                Settings settings = _getSettingsForKeyHash(keyHashToUpdate);
-                return _updateCall(keyHashToUpdate, settings);
-            }
-        } else if (functionType == TRANSFER_TOKEN) {
-            return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
-        }
-
-        // If no matches above, recurse
-        if (depth < MAX_DEPTH) {
-            HandlerCall[] memory innerCalls = _generateRandomHandlerCalls(randomSeed + 1, depth + 1);
-
-            return CallUtils.initHandlerDefault().withCall(CallUtils.encodeExecuteCall(innerCalls.toCalls()))
-                .withCallback(
-                abi.encodeWithSelector(IHandlerGhostCallbacks.ghost_ExecuteCallback.selector, innerCalls.toCalls())
-            );
+            // TODO: fuzz settings
+            return _updateCall(keyHash, Settings.wrap(0), isRegistered);
         } else {
-            // If at max depth, add a transfer call to the end of the calls list so we don't have an unintialized call
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
     }
@@ -148,13 +157,13 @@ abstract contract FunctionCallGenerator is Test, GhostStateTracker {
      * @param depth Current recursion depth
      * @return An array of call objects
      */
-    function _generateRandomHandlerCalls(uint256 seed, uint256 depth) internal returns (HandlerCall[] memory) {
+    function _generateHandlerCalls(uint256 seed, uint256 depth) internal returns (HandlerCall[] memory) {
         // How many calls to generate (more at lower depths)
         uint256 cnt = _bound(seed % 10, 1, MAX_DEPTH - depth + 1);
 
         HandlerCall[] memory handlerCalls = new HandlerCall[](cnt);
         for (uint256 i = 0; i < cnt; i++) {
-            handlerCalls[i] = generateRandomFunctionHandlerCall(uint256(keccak256(abi.encode(seed, i))), depth);
+            handlerCalls[i] = _generateHandlerCall(uint256(keccak256(abi.encode(seed, i))));
         }
 
         return handlerCalls;

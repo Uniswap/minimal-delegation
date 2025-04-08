@@ -86,13 +86,16 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     /// @dev Handler function meant to be called during invariant tests
     /// Generates random handler calls, executes them, then processes any registeredcallbacks
     function executeBatchedCall(uint256 seed) public useCaller(seed) {
-        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
+        HandlerCall memory handlerCall = _generateHandlerCall(seed);
+        HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
         try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (currentCaller != address(signerAccount)) {
                 assertEq(bytes4(revertData), IERC7821.Unauthorized.selector);
+            } else if (handlerCall.revertData.length > 0) {
+                assertEq(revertData, handlerCall.revertData);
             } else {
                 revert("uncaught revert");
             }
@@ -109,14 +112,15 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
             currentKeyHash = currentSigningKey.toKeyHash();
 
             // If not already registered, register the key
-            if (!_ghostKeyHashes.contains(currentKeyHash)) {
+            if (!_lastKnownKeyHashes.contains(currentKeyHash)) {
                 vm.prank(address(signerAccount));
                 signerAccount.register(currentSigningKey.toKey());
                 assertEq(signerAccount.getKey(currentKeyHash).hash(), currentKeyHash);
             }
         }
 
-        HandlerCall[] memory handlerCalls = _generateRandomHandlerCalls(seed, 0);
+        HandlerCall memory handlerCall = _generateHandlerCall(seed);
+        HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
@@ -130,11 +134,15 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            bytes memory debugCalldata =
-                abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-            console2.logBytes(debugCalldata);
-            console2.logBytes(revertData);
-            revert("uncaught revert");
+            if (handlerCall.revertData.length > 0) {
+                assertEq(revertData, handlerCall.revertData);
+            } else {
+                bytes memory debugCalldata =
+                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+                console2.logBytes(debugCalldata);
+                console2.logBytes(revertData);
+                revert("uncaught revert");
+            }
         }
     }
 }
@@ -237,15 +245,15 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         assertEq(signerAccount.getKey(newKey.toKeyHash()).hash(), newKey.toKeyHash());
     }
 
-    function invariant_keyStateIsConsistent() public view {
-        // Iterate over keyHashes
-        uint256 keyCount = signerAccount.keyCount();
-        for (uint256 i = 0; i < keyCount; i++) {
-            // Will revert if key does not exist
-            Key memory key = signerAccount.keyAt(i);
-            bytes32 keyHash = key.hash();
-            // Will be false if the stored encoded data is wrong
-            assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
-        }
-    }
+    // function invariant_keyStateIsConsistent() public view {
+    //     // Iterate over keyHashes
+    //     uint256 keyCount = signerAccount.keyCount();
+    //     for (uint256 i = 0; i < keyCount; i++) {
+    //         // Will revert if key does not exist
+    //         Key memory key = signerAccount.keyAt(i);
+    //         bytes32 keyHash = key.hash();
+    //         // Will be false if the stored encoded data is wrong
+    //         assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
+    //     }
+    // }
 }

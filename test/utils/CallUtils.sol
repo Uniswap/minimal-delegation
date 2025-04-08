@@ -9,8 +9,9 @@ import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 
 /// @dev A wrapper around Call that includes callback data for processing after execution
 struct HandlerCall {
-    Call call;
+    Call call; 
     bytes callback;
+    bytes revertData;
 }
 
 /// @dev Utility library for Call and HandlerCall objects
@@ -122,7 +123,7 @@ library CallUtils {
 
     /// @dev Create default empty HandlerCall
     function initHandlerDefault() internal pure returns (HandlerCall memory) {
-        return HandlerCall({call: Call({to: address(0), value: 0, data: ""}), callback: ""});
+        return HandlerCall({call: Call({to: address(0), value: 0, data: ""}), callback: "", revertData: ""});
     }
 
     function withCall(HandlerCall memory handlerCall, Call memory call) internal pure returns (HandlerCall memory) {
@@ -136,6 +137,11 @@ library CallUtils {
         returns (HandlerCall memory)
     {
         handlerCall.callback = callback;
+        return handlerCall;
+    }
+
+    function withRevertData(HandlerCall memory handlerCall, bytes memory revertData) internal pure returns (HandlerCall memory) {
+        handlerCall.revertData = revertData;
         return handlerCall;
     }
 }
