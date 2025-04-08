@@ -15,6 +15,7 @@ import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {HandlerCall, CallUtils} from "./CallUtils.sol";
 import {ExecuteHandler} from "./ExecuteHandler.sol";
 import {IInvariantStateTracker, InvariantStateTracker} from "./InvariantStateTracker.sol";
+import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 
 /**
  * @title FunctionCallGenerator
@@ -34,15 +35,15 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     uint256 public constant MAX_DEPTH = 5;
     uint256 public constant MAX_KEYS = 10;
 
+    IMinimalDelegation internal immutable signerAccount;
     address private immutable _tokenA;
     address private immutable _tokenB;
 
     // Keys that will be operated over in generated calldata
     TestKey[] public fixture_testKeys;
 
-    EnumerableSetLib.Bytes32Set internal pendingRegisteredKeys;
-
-    constructor(address tokenA, address tokenB) {
+    constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
+        signerAccount = _signerAccount;
         _tokenA = tokenA;
         _tokenB = tokenB;
 
@@ -112,24 +113,25 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         TestKey memory testKey = _rand(fixture_testKeys, randomSeed);
         bytes32 keyHash = testKey.toKeyHash();
 
-        bool isRegistered = _trackedKeyHashes.contains(keyHash);
-        if (!isRegistered) {
-            isRegistered = pendingRegisteredKeys.contains(keyHash);
+        bool isRegistered;
+        try signerAccount.getKey(keyHash) {
+            isRegistered = true;
+        } catch (bytes memory _revertData) {
+            assertEq(bytes4(_revertData), IKeyManagement.KeyDoesNotExist.selector);
+            isRegistered = false;
         }
 
         bytes memory revertData;
 
         // REGISTER == 0
         if (randomSeed % FUZZED_FUNCTION_COUNT == 0) {
-            pendingRegisteredKeys.add(keyHash);
             return _registerCall(testKey, revertData);
         }
-        // REVOKE == 1 
+        // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
             if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
-            pendingRegisteredKeys.remove(keyHash);
             return _revokeCall(keyHash, revertData);
         }
         // UPDATE == 2

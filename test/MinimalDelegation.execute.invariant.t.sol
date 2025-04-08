@@ -50,10 +50,9 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    IMinimalDelegation public signerAccount;
-
-    constructor(SetupParams memory _params) FunctionCallGenerator(_params._tokenA, _params._tokenB) {
-        signerAccount = _params._signerAccount;
+    constructor(SetupParams memory _params)
+        FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB)
+    {
         for (uint256 i = 0; i < _params._keys.length; i++) {
             keys.push(_params._keys[i]);
         }
@@ -115,7 +114,8 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         bool signatureIsValid;
         if (!isRootKey) {
             // TODO: check expiry here, settings, etc.
-            try signerAccount.getKey(currentKeyHash) {} catch (bytes memory revertData) {
+            try signerAccount.getKey(currentKeyHash) {}
+            catch (bytes memory revertData) {
                 assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
                 signatureIsValid = false;
             }
@@ -131,7 +131,8 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         Call[] memory calls = handlerCalls.toCalls();
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature = abi.encode(isRootKey ? bytes32(0) : currentKeyHash, currentSigningKey.sign(digest));
+        bytes memory wrappedSignature =
+            abi.encode(isRootKey ? bytes32(0) : currentKeyHash, currentSigningKey.sign(digest));
         bytes memory opData = abi.encode(nonce, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
 
