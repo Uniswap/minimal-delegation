@@ -65,13 +65,6 @@ library CallUtils {
         return call;
     }
 
-    /// @dev Create call to execute a batch
-    function encodeExecuteCall(Call[] memory calls) internal pure returns (Call memory) {
-        return initDefault().withTo(SELF_CALL).withData(
-            abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL, abi.encode(calls))
-        );
-    }
-
     /// @dev Create call to register key
     function encodeRegisterCall(TestKey memory newKey) internal pure returns (Call memory) {
         return initDefault().withTo(SELF_CALL).withData(
