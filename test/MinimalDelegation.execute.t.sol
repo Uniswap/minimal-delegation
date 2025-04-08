@@ -10,6 +10,7 @@ import {CallLib} from "../src/libraries/CallLib.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {CallBuilder} from "./utils/CallBuilder.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 import {EIP712} from "../src/EIP712.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
@@ -259,7 +260,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
-    function test_execute_batch_opData_withHook_succeeds() public {
+    function test_execute_batch_opData_withHook_verifySignature_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
@@ -282,10 +283,50 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Expect the signature to be valid after adding the hook
         vm.prank(address(signerAccount));
-        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
         signerAccount.update(p256Key.toKeyHash(), keySettings);
-        mockValidationHook.setVerifySignatureReturnValue(true);
+        mockHook.setVerifySignatureReturnValue(true);
 
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_batch_opData_withHook_beforeExecute() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        uint192 key = 0;
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
+
+        // Create hash of the calls + nonce and sign it
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
+        bytes memory signature = p256Key.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature);
+        bytes memory executionData = abi.encode(calls, abi.encode(nonce, wrappedSignature));
+
+        bytes memory revertData = bytes("revert");
+        mockExecutionHook.setBeforeExecuteRevertData(revertData);
+        Settings keySettings = SettingsBuilder.init().fromHook(mockExecutionHook);
+
+        vm.prank(address(signerAccount));
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+
+        // Expect the call to revert
+        vm.expectRevert("revert");
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+
+        // Unset the hook revert
+        mockExecutionHook.setBeforeExecuteRevertData(bytes(""));
+
+        vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
@@ -532,24 +573,29 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         bytes memory signature = signerTestKey.sign(hashToSign);
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, signature);
+        bytes memory opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signature));
         // 2. Encode the calls and opData together
         bytes memory executionData1 = abi.encode(calls, opData);
 
         calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 2e18)); // Transfer 2 tokenA
 
+        // resister a new key to use for the second batch
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
         // Create hash of the calls + nonce and sign it
         nonce++; // increment the nonce since first one hasnt been used yet
         signedCalls = SignedCalls({calls: calls, nonce: nonce});
-        hashToSign = signerAccount.hashTypedData(signedCalls.hash());
-        signature = signerTestKey.sign(hashToSign);
 
-        // Pack the execution data:
-        // 1. Encode the nonce and signature into opData
-        opData = abi.encode(nonce, signature);
-        // 2. Encode the calls and opData together
-        bytes memory executionData2 = abi.encode(calls, opData);
+        // Sign using the registered P256 key
+        signature = abi.encode(
+            nonce, abi.encode(p256Key.toKeyHash(), p256Key.sign(signerAccount.hashTypedData(signedCalls.hash())))
+        );
+        bytes memory executionData2 = abi.encode(calls, signature);
+
 
         bytes[] memory executionDataArray = new bytes[](2);
         executionDataArray[0] = executionData1;
@@ -581,7 +627,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, signature);
+        bytes memory opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signature));
         // 2. Encode the calls and opData together
         bytes memory executionData1 = abi.encode(calls, opData);
 
@@ -597,7 +643,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Pack the execution data:
         // 1. Encode the nonce and signature into opData
-        opData = abi.encode(nonce, signature);
+        opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signature));
         // 2. Encode the calls and opData together
         bytes memory executionData2 = abi.encode(calls, opData);
 
