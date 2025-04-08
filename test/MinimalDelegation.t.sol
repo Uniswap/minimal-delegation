@@ -59,8 +59,8 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         signerAccount.register(mockSecp256k1Key);
     }
 
-    function test_register_revertsWithCannotRegisterRootKey() public {
-        vm.expectRevert(IKeyManagement.CannotRegisterRootKey.selector);
+    function test_register_revertsWithCannotRegisterSelf() public {
+        vm.expectRevert(IKeyManagement.CannotRegisterSelf.selector);
         vm.prank(address(signerAccount));
         signerAccount.register(KeyLib.toRootKey());
     }
@@ -369,6 +369,64 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
         assertEq(valid, 1); // 1 is invalid
+    }
+
+    function test_validateUserOp_revertsIfKeyHashDoesNotExist() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = signerTestKey.sign(userOpHash);
+
+        userOp.signature = abi.encode(keccak256("does not exist"), signature);
+
+        vm.prank(address(entryPoint));
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
+    }
+
+    function test_validateUserOp_invalidSignature_KeyHashIsRootKeyButSigningKeyIsNot() public {
+        TestKey memory secp256K1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(secp256K1Key.toKey());
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = secp256K1Key.sign(userOpHash);
+
+        // Signature is valid, but not for the provided key hash (which does exist), so expect invalid signature
+        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        assertEq(valid, 1); // 1 is invalid
+    }
+
+    function test_validateUserOp_keyIsFetchedBeforeSettings() public {
+        TestKey memory keyWithSettings = TestKeyManager.initDefault(KeyType.Secp256k1);
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        // register the keyWithSettings along with mockValidationHook
+        signerAccount.register(keyWithSettings.toKey());
+        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        signerAccount.update(keyWithSettings.toKeyHash(), keySettings);
+        // register the p256Key
+        signerAccount.register(p256Key.toKey());
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = p256Key.sign(userOpHash);
+        // Incorrectly, we use the keyWithSettings's key hash here
+        userOp.signature = abi.encode(keyWithSettings.toKeyHash(), signature);
+
+        // We don't do _getKey() before fetching settings for the keyHash,
+        // so the settings associated with keyWithSettings should be fetched instead of the signing key
+        mockValidationHook.setValidateUserOpReturnValue(0);
+
+        vm.prank(address(entryPoint));
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
     }
 
     function test_validateUserOp_missingAccountFunds() public {
