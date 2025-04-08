@@ -563,20 +563,23 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         Call[] memory calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
+        // register a new key to use for the first batch
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+        vm.prank(address(signerAccount));
+        signerAccount.register(webAuthnP256Key.toKey());
+
         // Get the current nonce components for key 0
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
-        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
-        bytes memory signature = signerTestKey.sign(hashToSign);
-        // Pack the execution data:
-        // 1. Encode the nonce and signature into opData
-        bytes memory opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signature));
-        // 2. Encode the calls and opData together
-        bytes memory executionData1 = abi.encode(calls, opData);
+        bytes memory signature = abi.encode(
+            nonce, abi.encode(webAuthnP256Key.toKeyHash(), webAuthnP256Key.sign(signerAccount.hashTypedData(signedCalls.hash())))
+        );
+        bytes memory executionData1 = abi.encode(calls, signature);
 
+        // create a second batch of calls
         calls = CallBuilder.init();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 2e18)); // Transfer 2 tokenA
 
