@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
@@ -25,16 +24,22 @@ import {ERC7914} from "./ERC7914.sol";
 import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
-import {SignatureUnwrapper} from "./libraries/SignatureUnwrapper.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 
-/// @notice Uses custom storage layout according to ERC7201
-/// @custom:storage-location erc7201:Uniswap.MinimalDelegation.1.0.0
-/// @dev keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff))
-contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7914, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200 { 
+contract MinimalDelegation is
+    IERC7821,
+    ERC1271,
+    EIP712,
+    ERC4337Account,
+    Receiver,
+    KeyManagement,
+    NonceManager,
+    ERC7914,
+    ERC7201
+{
     using ModeDecoder for bytes32;
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -42,7 +47,6 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
     using SignedCallsLib for SignedCalls;
-    using SignatureUnwrapper for bytes;
     using HooksLib for IHook;
     using EntrypointLib for *;
     using SettingsLib for Settings;
@@ -51,14 +55,16 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
 
     function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (mode.isBatchedCall()) {
-            Call[] calldata calls = executionData.decodeCalls();
+            Call[] memory calls = abi.decode(executionData, (Call[]));
             _onlyThis();
-            _dispatch(mode, calls);
+            _dispatch(mode, calls, KeyLib.ROOT_KEY_HASH);
         } else if (mode.supportsOpData()) {
-            // executionData.decodeWithOpData();
-            (Call[] calldata calls, bytes calldata opData) = executionData.decodeCallsBytes();
-            _authorizeOpData(mode, calls, opData);
-            _dispatch(mode, calls);
+            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
+            (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
+            (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+
+            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce), signature);
+            _dispatch(mode, calls, keyHash);
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -70,52 +76,44 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
-        // TODO: Handle keyHash authorization.
-        // (bytes32 keyHash,) = userOp.signature.unwrap();
+
+        (bytes32 keyHash,) = abi.decode(userOp.signature, (bytes32, bytes));
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
-        Call[] calldata calls = executionData.decodeCalls();
+        Call[] memory calls = abi.decode(executionData, (Call[]));
 
-        _dispatch(mode, calls);
-    }
-
-    /// @dev The mode is passed to allow other modes to specify different types of opData decoding.
-    function _authorizeOpData(bytes32, Call[] calldata calls, bytes calldata opData) private {
-        (uint256 nonce, bytes calldata wrappedSignature) = opData.decodeUint256Bytes();
-        _useNonce(nonce);
-
-        bytes32 digest = _hashTypedData(calls.toSignedCalls(nonce).hash());
-
-        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
-        Key memory key = _getKey(keyHash);
-
-        IHook hook = keySettings[keyHash].hook();
-
-        /// TODO: Handle key expiry check.
-        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.verifySignature(keyHash, digest, signature)
-            : key.verify(digest, signature);
-
-        if (!isValid) revert IERC7821.InvalidSignature();
+        _dispatch(mode, calls, keyHash);
     }
 
     /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] calldata calls) private {
+    function _dispatch(bytes32 mode, Call[] memory calls, bytes32 keyHash) private {
         bool shouldRevert = mode.shouldRevert();
 
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i]);
+            (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
             if (!success && shouldRevert) revert IERC7821.CallFailed(output);
         }
     }
 
-    // Execute a single call.
-    function _execute(Call calldata _call) private returns (bool success, bytes memory output) {
+    /// @dev Executes a low level call using execution hooks if set
+    function _execute(Call memory _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
+        // Per ERC7821, replace address(0) with address(this)
         address to = _call.to == address(0) ? address(this) : _call.to;
+
+        // TODO: check key admin functionality
+
+        IHook hook = keySettings[keyHash].hook();
+        bytes memory beforeExecuteData;
+        if (hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
+            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
+        }
+
         (success, output) = to.call{value: _call.value}(_call.data);
+
+        if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
@@ -141,29 +139,55 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes calldata signature) = userOp.signature.unwrap();
+        (bytes32 keyHash, bytes memory signature) = abi.decode(userOp.signature, (bytes32, bytes));
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = getKeySettings(keyHash);
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
-        /// TODO: Handle key expiry check.
+        IHook hook = settings.hook();
         validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
             ? hook.validateUserOp(keyHash, userOp, userOpHash)
-            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash);
+            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash, expiry);
     }
 
     /// TODO: This is left as an internal function to handle wrapping the returned validation data accoring to ERC-4337 spec.
     function _handleValidateUserOp(
         bytes32 keyHash,
-        bytes calldata signature,
-        PackedUserOperation calldata,
-        bytes32 userOpHash
+        bytes memory signature,
+        PackedUserOperation memory,
+        bytes32 userOpHash,
+        uint40 expiry
     ) private view returns (uint256 validationData) {
-        Key memory key = _getKey(keyHash);
+        Key memory key = getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
-        if (key.verify(userOpHash, signature)) return SIG_VALIDATION_SUCCEEDED;
-        else return SIG_VALIDATION_FAILED;
+
+        /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
+        /// `validAfter` is always 0.
+        if (key.verify(userOpHash, signature)) return uint256(expiry) << 160 | SIG_VALIDATION_SUCCEEDED;
+        else return uint256(expiry) << 160 | SIG_VALIDATION_FAILED;
+    }
+
+    /// @dev This function is used to handle the verification of signatures sent through execute()
+    function _handleVerifySignature(bytes32 keyHash, SignedCalls memory signedCalls, bytes memory signature) private {
+        _useNonce(signedCalls.nonce);
+
+        Key memory key = getKey(keyHash);
+        Settings settings = getKeySettings(keyHash);
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+
+        IHook hook = settings.hook();
+
+        bytes32 digest = _hashTypedData(signedCalls.hash());
+
+        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
+            ? hook.verifySignature(keyHash, digest, signature)
+            : key.verify(digest, signature);
+
+        if (!isValid) revert IERC7821.InvalidSignature();
     }
 
     function _onlyThis() internal view override(KeyManagement, NonceManager, ERC7914) {
@@ -177,21 +201,24 @@ contract MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receive
         override
         returns (bytes4 result)
     {
-        (bytes32 keyHash, bytes calldata signature) = wrappedSignature.unwrap();
+        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
 
-        IHook hook = keySettings[keyHash].hook();
+        Settings settings = getKeySettings(keyHash);
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
+        IHook hook = settings.hook();
         result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
             ? hook.isValidSignature(keyHash, data, signature)
             : _handleIsValidSignature(keyHash, data, signature);
     }
 
-    function _handleIsValidSignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
+    function _handleIsValidSignature(bytes32 keyHash, bytes32 data, bytes memory signature)
         private
         view
         returns (bytes4 result)
     {
-        Key memory key = _getKey(keyHash);
+        Key memory key = getKey(keyHash);
         if (key.verify(_hashTypedData(data.hashWithWrappedType()), signature)) {
             return _1271_MAGIC_VALUE;
         }
