@@ -115,7 +115,10 @@ contract SpendingLimitHook is ISpendingLimitHook {
         emit SpendLimitSet(accountKeyHash, token, period, limit);
     }
 
-    function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data) external returns (bytes4, bytes memory beforeExecuteData) {
+    function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data)
+        external
+        returns (bytes4, bytes memory beforeExecuteData)
+    {
         DynamicArrayLib.DynamicArray memory erc20s;
         DynamicArrayLib.DynamicArray memory transferAmounts;
 
@@ -176,7 +179,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         // Ensure spends in beforeExecuteData are within limits, revert if not.
         // Perform after the `_execute`, so that in the case where `calls`
         // contain a `setSpendLimit`, it will affect the `_incrementSpent`.
-        
+
         // `_incrementSpent` is an no-op if the token does not have an active spend limit.
         _incrementSpent(spends.spends[address(0)], tempStorage.totalNativeSpend);
 
@@ -195,9 +198,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
                 // and we want to be as conservative as possible.
                 Math.max(
                     tempStorage.transferAmounts[i],
-                    Math.saturatingSub(
-                        tempStorage.balancesBefore[i], SafeTransferLib.balanceOf(token, msg.sender)
-                    )
+                    Math.saturatingSub(tempStorage.balancesBefore[i], SafeTransferLib.balanceOf(token, msg.sender))
                 )
             );
         }
@@ -206,11 +207,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
     }
 
     /// @dev Rounds the unix timestamp down to the period.
-    function startOfSpendPeriod(uint256 unixTimestamp, SpendPeriod period)
-        public
-        pure
-        returns (uint256)
-    {
+    function startOfSpendPeriod(uint256 unixTimestamp, SpendPeriod period) public pure returns (uint256) {
         if (period == SpendPeriod.Minute) return Math.rawMul(Math.rawDiv(unixTimestamp, 60), 60);
         if (period == SpendPeriod.Hour) return Math.rawMul(Math.rawDiv(unixTimestamp, 3600), 3600);
         if (period == SpendPeriod.Day) return Math.rawMul(Math.rawDiv(unixTimestamp, 86400), 86400);

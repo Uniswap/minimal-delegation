@@ -30,7 +30,7 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
 
         spendingLimitHook = new SpendingLimitHook();
     }
-    
+
     function test_setSpendLimit_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
@@ -53,14 +53,14 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
 
         vm.prank(address(signerAccount));
         spendingLimitHook.setSpendLimit(p256Key.toKeyHash(), address(0), SpendPeriod.Minute, 100);
-
     }
 
     function test_afterExecute_noSpendLimit_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 100, "");
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 100, "");
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         fnSel = spendingLimitHook.afterExecute(p256Key.toKeyHash(), beforeExecuteData);
@@ -75,7 +75,8 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         spendingLimitHook.setSpendLimit(p256Key.toKeyHash(), address(0), SpendPeriod.Minute, 1);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(0), 100, "");
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(0), 100, "");
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         vm.expectRevert(ISpendingLimitHook.ExceededSpendLimit.selector);
@@ -92,7 +93,8 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         Call memory call = buildTransferCall(address(tokenA), receiver, 100);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         vm.expectRevert(ISpendingLimitHook.ExceededSpendLimit.selector);
@@ -100,12 +102,14 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         vm.stopPrank();
     }
 
-    function test_afterExecute_reverts_withExceededSpendLimit_fuzz(uint8 _period, uint256 limit, uint256 amount) public {
+    function test_afterExecute_reverts_withExceededSpendLimit_fuzz(uint8 _period, uint256 limit, uint256 amount)
+        public
+    {
         vm.assume(_period < uint8(SpendPeriod.Year));
         SpendPeriod period = SpendPeriod(_period);
 
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        
+
         AccountKeyHash accountKeyHash = p256Key.toKeyHash().wrap(address(signerAccount));
 
         vm.prank(address(signerAccount));
@@ -113,11 +117,12 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         vm.expectEmit(true, true, true, true);
         emit ISpendingLimitHook.SpendLimitSet(accountKeyHash, address(tokenA), period, limit);
         spendingLimitHook.setSpendLimit(p256Key.toKeyHash(), address(tokenA), period, limit);
-        
+
         Call memory call = buildTransferCall(address(tokenA), receiver, amount);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         if (amount > limit) {
@@ -127,7 +132,7 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
             fnSel = spendingLimitHook.afterExecute(p256Key.toKeyHash(), beforeExecuteData);
             assertEq(fnSel, IExecutionHook.afterExecute.selector);
         }
-        vm.stopPrank();        
+        vm.stopPrank();
     }
 
     function test_afterExecute_spendPeriod_reverts_withExceededSpendLimit() public {
@@ -139,7 +144,8 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         Call memory call = buildTransferCall(address(tokenA), receiver, 1);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         // Transfer is OK because it's within the spend period and limit
@@ -164,7 +170,8 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         Call memory call = buildTransferCall(address(tokenA), receiver, 1);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         fnSel = spendingLimitHook.afterExecute(p256Key.toKeyHash(), beforeExecuteData);
@@ -181,7 +188,8 @@ contract SpendlingLimitHookTest is HookHandler, DelegationHandler, TokenHandler 
         Call memory call = buildTransferCall(address(tokenA), receiver, 1);
 
         vm.startPrank(address(signerAccount));
-        (bytes4 fnSel, bytes memory beforeExecuteData) = spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
+        (bytes4 fnSel, bytes memory beforeExecuteData) =
+            spendingLimitHook.beforeExecute(p256Key.toKeyHash(), address(tokenA), 0, call.data);
         assertEq(fnSel, IExecutionHook.beforeExecute.selector);
 
         fnSel = spendingLimitHook.afterExecute(p256Key.toKeyHash(), beforeExecuteData);
