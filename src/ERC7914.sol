@@ -3,9 +3,9 @@ pragma solidity ^0.8.23;
 
 import {IERC7914} from "./interfaces/IERC7914.sol";
 import {TransientAllowance} from "./libraries/TransientAllowance.sol";
-
 /// @title ERC-7914
 /// @notice Abstract ERC-7914 implementation
+
 abstract contract ERC7914 is IERC7914 {
     mapping(address => uint256) public allowance;
 
@@ -13,8 +13,8 @@ abstract contract ERC7914 is IERC7914 {
     function _onlyThis() internal view virtual {}
 
     /// @inheritdoc IERC7914
-    function transientAllowance(address spender) external view returns (uint256) {
-        return TransientAllowance.getTransientAllowance(spender);
+    function transientAllowance(address spender) public view returns (uint256) {
+        return TransientAllowance.get(spender);
     }
 
     /// @inheritdoc IERC7914
@@ -28,9 +28,12 @@ abstract contract ERC7914 is IERC7914 {
     /// @inheritdoc IERC7914
     function transferFromNative(address from, address recipient, uint256 amount) external override returns (bool) {
         if (from != address(this)) revert IncorrectSender();
-        if (allowance[msg.sender] < amount) revert AllowanceExceeded();
+        uint256 currentAllowance = allowance[msg.sender];
+        if (currentAllowance < amount) revert AllowanceExceeded();
         if (amount == 0) return false; // early return for amount == 0
-        allowance[msg.sender] -= amount;
+        if (currentAllowance < type(uint256).max) {
+            allowance[msg.sender] -= amount;
+        }
         (bool success,) = payable(recipient).call{value: amount}("");
         if (!success) {
             revert TransferNativeFailed();
@@ -42,7 +45,7 @@ abstract contract ERC7914 is IERC7914 {
     /// @inheritdoc IERC7914
     function approveNativeTransient(address spender, uint256 amount) external override returns (bool) {
         _onlyThis();
-        TransientAllowance.setTransientAllowance(spender, amount);
+        TransientAllowance.set(spender, amount);
         emit ApproveNativeTransient(address(this), spender, amount);
         return true;
     }
@@ -54,11 +57,12 @@ abstract contract ERC7914 is IERC7914 {
         returns (bool)
     {
         if (from != address(this)) revert IncorrectSender();
-        if (TransientAllowance.getTransientAllowance(msg.sender) < amount) revert AllowanceExceeded();
+        uint256 currentAllowance = transientAllowance(msg.sender);
+        if (currentAllowance < amount) revert AllowanceExceeded();
         if (amount == 0) return false; // early return for amount == 0
-        TransientAllowance.setTransientAllowance(
-            msg.sender, TransientAllowance.getTransientAllowance(msg.sender) - amount
-        );
+        if (currentAllowance < type(uint256).max) {
+            TransientAllowance.set(msg.sender, currentAllowance - amount);
+        }
         (bool success,) = payable(recipient).call{value: amount}("");
         if (!success) {
             revert TransferNativeFailed();

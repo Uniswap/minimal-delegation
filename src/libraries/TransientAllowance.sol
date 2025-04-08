@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 /// @notice This is a temporary library that allows us to use transient storage (tstore/tload)
@@ -12,14 +12,14 @@ library TransientAllowance {
         }
     }
 
-    function getTransientAllowance(address spender) internal view returns (uint256 allowance) {
+    function get(address spender) internal view returns (uint256 allowance) {
         bytes32 hashSlot = _computeSlot(spender);
         assembly ("memory-safe") {
             allowance := tload(hashSlot)
         }
     }
 
-    function setTransientAllowance(address spender, uint256 allowance) internal {
+    function set(address spender, uint256 allowance) internal {
         bytes32 hashSlot = _computeSlot(spender);
         assembly ("memory-safe") {
             tstore(hashSlot, allowance)
