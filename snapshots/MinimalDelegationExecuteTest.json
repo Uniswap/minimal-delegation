@@ -8,6 +8,6 @@
   "execute_BATCHED_CALL_singleCall": "59498",
   "execute_BATCHED_CALL_singleCall_native": "60375",
   "execute_BATCHED_CALL_twoCalls": "95664",
-  "execute_BATCH_OF_BATCHES_twoBatches_oneCallEach": "105996",
+  "execute_BATCH_OF_BATCHES_twoBatches_oneCallEach": "177280",
   "execute_invalidMode_reverts": "22940"
 }
