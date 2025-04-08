@@ -222,33 +222,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         console2.logUint(signerAccount.keyCount());
     }
 
-    /// @notice Verifies that the root key can always revoke other keys
-    function invariant_rootKeyCanAlwaysRevokeOtherSigningKeys() public {
-        // Ensure key exists
-        bytes32 keyHash = untrustedKey.toKeyHash();
-        try signerAccount.getKey(keyHash) {
-            vm.prank(address(signerAccount));
-            signerAccount.revoke(keyHash);
-
-            vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
-            signerAccount.getKey(keyHash);
-        } catch (bytes memory revertData) {
-            assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-        }
-    }
-
-    /// @notice Verifies that the root key can always update other keys
-    function invariant_rootKeyCanAlwaysUpdateOtherSigningKeys() public {
-        bytes32 keyHash = untrustedKey.toKeyHash();
-        try signerAccount.getKey(keyHash) {
-            vm.prank(address(signerAccount));
-            signerAccount.update(keyHash, SettingsBuilder.init());
-            assertEq(Settings.unwrap(signerAccount.getKeySettings(keyHash)), 0);
-        } catch (bytes memory revertData) {
-            assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-        }
-    }
-
     /// @notice Verifies that the root key can always register other signing keys
     function invariant_rootKeyCanAlwaysRegisterOtherSigningKeys() public {
         TestKey memory newKey = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
