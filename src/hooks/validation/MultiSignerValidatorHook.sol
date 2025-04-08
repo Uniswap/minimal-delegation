@@ -34,7 +34,7 @@ contract MultiSignerValidatorHook is IValidationHook {
         requiredSigners[keyHash.wrap(msg.sender)].add(signerKeyHash);
     }
 
-    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
+    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
         external
         pure
         returns (bytes4, uint256)
@@ -42,11 +42,11 @@ contract MultiSignerValidatorHook is IValidationHook {
         revert("Not implemented");
     }
 
-    function overrideIsValidSignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4, bytes4) {
+    function afterIsValidSignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4, bytes4) {
         revert("Not implemented");
     }
 
-    function overrideVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
+    function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
         external
         view
         returns (bytes4, bool isValid)
@@ -68,10 +68,10 @@ contract MultiSignerValidatorHook is IValidationHook {
             isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
             if (!isValid) {
-                return (IValidationHook.overrideVerifySignature.selector, false);
+                return (IValidationHook.afterVerifySignature.selector, false);
             }
         }
 
-        return (IValidationHook.overrideVerifySignature.selector, true);
+        return (IValidationHook.afterVerifySignature.selector, true);
     }
 }

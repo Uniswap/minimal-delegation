@@ -161,7 +161,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
 
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
@@ -191,7 +191,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
 
         // Sign using the registered P256 key
         bytes memory packedSignature = abi.encode(
@@ -213,7 +213,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
 
         bytes memory signature = signerTestKey.sign(hashToSign);
@@ -244,7 +244,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
@@ -308,7 +308,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         uint256 nonce = key << 64 | seq;
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = p256Key.sign(hashToSign);
 
@@ -350,7 +350,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         uint256 nonce = key << 64 | seq;
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = p256Key.sign(hashToSign);
 
@@ -375,7 +375,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -460,7 +460,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
@@ -482,7 +482,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
 
         vm.startPrank(address(signer));
         signerAccount.register(p256Key.toKey());
@@ -506,7 +506,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
@@ -526,7 +526,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
@@ -549,7 +549,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
@@ -576,7 +576,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
 
         bytes memory signature = signerTestKey.sign(hashToSign);
@@ -607,7 +607,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes memory signature = webAuthnP256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
         bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
@@ -625,7 +625,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Create hash of the calls + nonce and sign it
         nonce++; // increment the nonce since first one hasnt been used yet
-        signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
 
         // Sign using the registered P256 key
         signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
@@ -663,7 +663,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes memory signature = webAuthnP256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
         bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), signature);
         bytes memory opData = abi.encode(nonce, wrappedSignature);
@@ -681,7 +681,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Create hash of the calls + nonce and sign it
         nonce++; // increment the nonce since first one hasnt been used yet
-        signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
 
         // Sign using the registered P256 key
         signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
@@ -707,7 +707,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
@@ -723,7 +723,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, DelegationHandler, Execut
 
         // Create hash of the calls + nonce and sign it
         nonce++; // increment the nonce since first one hasnt been used yet
-        signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: bytes("")});
         hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         signature = signerTestKey.sign(hashToSign);
 

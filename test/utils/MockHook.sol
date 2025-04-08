@@ -34,20 +34,16 @@ contract MockHook is IHook {
         _beforeExecuteRevertData = revertData;
     }
 
-    function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
-        external
-        view
-        returns (bytes4, uint256)
-    {
-        return (IValidationHook.overrideValidateUserOp.selector, _validateUserOpReturnValue);
+    function afterValidateUserOp(bytes32, bytes calldata) external view returns (bytes4) {
+        return (IValidationHook.afterValidateUserOp.selector);
     }
 
-    function overrideIsValidSignature(bytes32, bytes32, bytes calldata) external view returns (bytes4, bytes4) {
-        return (IValidationHook.overrideIsValidSignature.selector, _isValidSignatureReturnValue);
+    function afterIsValidSignature(bytes32, bytes calldata) external view returns (bytes4) {
+        return (IValidationHook.afterIsValidSignature.selector);
     }
 
-    function overrideVerifySignature(bytes32, bytes32, bytes calldata) external view returns (bytes4, bool) {
-        return (IValidationHook.overrideVerifySignature.selector, _verifySignatureReturnValue);
+    function afterVerifySignature(bytes32, bytes calldata) external view returns (bytes4) {
+        return (IValidationHook.afterVerifySignature.selector);
     }
 
     function beforeExecute(bytes32, address, uint256, bytes calldata) external view returns (bytes4, bytes memory) {

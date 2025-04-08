@@ -20,37 +20,28 @@ library HooksLib {
         return uint160(address(self)) & flag != 0;
     }
 
-    function validateUserOp(IHook self, bytes32 keyHash, PackedUserOperation memory userOp, bytes32 userOpHash)
+    function checkValidateUserOp(IHook self, bytes32 keyHash, bytes memory witness)
         internal
         view
-        returns (uint256 validationData)
     {
-        bytes4 hookSelector;
-        (hookSelector, validationData) = self.overrideValidateUserOp(keyHash, userOp, userOpHash);
-        if (hookSelector != IValidationHook.overrideValidateUserOp.selector) revert InvalidHookResponse();
-        return validationData;
+        bytes4 hookSelector = self.afterValidateUserOp(keyHash, witness);
+        if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
     }
 
-    function isValidSignature(IHook self, bytes32 keyHash, bytes32 data, bytes memory signature)
+    function checkIsValidSignature(IHook self, bytes32 keyHash, bytes memory witness)
         internal
         view
-        returns (bytes4 result)
     {
-        bytes4 hookSelector;
-        (hookSelector, result) = self.overrideIsValidSignature(keyHash, data, signature);
-        if (hookSelector != IValidationHook.overrideIsValidSignature.selector) revert InvalidHookResponse();
-        return result;
+        bytes4 hookSelector = self.afterIsValidSignature(keyHash, witness);
+        if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
     }
 
-    function verifySignature(IHook self, bytes32 keyHash, bytes32 data, bytes memory signature)
+    function checkVerifySignature(IHook self, bytes32 keyHash, bytes memory witness)
         internal
         view
-        returns (bool result)
     {
-        bytes4 hookSelector;
-        (hookSelector, result) = self.overrideVerifySignature(keyHash, data, signature);
-        if (hookSelector != IValidationHook.overrideVerifySignature.selector) revert InvalidHookResponse();
-        return result;
+        bytes4 hookSelector = self.afterVerifySignature(keyHash, witness);
+        if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
     }
 
     function handleBeforeExecute(IHook self, bytes32 keyHash, address to, uint256 value, bytes memory data)

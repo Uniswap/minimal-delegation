@@ -62,7 +62,7 @@ contract MinimalDelegation is
             (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
             (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
 
-            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce), signature);
+            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce, bytes("")), signature);
             _dispatch(mode, calls, keyHash);
         } else if (mode.isBatchOfBatches()) {
             bytes[] memory executeDataArray = abi.decode(executionData, (bytes[]));
@@ -144,35 +144,30 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature) = abi.decode(userOp.signature, (bytes32, bytes));
+        (bytes32 keyHash, bytes memory signature, bytes memory witness) = abi.decode(userOp.signature, (bytes32, bytes, bytes));
 
+        Key memory key = getKey(keyHash);
         Settings settings = getKeySettings(keyHash);
         (bool isExpired, uint40 expiry) = settings.isExpired();
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
-        IHook hook = settings.hook();
-        validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
-            ? hook.validateUserOp(keyHash, userOp, userOpHash)
-            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash, expiry);
-    }
-
-    /// TODO: This is left as an internal function to handle wrapping the returned validation data accoring to ERC-4337 spec.
-    function _handleValidateUserOp(
-        bytes32 keyHash,
-        bytes memory signature,
-        PackedUserOperation memory,
-        bytes32 userOpHash,
-        uint40 expiry
-    ) private view returns (uint256 validationData) {
-        Key memory key = getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
 
         /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
         /// `validAfter` is always 0.
-        if (key.verify(userOpHash, signature)) return uint256(expiry) << 160 | SIG_VALIDATION_SUCCEEDED;
-        else return uint256(expiry) << 160 | SIG_VALIDATION_FAILED;
+        if(key.verify(userOpHash, signature)) {
+            validationData = uint256(expiry) << 160 | SIG_VALIDATION_SUCCEEDED;
+        } else {
+            validationData = uint256(expiry) << 160 | SIG_VALIDATION_FAILED;
+        }
+
+        IHook hook = settings.hook();
+        if(hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
+            // Will revert if validation should fail
+            hook.checkValidateUserOp(keyHash, witness);
+        }
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
@@ -180,19 +175,19 @@ contract MinimalDelegation is
         _useNonce(signedCalls.nonce);
 
         Key memory key = getKey(keyHash);
+
+        bytes32 digest = _hashTypedData(signedCalls.hash());
+        if(!key.verify(digest, signature)) revert IERC7821.InvalidSignature();
+        
         Settings settings = getKeySettings(keyHash);
         (bool isExpired, uint40 expiry) = settings.isExpired();
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
         IHook hook = settings.hook();
-
-        bytes32 digest = _hashTypedData(signedCalls.hash());
-
-        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.verifySignature(keyHash, digest, signature)
-            : key.verify(digest, signature);
-
-        if (!isValid) revert IERC7821.InvalidSignature();
+        if(hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
+            // Will revert if validation should fail
+            hook.checkVerifySignature(keyHash, signedCalls.witness);
+        }
     }
 
     function _onlyThis() internal view override(KeyManagement, NonceManager) {
@@ -206,27 +201,17 @@ contract MinimalDelegation is
         override
         returns (bytes4 result)
     {
-        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+        (bytes32 keyHash, bytes memory signature, bytes memory witness) = abi.decode(wrappedSignature, (bytes32, bytes, bytes));
+
+        Key memory key = getKey(keyHash);
+        result = key.verify(_hashTypedData(data.hashWithWrappedType()), signature) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE;
 
         Settings settings = getKeySettings(keyHash);
-        (bool isExpired, uint40 expiry) = settings.isExpired();
-        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-
         IHook hook = settings.hook();
-        result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
-            ? hook.isValidSignature(keyHash, data, signature)
-            : _handleIsValidSignature(keyHash, data, signature);
-    }
-
-    function _handleIsValidSignature(bytes32 keyHash, bytes32 data, bytes memory signature)
-        private
-        view
-        returns (bytes4 result)
-    {
-        Key memory key = getKey(keyHash);
-        if (key.verify(_hashTypedData(data.hashWithWrappedType()), signature)) {
-            return _1271_MAGIC_VALUE;
+        if(hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
+            // Will revert if validation should fail
+            hook.checkIsValidSignature(keyHash, witness);
         }
-        return _1271_INVALID_VALUE;
+        return result;
     }
 }
