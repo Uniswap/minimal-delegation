@@ -108,8 +108,6 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
      * @return A call object for the generated function
      */
     function _generateHandlerCall(uint256 randomSeed) public returns (HandlerCall memory) {
-        vm.assume(randomSeed < type(uint256).max);
-
         TestKey memory testKey = _rand(fixture_testKeys, randomSeed);
         bytes32 keyHash = testKey.toKeyHash();
 
