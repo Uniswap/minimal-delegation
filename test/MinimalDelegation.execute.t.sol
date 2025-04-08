@@ -151,7 +151,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     // Execute can contain a self call which registers a new key even if the caller is untrusted as long as the signature is valid
-    function test_execute_opData_eoaSigner_selfCall_succeeds() public {
+    function test_execute_opData_rootSigner_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         Call[] memory calls = CallUtils.initArray();
@@ -175,12 +175,15 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
 
-    function test_execute_opData_P256_selfCall_succeeds() public {
+    function test_execute_opData_P256_isAdmin_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
 
-        vm.prank(address(signerAccount));
+        vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
+        Settings settings = SettingsBuilder.init().fromIsAdmin(true);
+        signerAccount.update(p256Key.toKeyHash(), settings);
+        vm.stopPrank();
 
         Call[] memory calls = CallUtils.initArray();
         Call memory registerCall =
@@ -325,6 +328,37 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
 
         // Unset the hook revert
+        mockExecutionHook.setBeforeExecuteRevertData(bytes(""));
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_batch_opData_isAdmin_checkedBeforeHook() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), SettingsBuilder.init().fromIsAdmin(false).fromHook(mockExecutionHook));
+        vm.stopPrank();
+
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        uint192 key = 0;
+        uint64 seq = uint64(signerAccount.getSeq(key));
+        uint256 nonce = key << 64 | seq;
+
+        // Create hash of the calls + nonce and sign it
+        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
+        bytes memory signature = p256Key.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature);
+        bytes memory executionData = abi.encode(calls, abi.encode(nonce, wrappedSignature));
+
+        // The hook has no revertData, so it should not revert
         mockExecutionHook.setBeforeExecuteRevertData(bytes(""));
 
         vm.prank(address(signerAccount));
