@@ -107,9 +107,10 @@ contract MinimalDelegation is
         // Per ERC7821, replace address(0) with address(this)
         address to = _call.to == address(0) ? address(this) : _call.to;
 
-        // TODO: check key admin functionality
+        Settings settings = getKeySettings(keyHash);
+        if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
 
-        IHook hook = keySettings[keyHash].hook();
+        IHook hook = settings.hook();
         bytes memory beforeExecuteData;
         if (hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
             beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);

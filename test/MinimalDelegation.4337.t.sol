@@ -67,7 +67,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
     /// forge-config: ci.isolate = true
     function test_handleOps_single_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        
+
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
