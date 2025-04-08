@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
