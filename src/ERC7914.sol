@@ -53,6 +53,7 @@ abstract contract ERC7914 is IERC7914 {
     /// @param amount The amount to transfer
     /// @param isTransient Whether this is transient allowance or not
     /// @return success Whether the transfer was successful
+    /// @dev Doesn't forward transferFrom requests - the sender of funds must be address(this)
     function _transferFrom(address from, address recipient, uint256 amount, bool isTransient) internal returns (bool) {
         // Validate inputs
         if (from != address(this)) revert IncorrectSender();
