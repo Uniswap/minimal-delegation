@@ -12,6 +12,7 @@ library ModeDecoder {
     bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA = 0x0100000000007821000100000000000000000000000000000000000000000000;
     bytes32 constant BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT =
         0x0101000000007821000100000000000000000000000000000000000000000000;
+    bytes32 constant BATCH_OF_BATCHES_CALL = 0x0100000000007821000200000000000000000000000000000000000000000000;
 
     // Mode Masks
     bytes32 constant EXTRACT_EXEC_TYPE = 0x00ff000000000000000000000000000000000000000000000000000000000000;
@@ -32,6 +33,13 @@ library ModeDecoder {
     // - A batched call that does not revert on failure, and requires opData
     function supportsOpData(bytes32 mode) internal pure returns (bool) {
         return mode == BATCHED_CALL_SUPPORTS_OPDATA || mode == BATCHED_CALL_SUPPORTS_OPDATA_AND_CAN_REVERT;
+    }
+
+    // Supported modes:
+    // 0x01           | 0x00      | unused        | 0x78210002   | unused
+    // - A batch of batches call
+    function isBatchOfBatches(bytes32 mode) internal pure returns (bool) {
+        return mode == BATCH_OF_BATCHES_CALL;
     }
 
     // Revert if the EXEC_TYPE is 0.
