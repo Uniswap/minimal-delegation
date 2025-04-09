@@ -588,7 +588,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batchOfBatches_succeeds() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // register a new key to use for the first batch
@@ -608,7 +608,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         bytes memory executionData1 = abi.encode(calls, opData);
 
         // create a second batch of calls
-        calls = CallBuilder.init();
+        calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 2e18)); // Transfer 2 tokenA
 
         // resister a new key to use for the second batch
@@ -644,7 +644,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_execute_batchOfBatches_gas() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // register a new key to use for the first batch
@@ -664,7 +664,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         bytes memory executionData1 = abi.encode(calls, opData);
 
         // create a second batch of calls
-        calls = CallBuilder.init();
+        calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 2e18)); // Transfer 2 tokenA
 
         // resister a new key to use for the second batch
@@ -693,7 +693,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     }
 
     function test_execute_batchOfBatches_revertsWithCallFailed() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
         // Get the current nonce components for key 0
@@ -711,7 +711,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         // 2. Encode the calls and opData together
         bytes memory executionData1 = abi.encode(calls, opData);
 
-        calls = CallBuilder.init();
+        calls = CallUtils.initArray();
         // this call makes the whole batch of batches call revert because its over the balance
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 101e18));
 
