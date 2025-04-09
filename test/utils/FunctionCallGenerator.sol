@@ -57,6 +57,10 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         return (keys[seed % keys.length], seed % keys.length);
     }
 
+    function _testKeyIsSignerAccount(TestKey memory testKey) internal view returns (bool) {
+        return vm.addr(testKey.privateKey) == address(signerAccount);
+    }
+
     function _wrapCallFailedRevertData(bytes4 selector) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(IERC7821.CallFailed.selector, abi.encodePacked(selector));
     }
@@ -67,7 +71,6 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         virtual
         returns (HandlerCall memory)
     {
-        // No error is thrown if the key is already registered, so ignore
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRegisterCall(newKey)).withCallback(
             abi.encodeWithSelector(IInvariantStateTracker.registerCallback.selector, newKey.toKey())
         ).withRevertData(revertData);
@@ -124,6 +127,9 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         // REGISTER == 0
         if (randomSeed % FUZZED_FUNCTION_COUNT == 0) {
             console2.log("register key #%s", index);
+            if (_testKeyIsSignerAccount(testKey)) {
+                revertData = _wrapCallFailedRevertData(IKeyManagement.CannotRegisterRootKey.selector);
+            }
             return _registerCall(testKey, revertData);
         }
         // REVOKE == 1
@@ -136,7 +142,9 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         }
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
-            if (!isRegistered) {
+            if (_testKeyIsSignerAccount(testKey)) {
+                revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
+            } else if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
             console2.log("update key #%s, expecting revert %s", index, revertData.length > 0);
