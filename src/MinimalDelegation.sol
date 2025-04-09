@@ -165,7 +165,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
             // The hook can override the validation data
-            validationData = hook.validateUserOp(keyHash, userOp, userOpHash, witness);
+            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, witness);
         }
     }
 
@@ -202,7 +202,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
             // Hook must revert to signal that signature verification
-            hook.verifySignature(keyHash, digest, signedCalls.witness);
+            hook.handleAfterVerifySignature(keyHash, digest, signedCalls.witness);
         }
     }
 
@@ -230,7 +230,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
-            result = hook.isValidSignature(keyHash, digest, witness);
+            result = hook.handleAfterIsValidSignature(keyHash, digest, witness);
         }
     }
 }
