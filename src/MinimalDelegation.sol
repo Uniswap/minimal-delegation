@@ -24,6 +24,7 @@ import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
+import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
@@ -51,7 +52,7 @@ contract MinimalDelegation is
 
     uint256 public packedEntrypoint;
 
-    function execute(bytes32 mode, bytes calldata executionData) external payable override {
+    function execute(bytes32 mode, bytes memory executionData) public payable override {
         if (mode.isBatchedCall()) {
             Call[] memory calls = abi.decode(executionData, (Call[]));
             _onlyThis();
@@ -63,6 +64,11 @@ contract MinimalDelegation is
 
             _handleVerifySignature(keyHash, calls.toSignedCalls(nonce), signature);
             _dispatch(mode, calls, keyHash);
+        } else if (mode.isBatchOfBatches()) {
+            bytes[] memory executeDataArray = abi.decode(executionData, (bytes[]));
+            for (uint256 i = 0; i < executeDataArray.length; i++) {
+                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA, executeDataArray[i]);
+            }
         } else {
             revert IERC7821.UnsupportedExecutionMode();
         }
@@ -116,7 +122,7 @@ contract MinimalDelegation is
     }
 
     function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return mode.isBatchedCall() || mode.supportsOpData();
+        return mode.isBatchedCall() || mode.supportsOpData() || mode.isBatchOfBatches();
     }
 
     /// @inheritdoc IERC4337Account
