@@ -27,7 +27,6 @@ import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 struct SetupParams {
     IMinimalDelegation _signerAccount;
     TestKey[] _signingKeys;
-    address[] _callers;
     address _tokenA;
     address _tokenB;
 }
@@ -42,10 +41,6 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     using SettingsBuilder for Settings;
     using SettingsLib for Settings;
 
-    /// @notice The callers which will be used to call execute
-    address[] public callers;
-    address public currentCaller;
-
     /// @notice The keys which will be used to sign calls to execute
     TestKey[] public signingKeys;
     TestKey public currentSigningKey;
@@ -58,33 +53,17 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     {
         for (uint256 i = 0; i < _params._signingKeys.length; i++) {
             signingKeys.push(_params._signingKeys[i]);
-            // Also add to fixture_keys
-            fixture_keys.push(_params._signingKeys[i]);
         }
-        callers = _params._callers;
         tokenA = ERC20Mock(_params._tokenA);
         tokenB = ERC20Mock(_params._tokenB);
     }
 
-    /// @notice Sets the current signing key for the test
-    modifier useSigningKey(uint256 keyIndexSeed) {
-        // 20% of the time, use a random key from fixture_keys
+    /// @notice Sets the current key for the test
+    /// if the test uses `caller`, we prank the key's public key
+    modifier useKey(uint256 keyIndexSeed) {
         uint256 index;
-        if (keyIndexSeed % 5 == 0) {
-            (currentSigningKey, index) = _rand(fixture_keys, keyIndexSeed);
-        } else {
-            (currentSigningKey, index) = _rand(signingKeys, keyIndexSeed);
-        }
-        console2.log("signing with key #%s", index);
+        (currentSigningKey, index) = _rand(signingKeys, keyIndexSeed);
         _;
-    }
-
-    /// @notice Sets the current caller for the test
-    modifier useCaller(uint256 callerIndexSeed) {
-        currentCaller = callers[_bound(callerIndexSeed, 0, callers.length - 1)];
-        vm.startPrank(currentCaller);
-        _;
-        vm.stopPrank();
     }
 
     /// Helper function to get the next available nonce
@@ -106,14 +85,16 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// TODO: only supports single call arrays for now
     /// - Generates a random call, executes it, then processes any registered callbacks
     /// - Any reverts are expected by the generated handler call
-    function executeBatchedCall(uint256 seed) public useCaller(seed) {
-        HandlerCall memory handlerCall = _generateHandlerCall(seed);
+    function executeBatchedCall(uint256 generatorSeed, uint256 signerSeed) public useKey(signerSeed) {
+        address caller = vm.addr(currentSigningKey.privateKey);
+        vm.startPrank(caller);
+        HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
         try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (currentCaller != address(signerAccount)) {
+            if (caller != address(signerAccount)) {
                 assertEq(bytes4(revertData), IERC7821.Unauthorized.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
@@ -121,17 +102,19 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 revert("uncaught revert");
             }
         }
+
+        vm.stopPrank();
     }
 
     /// @notice Executes a call with operation data (with signature)
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
+    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed, uint256 signerSeed) public useKey(signerSeed) {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
 
-        HandlerCall memory handlerCall = _generateHandlerCall(seed);
+        HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
@@ -144,9 +127,8 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
 
         // Track just the first expected revert
         bytes memory expectedRevert;
-        // Top level reverts
+        // Signature validation reverts happen first
         if (!isRootKey) {
-            // TODO: check expiry here, settings, etc.
             try signerAccount.getKey(currentKeyHash) {
                 Settings settings = signerAccount.getKeySettings(currentKeyHash);
                 // Expect revert if expired
@@ -209,14 +191,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         tokenA.mint(address(signerAccount), 100e18);
         tokenB.mint(address(signerAccount), 100e18);
 
-        address[] memory callers = new address[](2);
-        // Add trusted root caller
-        callers[0] = address(signerAccount);
-        vm.label(callers[0], "signerAccount");
-        // Add untrusted caller
-        callers[1] = untrustedCaller;
-        vm.label(callers[1], "untrustedCaller");
-
         TestKey[] memory _signingKeys = new TestKey[](2);
         // Add trusted root key
         _signingKeys[0] = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
@@ -226,7 +200,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         SetupParams memory params = SetupParams({
             _signerAccount: signerAccount,
             _signingKeys: _signingKeys,
-            _callers: callers,
             _tokenA: address(tokenA),
             _tokenB: address(tokenB)
         });
@@ -249,6 +222,8 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     function afterInvariant() public {
         console2.log("Number of persisted registered keys");
         console2.logUint(signerAccount.keyCount());
+
+        invariantHandler.logState();
     }
 
     /// @notice Verifies that the root key can always register other signing keys

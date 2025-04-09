@@ -33,7 +33,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     uint256 public constant MAX_KEYS = 10;
 
     /// Member variables passed in by inheriting contract
-    IMinimalDelegation internal immutable signerAccount;
+    IMinimalDelegation internal signerAccount;
     address private immutable _tokenA;
     address private immutable _tokenB;
 
@@ -69,6 +69,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         virtual
         returns (HandlerCall memory)
     {
+        if (revertData.length > 0) _state.registerReverted++;
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRegisterCall(newKey)).withCallback(
             abi.encodeWithSelector(IInvariantStateTracker.registerCallback.selector, newKey.toKey())
         ).withRevertData(revertData);
@@ -76,6 +77,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
 
     /// @return calldata to revoke a key along with its callback
     function _revokeCall(bytes32 keyHash, bytes memory revertData) internal virtual returns (HandlerCall memory) {
+        if (revertData.length > 0) _state.revokeReverted++;
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRevokeCall(keyHash)).withCallback(
             abi.encodeWithSelector(IInvariantStateTracker.revokeCallback.selector, keyHash)
         ).withRevertData(revertData);
@@ -87,6 +89,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         virtual
         returns (HandlerCall memory)
     {
+        if (revertData.length > 0) _state.updateReverted++;
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeUpdateCall(keyHash, settings)).withCallback(
             abi.encodeWithSelector(IInvariantStateTracker.updateCallback.selector, keyHash, settings)
         ).withRevertData(revertData);
@@ -124,7 +127,6 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
 
         // REGISTER == 0
         if (randomSeed % FUZZED_FUNCTION_COUNT == 0) {
-            console2.log("register key #%s", index);
             if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotRegisterRootKey.selector);
             }
@@ -135,7 +137,6 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
             if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
-            console2.log("revoke key #%s, expecting revert %s", index, revertData.length > 0);
             return _revokeCall(keyHash, revertData);
         }
         // UPDATE == 2
@@ -145,11 +146,9 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
             } else if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
-            console2.log("update key #%s, expecting revert %s", index, revertData.length > 0);
             // TODO: fuzz settings
             return _updateCall(keyHash, Settings.wrap(0), revertData);
         } else {
-            console2.log("token transfer key #%s", index);
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
     }
