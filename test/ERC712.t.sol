@@ -15,6 +15,7 @@ import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using SignedCallBuilder for SignedCalls;
@@ -28,6 +29,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
 
     function setUp() public {
         setUpDelegation();
+        setUpTokens();
     }
 
     function test_domainSeparator() public view {
@@ -67,18 +69,17 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(expected, hashTypedData);
     }
 
-    /// TODO: Fix FFI.
-    // function test_hashTypedData_matches_signedTypedData_ffi() public {
-    //     Call[] memory calls = CallBuilder.init();
-    //     calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-    //     uint256 nonce = 0;
-    //     SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
-    //     TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
-    //     // Make it clear that the verifying contract is set properly.
-    //     address verifyingContract = address(signerAccount);
+    function test_hashTypedData_matches_signedTypedData_ffi() public {
+        Call[] memory calls = CallBuilder.init();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        uint256 nonce = 0;
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+        // Make it clear that the verifying contract is set properly.
+        address verifyingContract = address(signerAccount);
 
-    //     (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, nonce, verifyingContract);
+        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedCalls, verifyingContract);
 
-    //     assertEq(signature, key.sign(signerAccount.hashTypedData(signedCalls.hash())));
-    // }
+        assertEq(signature, key.sign(signerAccount.hashTypedData(signedCalls.hash())));
+    }
 }

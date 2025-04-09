@@ -10,19 +10,24 @@ contract SignedCallsLibTest is Test {
     using SignedCallBuilder for SignedCalls;
     using CallLib for Call[];
 
-    /// TODO: FIX
-    // /// @notice Test to catch accidental changes to the typehash
-    // function test_constant_execution_data_typehash() public pure {
-    //     bytes32 expectedTypeHash =
-    //         keccak256("SignedCalls(Call[] calls,uint256 nonce)Call(address to,uint256 value,bytes data)");
-    //     assertEq(SignedCallsLib.SIGNED_CALLS_TYPEHASH, expectedTypeHash);
-    // }
+    /// @notice Test to catch accidental changes to the typehash
+    function test_constant_execution_data_typehash() public pure {
+        bytes32 expectedTypeHash = keccak256(
+            "SignedCalls(Call[] calls,uint256 nonce,bytes32 keyHash,bool shouldRevert)Call(address to,uint256 value,bytes data)"
+        );
+        assertEq(SignedCallsLib.SIGNED_CALLS_TYPEHASH, expectedTypeHash);
+    }
 
-    // function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce) public pure {
-    //     SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
-    //     bytes32 actualHash = SignedCallsLib.hash(signedCalls);
+    function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce, bytes32 keyHash, bool shouldRevert)
+        public
+        pure
+    {
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(keyHash)
+            .withShouldRevert(shouldRevert);
+        bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
-    //     bytes32 expectedHash = keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce));
-    //     assertEq(actualHash, expectedHash);
-    // }
+        bytes32 expectedHash =
+            keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert));
+        assertEq(actualHash, expectedHash);
+    }
 }

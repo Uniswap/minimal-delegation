@@ -2,19 +2,19 @@
 pragma solidity ^0.8.23;
 
 import {JavascriptFfi} from "./JavascriptFfi.sol";
-import {Call} from "../../src/libraries/CallLib.sol";
+import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract FFISignTypedData is JavascriptFfi {
     using stdJson for string;
 
-    function ffi_signTypedData(uint256 privateKey, Call[] memory calls, uint256 nonce, address verifyingContract)
+    function ffi_signTypedData(uint256 privateKey, SignedCalls memory signedCalls, address verifyingContract)
         public
         returns (bytes memory)
     {
         // Create JSON object
-        string memory jsonObj = _createJsonInput(privateKey, calls, nonce, verifyingContract);
+        string memory jsonObj = _createJsonInput(privateKey, signedCalls, verifyingContract);
 
         // Run the JavaScript script
         return runScript("sign-typed-data", jsonObj);
@@ -23,14 +23,14 @@ contract FFISignTypedData is JavascriptFfi {
     /**
      * @dev Creates a JSON input string for the JavaScript script
      */
-    function _createJsonInput(uint256 privateKey, Call[] memory calls, uint256 nonce, address verifyingContract)
+    function _createJsonInput(uint256 privateKey, SignedCalls memory signedCalls, address verifyingContract)
         internal
         pure
         returns (string memory)
     {
         string memory callsJson = "[";
 
-        for (uint256 i = 0; i < calls.length; i++) {
+        for (uint256 i = 0; i < signedCalls.calls.length; i++) {
             if (i > 0) {
                 callsJson = string.concat(callsJson, ",");
             }
@@ -39,19 +39,36 @@ contract FFISignTypedData is JavascriptFfi {
                 callsJson,
                 "{",
                 '"to":"',
-                vm.toString(calls[i].to),
+                vm.toString(signedCalls.calls[i].to),
                 '",',
                 '"value":',
-                vm.toString(calls[i].value),
+                vm.toString(signedCalls.calls[i].value),
                 ",",
                 '"data":"0x',
-                bytesToHex(calls[i].data),
+                bytesToHex(signedCalls.calls[i].data),
                 '"',
                 "}"
             );
         }
 
         callsJson = string.concat(callsJson, "]");
+
+        // Create the SignedCalls object
+        string memory signedCallsJson = string.concat(
+            "{",
+            '"calls":',
+            callsJson,
+            ",",
+            '"nonce":',
+            vm.toString(signedCalls.nonce),
+            ",",
+            '"keyHash":"',
+            vm.toString(signedCalls.keyHash),
+            '",',
+            '"shouldRevert":',
+            signedCalls.shouldRevert ? "true" : "false",
+            "}"
+        );
 
         string memory jsonObj = string.concat(
             "{",
@@ -61,10 +78,8 @@ contract FFISignTypedData is JavascriptFfi {
             '"verifyingContract":"',
             vm.toString(verifyingContract),
             '",',
-            '"calls":',
-            callsJson,
-            ',"nonce":',
-            vm.toString(nonce),
+            '"signedCalls":',
+            signedCallsJson,
             "}"
         );
 

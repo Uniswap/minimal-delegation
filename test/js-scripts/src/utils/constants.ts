@@ -7,20 +7,29 @@ export const DOMAIN_VERSION = "1";
 
 // Define the struct types
 export const types = {
-    Call: [
-      { name: 'to', type: 'address' },
-      { name: 'value', type: 'uint256' },
-      { name: 'data', type: 'bytes' }
-    ],
-    SignedCalls: [
-      { name: 'calls', type: 'Call[]' },
-      { name: 'nonce', type: 'uint256' }
-    ]
-    } as const;
+  SignedCalls: [
+    { name: 'calls', type: 'Call[]' },
+    { name: 'nonce', type: 'uint256' },
+    { name: 'keyHash', type: 'bytes32' },
+    { name: 'shouldRevert', type: 'bool' }
+  ],
+  Call: [
+    { name: 'to', type: 'address' },
+    { name: 'value', type: 'uint256' },
+    { name: 'data', type: 'bytes' }
+  ]
+} as const;
 
   // Type definitions
 export type Call = {
     to: Address;
     value: number;
     data: string;
+  }
+
+export type SignedCalls = {
+    calls: Call[];
+    nonce: number;
+    keyHash: string;
+    shouldRevert: boolean;
   }
