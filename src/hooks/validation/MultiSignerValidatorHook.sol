@@ -34,24 +34,31 @@ contract MultiSignerValidatorHook is IValidationHook {
         requiredSigners[keyHash.wrap(msg.sender)].add(signerKeyHash);
     }
 
-    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
-        external
-        pure
-        returns (bytes4, uint256)
-    {
-        revert("Not implemented");
-    }
-
-    function afterIsValidSignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4, bytes4) {
-        revert("Not implemented");
-    }
-
-    function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata data)
+    function afterValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash, bytes calldata witness)
         external
         view
-        returns (bytes4, bool isValid)
+        returns (bytes4 selector, uint256 validationData)
     {
-        (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
+        // TODO:
+        return (IValidationHook.afterValidateUserOp.selector, 0);
+    }
+
+    function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata witness) 
+        external 
+        view 
+        returns (bytes4 selector, bytes4 magicValue) 
+    {
+        // TODO:
+        bytes4 _1271_MAGIC_VALUE = 0x1626ba7e;
+        return (IValidationHook.afterIsValidSignature.selector, _1271_MAGIC_VALUE);
+    }
+
+    function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata witness)
+        external
+        view
+        returns (bytes4 selector)
+    {
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(witness, (bytes[]));
         AccountKeyHash accountKeyHash = keyHash.wrap(msg.sender);
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
@@ -65,13 +72,13 @@ contract MultiSignerValidatorHook is IValidationHook {
             if (!requiredSigners[accountKeyHash].contains(signerKeyHash)) revert MissingSigner();
 
             Key memory signerKey = abi.decode(keyStorage[signerKeyHash], (Key));
-            isValid = KeyLib.verify(signerKey, digest, signerSignature);
+            bool isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
             if (!isValid) {
-                return (IValidationHook.afterVerifySignature.selector, false);
+                revert("Invalid additional signer signature");
             }
         }
 
-        return (IValidationHook.afterVerifySignature.selector, true);
+        return IValidationHook.afterVerifySignature.selector;
     }
 }

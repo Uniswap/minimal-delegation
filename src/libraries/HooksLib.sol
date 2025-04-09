@@ -20,23 +20,27 @@ library HooksLib {
         return uint160(address(self)) & flag != 0;
     }
 
-    function checkValidateUserOp(IHook self, bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash, bytes memory witness)
+    function validateUserOp(IHook self, bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash, bytes memory witness)
         internal
         view
+        returns (uint256 validationData)
     {
-        bytes4 hookSelector = self.afterValidateUserOp(keyHash, userOp, userOpHash, witness);
+        (bytes4 hookSelector, uint256 hookValidationData) = self.afterValidateUserOp(keyHash, userOp, userOpHash, witness);
         if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
+        return hookValidationData;
     }
 
-    function checkIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory witness)
+    function isValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory witness)
         internal
         view
+        returns (bytes4 magicValue)
     {
-        bytes4 hookSelector = self.afterIsValidSignature(keyHash, digest, witness);
+        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, witness);
         if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
+        return hookMagicValue;
     }
 
-    function checkVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory witness)
+    function verifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory witness)
         internal
         view
     {
