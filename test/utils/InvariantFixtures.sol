@@ -35,6 +35,19 @@ abstract contract InvariantFixtures {
     InvariantState internal _state;
     Settings[] internal fixtureSettings;
 
+    // Warp to this time for keys with expiration to expire
+    uint256 constant EXPIRATION_TIME = 100;
+
+    constructor() {
+        fixtureSettings.push(SettingsBuilder.init());
+        fixtureSettings.push(SettingsBuilder.init().fromIsAdmin(true));
+        fixtureSettings.push(SettingsBuilder.init().fromExpiration(uint40(EXPIRATION_TIME - 1)));
+    }
+
+    function _randSettings(uint256 randomSeed) internal view returns (Settings) {
+        return fixtureSettings[randomSeed % fixtureSettings.length];
+    }
+
     function logState() public view {
         console2.log("[register] success %s", _state.registerSuccess);
         console2.log("[register] reverted %s", _state.registerReverted);

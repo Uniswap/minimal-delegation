@@ -41,7 +41,6 @@ abstract contract FunctionCallGenerator is Test, InvariantFixtures {
 
     // Keys that will be operated over in generated calldata
     TestKey[] public fixture_keys;
-    Settings[] public fixtureSettings;
 
     constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
@@ -52,9 +51,6 @@ abstract contract FunctionCallGenerator is Test, InvariantFixtures {
         for (uint256 i = 0; i < MAX_KEYS; i++) {
             fixture_keys.push(TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint()));
         }
-
-        fixtureSettings.push(SettingsLib.DEFAULT);
-        fixtureSettings.push(SettingsBuilder.init().fromIsAdmin(true));
     }
 
     function _rand(TestKey[] storage keys, uint256 seed) internal view returns (TestKey memory, uint256) {
@@ -147,13 +143,14 @@ abstract contract FunctionCallGenerator is Test, InvariantFixtures {
         }
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
+            Settings settings = _randSettings(randomSeed);
+
             if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
             } else if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
-            // TODO: fuzz settings
-            return _updateCall(keyHash, Settings.wrap(0), revertData);
+            return _updateCall(keyHash, settings, revertData);
         } else {
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
