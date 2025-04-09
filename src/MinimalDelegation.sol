@@ -153,7 +153,7 @@ contract MinimalDelegation is
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
         (bool isValid, Settings settings) = _verifySignatureCore(keyHash, userOpHash, signature);
 
-        // If signature verification failed, return failure immediately WITHOUT expiry
+        // If signature verification failed, return failure immediately WITHOUT expiry as it cannot be untrusted
         if (!isValid) {
             return SIG_VALIDATION_FAILED;
         }
@@ -224,7 +224,6 @@ contract MinimalDelegation is
         (bool isValid, Settings settings) = _verifySignatureCore(keyHash, digest, signature);
 
         if (!isValid) return _1271_INVALID_VALUE;
-        // Otherwise, return the success magic value
         result = _1271_MAGIC_VALUE;
 
         IHook hook = settings.hook();

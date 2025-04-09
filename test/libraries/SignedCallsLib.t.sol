@@ -19,7 +19,7 @@ contract SignedCallsLibTest is Test {
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce, witness: witness});
         bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
-        bytes32 expectedHash = keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce));
+        bytes32 expectedHash = keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, witness));
         assertEq(actualHash, expectedHash);
     }
 }
