@@ -13,7 +13,7 @@ import {Call} from "../../src/libraries/CallLib.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {HandlerCall, CallUtils} from "./CallUtils.sol";
-import {ExecuteHandler} from "./ExecuteHandler.sol";
+import {ExecuteFixtures} from "./ExecuteFixtures.sol";
 import {IInvariantStateTracker, InvariantStateTracker} from "./InvariantStateTracker.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 
@@ -24,10 +24,7 @@ import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
-    using CallUtils for Call;
-    using CallUtils for Call[];
-    using CallUtils for HandlerCall;
-    using CallUtils for HandlerCall[];
+    using CallUtils for *;
     using TestKeyManager for TestKey;
 
     uint256 public constant FUZZED_FUNCTION_COUNT = 3;
@@ -35,12 +32,13 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     uint256 public constant MAX_DEPTH = 5;
     uint256 public constant MAX_KEYS = 10;
 
+    /// Member variables passed in by inheriting contract
     IMinimalDelegation internal immutable signerAccount;
     address private immutable _tokenA;
     address private immutable _tokenB;
 
     // Keys that will be operated over in generated calldata
-    TestKey[] public fixture_testKeys;
+    TestKey[] public fixture_keys;
 
     constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
@@ -49,7 +47,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
 
         // Generate MAX_KEYS and add to fixtureKey
         for (uint256 i = 0; i < MAX_KEYS; i++) {
-            fixture_testKeys.push(TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint()));
+            fixture_keys.push(TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint()));
         }
     }
 
@@ -111,7 +109,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
      * @return A call object for the generated function
      */
     function _generateHandlerCall(uint256 randomSeed) public returns (HandlerCall memory) {
-        (TestKey memory testKey, uint256 index) = _rand(fixture_testKeys, randomSeed);
+        (TestKey memory testKey, uint256 index) = _rand(fixture_keys, randomSeed);
         bytes32 keyHash = testKey.toKeyHash();
 
         bool isRegistered;

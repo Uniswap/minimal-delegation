@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
-import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
+import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
@@ -17,7 +17,7 @@ import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.so
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 
-contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHandler {
+contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler {
     using CallUtils for Call[];
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;

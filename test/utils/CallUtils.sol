@@ -47,6 +47,15 @@ library CallUtils {
         return newCalls;
     }
 
+    function containsSelfCall(Call[] memory calls) internal pure returns (bool) {
+        for (uint256 i = 0; i < calls.length; i++) {
+            if (calls[i].to == SELF_CALL) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Call manipulation
 
     /// @dev Create default empty Call

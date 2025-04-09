@@ -7,7 +7,7 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
-import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
+import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
@@ -26,13 +26,13 @@ import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 // To avoid stack to deep
 struct SetupParams {
     IMinimalDelegation _signerAccount;
-    TestKey[] _keys;
+    TestKey[] _signingKeys;
     address[] _callers;
     address _tokenA;
     address _tokenB;
 }
 
-contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCallGenerator {
+contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerator {
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
@@ -40,11 +40,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     using CallUtils for *;
     using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
+    using SettingsLib for Settings;
 
+    /// @notice The callers which will be used to call execute
     address[] public callers;
     address public currentCaller;
 
-    TestKey[] public keys;
+    /// @notice The keys which will be used to sign calls to execute
+    TestKey[] public signingKeys;
     TestKey public currentSigningKey;
 
     ERC20Mock public tokenA;
@@ -53,8 +56,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     constructor(SetupParams memory _params)
         FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB)
     {
-        for (uint256 i = 0; i < _params._keys.length; i++) {
-            keys.push(_params._keys[i]);
+        for (uint256 i = 0; i < _params._signingKeys.length; i++) {
+            signingKeys.push(_params._signingKeys[i]);
+            // Also add to fixture_keys
+            fixture_keys.push(_params._signingKeys[i]);
         }
         callers = _params._callers;
         tokenA = ERC20Mock(_params._tokenA);
@@ -63,7 +68,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 
     /// @notice Sets the current signing key for the test
     modifier useSigningKey(uint256 keyIndexSeed) {
-        currentSigningKey = keys[_bound(keyIndexSeed, 0, keys.length - 1)];
+        // 20% of the time, use a random key from fixture_keys
+        uint256 index;
+        if (keyIndexSeed % 5 == 0) {
+            (currentSigningKey, index) = _rand(fixture_keys, keyIndexSeed);
+        } else {
+            (currentSigningKey, index) = _rand(signingKeys, keyIndexSeed);
+        }
+        console2.log("signing with key #%s", index);
         _;
     }
 
@@ -79,6 +91,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
         seq = uint64(signerAccount.getSeq(key));
         nonce = key << 64 | seq;
+    }
+
+    /// @notice Sets the tracked revert data if it is not already set
+    function _trackRevert(bytes memory revertData, bytes memory trackedRevertData) internal returns (bytes memory) {
+        if (trackedRevertData.length == 0) {
+            trackedRevertData = revertData;
+        }
+        return trackedRevertData;
     }
 
     /// @notice Executes a batched call with the current caller
@@ -109,40 +129,52 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     /// - If the signing key is not registered on the account, expect the call to revert
     function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
-
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
-        bool signatureIsValid;
-        if (!isRootKey) {
-            // TODO: check expiry here, settings, etc.
-            try signerAccount.getKey(currentKeyHash) {}
-            catch (bytes memory revertData) {
-                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-                signatureIsValid = false;
-            }
-        } else {
-            signatureIsValid = true;
-        }
 
         HandlerCall memory handlerCall = _generateHandlerCall(seed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
-
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-
         Call[] memory calls = handlerCalls.toCalls();
 
         bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
         bytes memory wrappedSignature =
-            abi.encode(isRootKey ? bytes32(0) : currentKeyHash, currentSigningKey.sign(digest));
+            abi.encode(isRootKey ? KeyLib.ROOT_KEY_HASH : currentKeyHash, currentSigningKey.sign(digest));
         bytes memory opData = abi.encode(nonce, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
+
+        // Track just the first expected revert
+        bytes memory expectedRevert;
+        // Top level reverts
+        if (!isRootKey) {
+            // TODO: check expiry here, settings, etc.
+            try signerAccount.getKey(currentKeyHash) {
+                Settings settings = signerAccount.getKeySettings(currentKeyHash);
+                // Expect revert if expired
+                (bool isExpired,) = settings.isExpired();
+                if (isExpired) {
+                    expectedRevert =
+                        _trackRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector), expectedRevert);
+                } else if (!settings.isAdmin() && calls.containsSelfCall()) {
+                    expectedRevert = _trackRevert(
+                        abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector), expectedRevert
+                    );
+                }
+            } catch (bytes memory revertData) {
+                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+                expectedRevert =
+                    _trackRevert(abi.encodeWithSelector(IKeyManagement.KeyDoesNotExist.selector), expectedRevert);
+            }
+        }
+        // Handler call reverts
+        if (handlerCall.revertData.length > 0) {
+            expectedRevert = _trackRevert(handlerCall.revertData, expectedRevert);
+        }
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (!signatureIsValid) {
-                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-            } else if (handlerCall.revertData.length > 0) {
-                assertEq(revertData, handlerCall.revertData);
+            if (expectedRevert.length > 0) {
+                assertEq(revertData, expectedRevert);
             } else {
                 bytes memory debugCalldata =
                     abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -169,9 +201,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
 
     address internal sender = makeAddr("sender");
 
-    TestKey[] internal _keys;
-    TestKey internal untrustedKey;
-
     function setUp() public {
         setUpDelegation();
         setUpTokens();
@@ -188,16 +217,15 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         callers[1] = untrustedCaller;
         vm.label(callers[1], "untrustedCaller");
 
-        untrustedKey = TestKeyManager.withSeed(KeyType.Secp256k1, untrustedPrivateKey);
-
+        TestKey[] memory _signingKeys = new TestKey[](2);
         // Add trusted root key
-        _keys.push(TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey));
+        _signingKeys[0] = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Add untrusted key
-        _keys.push(untrustedKey);
+        _signingKeys[1] = TestKeyManager.withSeed(KeyType.Secp256k1, untrustedPrivateKey);
 
         SetupParams memory params = SetupParams({
             _signerAccount: signerAccount,
-            _keys: _keys,
+            _signingKeys: _signingKeys,
             _callers: callers,
             _tokenA: address(tokenA),
             _tokenB: address(tokenB)
