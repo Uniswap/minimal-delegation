@@ -130,7 +130,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 
         Call[] memory calls = handlerCalls.toCalls();
 
-        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
+        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce, bytes("")).hash());
         bytes memory wrappedSignature =
             abi.encode(isRootKey ? bytes32(0) : currentKeyHash, currentSigningKey.sign(digest));
         bytes memory opData = abi.encode(nonce, wrappedSignature);
