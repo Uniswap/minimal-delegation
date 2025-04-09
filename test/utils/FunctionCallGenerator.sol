@@ -102,7 +102,7 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
      * @return A call object for the generated function
      */
     function _generateHandlerCall(uint256 randomSeed) internal returns (HandlerCall memory) {
-        TestKey memory testKey = _seedKeyFromArray(fixtureKeys, randomSeed);
+        TestKey memory testKey = _randKeyFromArray(fixtureKeys);
         bytes32 keyHash = testKey.toKeyHash();
 
         bool isRegistered;
@@ -132,10 +132,10 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
             Settings settings = _randSettings();
-            if (_testKeyIsSignerAccount(testKey)) {
-                revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
-            } else if (!isRegistered) {
+            if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
+            } else if (_testKeyIsSignerAccount(testKey)) {
+                revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
             }
             return _updateCall(keyHash, settings, revertData);
         } else {

@@ -63,9 +63,6 @@ abstract contract InvariantFixtures is Test {
         fixtureSettings.push(SettingsBuilder.init());
         fixtureSettings.push(SettingsBuilder.init().fromIsAdmin(true));
         fixtureSettings.push(SettingsBuilder.init().fromExpiration(uint40(expirationTime)));
-        for (uint256 i = 0; i < fixtureSettings.length; i++) {
-            console2.log("fixtureSettings[%s] %s", i, Settings.unwrap(fixtureSettings[i]));
-        }
 
         // Add the current block
         fixtureBlocks.push(InvariantBlock({blockNumber: block.number, blockTimestamp: block.timestamp}));
@@ -73,8 +70,8 @@ abstract contract InvariantFixtures is Test {
         fixtureBlocks.push(InvariantBlock({blockNumber: block.number + 1, blockTimestamp: expirationTime - 1}));
     }
 
-    function _seedKeyFromArray(TestKey[] storage _keys, uint256 randomSeed) internal view returns (TestKey memory) {
-        return _keys[randomSeed % _keys.length];
+    function _randKeyFromArray(TestKey[] storage _keys) internal returns (TestKey memory) {
+        return _keys[vm.randomUint() % _keys.length];
     }
 
     function _randSettings() internal returns (Settings) {

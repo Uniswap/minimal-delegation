@@ -64,8 +64,8 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
 
     /// @notice Sets the current key for the test
     /// if the test uses `caller`, we prank the key's public key
-    modifier useKey(uint256 keyIndexSeed) {
-        currentSigningKey = _seedKeyFromArray(signingKeys, keyIndexSeed);
+    modifier useKey() {
+        currentSigningKey = _randKeyFromArray(signingKeys);
         _;
     }
 
@@ -91,7 +91,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// TODO: only supports single call arrays for now
     /// - Generates a random call, executes it, then processes any registered callbacks
     /// - Any reverts are expected by the generated handler call
-    function executeBatchedCall(uint256 generatorSeed, uint256 signerSeed) public useKey(signerSeed) setBlock() {
+    function executeBatchedCall(uint256 generatorSeed) public useKey() setBlock() {
         address caller = vm.addr(currentSigningKey.privateKey);
         vm.startPrank(caller);
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
@@ -116,7 +116,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed, uint256 signerSeed) public useKey(signerSeed) setBlock() {
+    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey() setBlock() {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
 
