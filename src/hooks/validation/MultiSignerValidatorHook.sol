@@ -21,8 +21,14 @@ contract MultiSignerValidatorHook is IValidationHook {
     mapping(AccountKeyHash => EnumerableSetLib.Bytes32Set requiredSigners) private requiredSigners;
     mapping(bytes32 => bytes encodedKey) private keyStorage;
 
+    error InvalidSignature();
     error InvalidSignatureCount();
-    error MissingSigner();
+    error SignerNotRegistered();
+
+    bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
+
+    event RequiredSignerAdded(bytes32 keyHash, bytes32 signerKeyHash);
 
     /// @notice Add a required signer for a call.
     /// @dev Calculates the accountKeyHash using the msg.sender and the provided keyHash
@@ -32,25 +38,32 @@ contract MultiSignerValidatorHook is IValidationHook {
 
         keyStorage[signerKeyHash] = encodedKey;
         requiredSigners[keyHash.wrap(msg.sender)].add(signerKeyHash);
+
+        emit RequiredSignerAdded(keyHash, signerKeyHash);
     }
 
-    function afterValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash, bytes calldata witness)
+    function afterValidateUserOp(
+        bytes32 keyHash,
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash,
+        bytes calldata witness
+    ) external view returns (bytes4 selector, uint256 validationData) {
+        return (
+            IValidationHook.afterValidateUserOp.selector,
+            _hasAllRequiredSignatures(keyHash, userOpHash, witness) ? 0 : 1
+        );
+    }
+
+    function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata witness)
         external
         view
-        returns (bytes4 selector, uint256 validationData)
+        returns (bytes4 selector, bytes4 magicValue)
     {
-        // TODO:
-        return (IValidationHook.afterValidateUserOp.selector, 0);
-    }
-
-    function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata witness) 
-        external 
-        view 
-        returns (bytes4 selector, bytes4 magicValue) 
-    {
-        // TODO:
-        bytes4 _1271_MAGIC_VALUE = 0x1626ba7e;
-        return (IValidationHook.afterIsValidSignature.selector, _1271_MAGIC_VALUE);
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(witness, (bytes[]));
+        return (
+            IValidationHook.afterIsValidSignature.selector,
+            _hasAllRequiredSignatures(keyHash, digest, witness) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE
+        );
     }
 
     function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata witness)
@@ -58,27 +71,35 @@ contract MultiSignerValidatorHook is IValidationHook {
         view
         returns (bytes4 selector)
     {
+        if (!_hasAllRequiredSignatures(keyHash, digest, witness)) revert InvalidSignature();
+        return IValidationHook.afterVerifySignature.selector;
+    }
+
+    function _hasAllRequiredSignatures(bytes32 keyHash, bytes32 digest, bytes calldata witness)
+        internal
+        view
+        returns (bool isValid)
+    {
         (bytes[] memory wrappedSignerSignatures) = abi.decode(witness, (bytes[]));
         AccountKeyHash accountKeyHash = keyHash.wrap(msg.sender);
-
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 
         // iterate over requiredSigners
         for (uint256 i = 0; i < requiredSigners[accountKeyHash].length(); i++) {
-            // Verify that keyHash is in the requiredSigners set
             (bytes32 signerKeyHash, bytes memory signerSignature) =
                 abi.decode(wrappedSignerSignatures[i], (bytes32, bytes));
 
-            if (!requiredSigners[accountKeyHash].contains(signerKeyHash)) revert MissingSigner();
+            if (!requiredSigners[accountKeyHash].contains(signerKeyHash)) revert SignerNotRegistered();
 
             Key memory signerKey = abi.decode(keyStorage[signerKeyHash], (Key));
-            bool isValid = KeyLib.verify(signerKey, digest, signerSignature);
+            isValid = KeyLib.verify(signerKey, digest, signerSignature);
 
+            // break if any signatures are invalid
             if (!isValid) {
-                revert("Invalid additional signer signature");
+                return false;
             }
         }
 
-        return IValidationHook.afterVerifySignature.selector;
+        return true;
     }
 }

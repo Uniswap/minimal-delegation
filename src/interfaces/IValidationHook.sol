@@ -9,10 +9,12 @@ interface IValidationHook {
     /// @dev Must revert if the user operation is invalid with `witness`
     /// @return selector Must be afterValidateUserOp.selector
     /// @return validationData The validation data to be returned, overriding the default value
-    function afterValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash, bytes calldata witness)
-        external
-        view
-        returns (bytes4 selector, uint256 validationData);
+    function afterValidateUserOp(
+        bytes32 keyHash,
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash,
+        bytes calldata witness
+    ) external view returns (bytes4 selector, uint256 validationData);
 
     /// @dev Called to override isValidSignature result
     /// @return selector Must be afterIsValidSignature.selector

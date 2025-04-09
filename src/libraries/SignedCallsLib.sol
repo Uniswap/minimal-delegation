@@ -20,6 +20,8 @@ library SignedCallsLib {
 
     /// @notice Hashes an Execute struct.
     function hash(SignedCalls memory signedCalls) internal pure returns (bytes32) {
-        return keccak256(abi.encode(SIGNED_CALLS_TYPEHASH, signedCalls.calls.hash(), signedCalls.nonce, signedCalls.witness));
+        return keccak256(
+            abi.encode(SIGNED_CALLS_TYPEHASH, signedCalls.calls.hash(), signedCalls.nonce, signedCalls.witness)
+        );
     }
 }
