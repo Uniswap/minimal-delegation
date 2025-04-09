@@ -27,7 +27,7 @@ contract ERC7914Test is DelegationHandler {
     function test_approveNative_succeeds() public {
         vm.expectEmit(true, true, false, true);
         emit ApproveNative(address(signerAccount), bob, 1 ether);
-        vm.startPrank(address(signerAccount));
+        vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, 1 ether);
         assertTrue(success);
         assertEq(signerAccount.allowance(bob), 1 ether);

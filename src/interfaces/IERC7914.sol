@@ -26,12 +26,14 @@ interface IERC7914 {
     function transientAllowance(address spender) external returns (uint256);
 
     /// @notice Transfers native tokens from the caller to a recipient
+    /// @dev Doesn't forward transferFrom requests - the specified `from` address must be address(this)
     function transferFromNative(address from, address recipient, uint256 amount) external returns (bool);
 
     /// @notice Approves a spender to transfer native tokens on behalf of the caller
     function approveNative(address spender, uint256 amount) external returns (bool);
 
     /// @notice Transfers native tokens from the caller to a recipient with transient storage
+    /// @dev Doesn't forward transferFrom requests - the specified `from` address must be address(this)
     function transferFromNativeTransient(address from, address recipient, uint256 amount) external returns (bool);
 
     /// @notice Approves a spender to transfer native tokens on behalf of the caller with transient storage
