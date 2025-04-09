@@ -60,9 +60,9 @@ contract MinimalDelegation is
         } else if (mode.supportsOpData()) {
             (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
             (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
-            (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+            (bytes32 keyHash, bytes memory signature, bytes memory witness) = abi.decode(wrappedSignature, (bytes32, bytes, bytes));
 
-            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce, bytes("")), signature);
+            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce, witness), signature);
             _dispatch(mode, calls, keyHash);
         } else if (mode.isBatchOfBatches()) {
             bytes[] memory executeDataArray = abi.decode(executionData, (bytes[]));
@@ -166,7 +166,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if(hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
             // Will revert if validation should fail
-            hook.checkValidateUserOp(keyHash, witness);
+            hook.checkValidateUserOp(keyHash, userOp, userOpHash, witness);
         }
     }
 
@@ -186,7 +186,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if(hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
             // Will revert if validation should fail
-            hook.checkVerifySignature(keyHash, signedCalls.witness);
+            hook.checkVerifySignature(keyHash, digest, signedCalls.witness);
         }
     }
 
@@ -202,15 +202,19 @@ contract MinimalDelegation is
         returns (bytes4 result)
     {
         (bytes32 keyHash, bytes memory signature, bytes memory witness) = abi.decode(wrappedSignature, (bytes32, bytes, bytes));
-
+        
         Key memory key = getKey(keyHash);
-        result = key.verify(_hashTypedData(data.hashWithWrappedType()), signature) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE;
-
         Settings settings = getKeySettings(keyHash);
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+
+        bytes32 digest = _hashTypedData(data.hashWithWrappedType());
+        result = key.verify(digest, signature) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE;
+
         IHook hook = settings.hook();
         if(hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
             // Will revert if validation should fail
-            hook.checkIsValidSignature(keyHash, witness);
+            hook.checkIsValidSignature(keyHash, digest, witness);
         }
         return result;
     }
