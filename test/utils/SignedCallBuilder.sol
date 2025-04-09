@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.23;
+
+import {Call} from "../../src/libraries/CallLib.sol";
+import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
+import {CallBuilder} from "./CallBuilder.sol";
+
+library SignedCallBuilder {
+    using CallBuilder for Call[];
+
+    function init() internal pure returns (SignedCalls memory) {
+        return SignedCalls({calls: CallBuilder.init(), keyHash: bytes32(0), nonce: 0, shouldRevert: true});
+    }
+
+    function withCalls(SignedCalls memory signedCalls, Call[] memory calls)
+        internal
+        pure
+        returns (SignedCalls memory)
+    {
+        return SignedCalls({
+            calls: calls,
+            keyHash: signedCalls.keyHash,
+            nonce: signedCalls.nonce,
+            shouldRevert: signedCalls.shouldRevert
+        });
+    }
+
+    function withKeyHash(SignedCalls memory signedCalls, bytes32 keyHash) internal pure returns (SignedCalls memory) {
+        return SignedCalls({
+            calls: signedCalls.calls,
+            keyHash: keyHash,
+            nonce: signedCalls.nonce,
+            shouldRevert: signedCalls.shouldRevert
+        });
+    }
+
+    function withNonce(SignedCalls memory signedCalls, uint256 nonce) internal pure returns (SignedCalls memory) {
+        return SignedCalls({
+            calls: signedCalls.calls,
+            keyHash: signedCalls.keyHash,
+            nonce: nonce,
+            shouldRevert: signedCalls.shouldRevert
+        });
+    }
+
+    function withShouldRevert(SignedCalls memory signedCalls, bool shouldRevert)
+        internal
+        pure
+        returns (SignedCalls memory)
+    {
+        return SignedCalls({
+            calls: signedCalls.calls,
+            keyHash: signedCalls.keyHash,
+            nonce: signedCalls.nonce,
+            shouldRevert: shouldRevert
+        });
+    }
+}
