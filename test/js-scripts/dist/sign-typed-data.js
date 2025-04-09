@@ -276,7 +276,7 @@ var init_md = __esm({
         const { view, buffer: buffer2, blockLen } = this;
         data = toBytes(data);
         const len = data.length;
-        for (let pos = 0; pos < len; ) {
+        for (let pos = 0; pos < len;) {
           const take = Math.min(blockLen - this.pos, len - pos);
           if (take === blockLen) {
             const dataView = createView(data);
@@ -1947,14 +1947,14 @@ function weierstrass(curveDef) {
     const b = Point2.fromHex(publicB);
     return b.multiply(normPrivateKeyToScalar(privateA)).toRawBytes(isCompressed);
   }
-  const bits2int = CURVE.bits2int || function(bytes) {
+  const bits2int = CURVE.bits2int || function (bytes) {
     if (bytes.length > 8192)
       throw new Error("input is too large");
     const num2 = bytesToNumberBE(bytes);
     const delta = bytes.length * 8 - CURVE.nBitLength;
     return delta > 0 ? num2 >> BigInt(delta) : num2;
   };
-  const bits2int_modN = CURVE.bits2int_modN || function(bytes) {
+  const bits2int_modN = CURVE.bits2int_modN || function (bytes) {
     return modN2(bits2int(bytes));
   };
   const ORDER_MASK = bitMask(CURVE.nBitLength);
@@ -3279,7 +3279,7 @@ var init_sha3 = __esm({
         const { blockLen, state } = this;
         data = toBytes(data);
         const len = data.length;
-        for (let pos = 0; pos < len; ) {
+        for (let pos = 0; pos < len;) {
           const take = Math.min(blockLen - this.pos, len - pos);
           for (let i = 0; i < take; i++)
             state[this.pos++] ^= data[pos++];
@@ -3305,7 +3305,7 @@ var init_sha3 = __esm({
         this.finish();
         const bufferOut = this.state;
         const { blockLen } = this;
-        for (let pos = 0, len = out.length; pos < len; ) {
+        for (let pos = 0, len = out.length; pos < len;) {
           if (this.posOut >= blockLen)
             this.keccak();
           const take = Math.min(blockLen - this.posOut, len - pos);
@@ -3791,7 +3791,7 @@ var init_transaction = __esm({
       }
     };
     TransactionExecutionError = class extends BaseError {
-      constructor(cause, { account: account2, docsPath: docsPath3, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce: nonce2, to, value }) {
+      constructor(cause, { account: account2, docsPath: docsPath3, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value }) {
         const prettyArgs = prettyPrint({
           chain: chain && `${chain?.name} (id: ${chain?.id})`,
           from: account2?.address,
@@ -3802,7 +3802,7 @@ var init_transaction = __esm({
           gasPrice: typeof gasPrice !== "undefined" && `${formatGwei(gasPrice)} gwei`,
           maxFeePerGas: typeof maxFeePerGas !== "undefined" && `${formatGwei(maxFeePerGas)} gwei`,
           maxPriorityFeePerGas: typeof maxPriorityFeePerGas !== "undefined" && `${formatGwei(maxPriorityFeePerGas)} gwei`,
-          nonce: nonce2
+          nonce
         });
         super(cause.shortMessage, {
           cause,
@@ -4019,8 +4019,8 @@ var init_node = __esm({
       value: /max fee per gas less than block base fee|fee cap less than block base fee|transaction is outdated/
     });
     NonceTooHighError = class extends BaseError {
-      constructor({ cause, nonce: nonce2 } = {}) {
-        super(`Nonce provided for the transaction ${nonce2 ? `(${nonce2}) ` : ""}is higher than the next one expected.`, { cause, name: "NonceTooHighError" });
+      constructor({ cause, nonce } = {}) {
+        super(`Nonce provided for the transaction ${nonce ? `(${nonce}) ` : ""}is higher than the next one expected.`, { cause, name: "NonceTooHighError" });
       }
     };
     Object.defineProperty(NonceTooHighError, "nodeMessage", {
@@ -4030,9 +4030,9 @@ var init_node = __esm({
       value: /nonce too high/
     });
     NonceTooLowError = class extends BaseError {
-      constructor({ cause, nonce: nonce2 } = {}) {
+      constructor({ cause, nonce } = {}) {
         super([
-          `Nonce provided for the transaction ${nonce2 ? `(${nonce2}) ` : ""}is lower than the current nonce of the account.`,
+          `Nonce provided for the transaction ${nonce ? `(${nonce}) ` : ""}is lower than the current nonce of the account.`,
           "Try increasing the nonce or find the latest nonce with `getTransactionCount`."
         ].join("\n"), { cause, name: "NonceTooLowError" });
       }
@@ -4044,8 +4044,8 @@ var init_node = __esm({
       value: /nonce too low|transaction already imported|already known/
     });
     NonceMaxValueError = class extends BaseError {
-      constructor({ cause, nonce: nonce2 } = {}) {
-        super(`Nonce provided for the transaction ${nonce2 ? `(${nonce2}) ` : ""}exceeds the maximum allowed nonce.`, { cause, name: "NonceMaxValueError" });
+      constructor({ cause, nonce } = {}) {
+        super(`Nonce provided for the transaction ${nonce ? `(${nonce}) ` : ""}exceeds the maximum allowed nonce.`, { cause, name: "NonceMaxValueError" });
       }
     };
     Object.defineProperty(NonceMaxValueError, "nodeMessage", {
@@ -6166,14 +6166,14 @@ function serializeStateMapping(stateMapping) {
   }, {});
 }
 function serializeAccountStateOverride(parameters) {
-  const { balance, nonce: nonce2, state, stateDiff, code } = parameters;
+  const { balance, nonce, state, stateDiff, code } = parameters;
   const rpcAccountStateOverride = {};
   if (code !== void 0)
     rpcAccountStateOverride.code = code;
   if (balance !== void 0)
     rpcAccountStateOverride.balance = numberToHex(balance);
-  if (nonce2 !== void 0)
-    rpcAccountStateOverride.nonce = numberToHex(nonce2);
+  if (nonce !== void 0)
+    rpcAccountStateOverride.nonce = numberToHex(nonce);
   if (state !== void 0)
     rpcAccountStateOverride.state = serializeStateMapping(state);
   if (stateDiff !== void 0) {
@@ -6503,13 +6503,13 @@ function getSizeOfLength(length) {
 // node_modules/viem/_esm/experimental/eip7702/utils/hashAuthorization.js
 init_keccak256();
 function hashAuthorization(parameters) {
-  const { chainId, contractAddress, nonce: nonce2, to } = parameters;
+  const { chainId, contractAddress, nonce, to } = parameters;
   const hash2 = keccak256(concatHex([
     "0x05",
     toRlp([
       chainId ? numberToHex(chainId) : "0x",
       contractAddress,
-      nonce2 ? numberToHex(nonce2) : "0x"
+      nonce ? numberToHex(nonce) : "0x"
     ])
   ]));
   if (to === "bytes")
@@ -6519,9 +6519,9 @@ function hashAuthorization(parameters) {
 
 // node_modules/viem/_esm/accounts/utils/signAuthorization.js
 async function experimental_signAuthorization(parameters) {
-  const { contractAddress, chainId, nonce: nonce2, privateKey: privateKey2, to = "object" } = parameters;
+  const { contractAddress, chainId, nonce, privateKey: privateKey2, to = "object" } = parameters;
   const signature = await sign({
-    hash: hashAuthorization({ contractAddress, chainId, nonce: nonce2 }),
+    hash: hashAuthorization({ contractAddress, chainId, nonce }),
     privateKey: privateKey2,
     to
   });
@@ -6529,7 +6529,7 @@ async function experimental_signAuthorization(parameters) {
     return {
       contractAddress,
       chainId,
-      nonce: nonce2,
+      nonce,
       ...signature
     };
   return signature;
@@ -6649,8 +6649,8 @@ var bytesPerFieldElement = 32;
 var fieldElementsPerBlob = 4096;
 var bytesPerBlob = bytesPerFieldElement * fieldElementsPerBlob;
 var maxBytesPerTransaction = bytesPerBlob * blobsPerTransaction - // terminator byte (0x80).
-1 - // zero byte (0x00) appended to each field element.
-1 * fieldElementsPerBlob * blobsPerTransaction;
+  1 - // zero byte (0x00) appended to each field element.
+  1 * fieldElementsPerBlob * blobsPerTransaction;
 
 // node_modules/viem/_esm/constants/kzg.js
 var versionedHashVersionKzg = 1;
@@ -6757,11 +6757,11 @@ function serializeAuthorizationList(authorizationList) {
     return [];
   const serializedAuthorizationList = [];
   for (const authorization of authorizationList) {
-    const { contractAddress, chainId, nonce: nonce2, ...signature } = authorization;
+    const { contractAddress, chainId, nonce, ...signature } = authorization;
     serializedAuthorizationList.push([
       chainId ? toHex(chainId) : "0x",
       contractAddress,
-      nonce2 ? toHex(nonce2) : "0x",
+      nonce ? toHex(nonce) : "0x",
       ...toYParitySignatureArray({}, signature)
     ]);
   }
@@ -6901,7 +6901,7 @@ function serializeTransaction(transaction, signature) {
   return serializeTransactionLegacy(transaction, signature);
 }
 function serializeTransactionEIP7702(transaction, signature) {
-  const { authorizationList, chainId, gas, nonce: nonce2, to, value, maxFeePerGas, maxPriorityFeePerGas, accessList, data } = transaction;
+  const { authorizationList, chainId, gas, nonce, to, value, maxFeePerGas, maxPriorityFeePerGas, accessList, data } = transaction;
   assertTransactionEIP7702(transaction);
   const serializedAccessList = serializeAccessList(accessList);
   const serializedAuthorizationList = serializeAuthorizationList(authorizationList);
@@ -6909,7 +6909,7 @@ function serializeTransactionEIP7702(transaction, signature) {
     "0x04",
     toRlp([
       toHex(chainId),
-      nonce2 ? toHex(nonce2) : "0x",
+      nonce ? toHex(nonce) : "0x",
       maxPriorityFeePerGas ? toHex(maxPriorityFeePerGas) : "0x",
       maxFeePerGas ? toHex(maxFeePerGas) : "0x",
       gas ? toHex(gas) : "0x",
@@ -6923,7 +6923,7 @@ function serializeTransactionEIP7702(transaction, signature) {
   ]);
 }
 function serializeTransactionEIP4844(transaction, signature) {
-  const { chainId, gas, nonce: nonce2, to, value, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, accessList, data } = transaction;
+  const { chainId, gas, nonce, to, value, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, accessList, data } = transaction;
   assertTransactionEIP4844(transaction);
   let blobVersionedHashes = transaction.blobVersionedHashes;
   let sidecars = transaction.sidecars;
@@ -6946,7 +6946,7 @@ function serializeTransactionEIP4844(transaction, signature) {
   const serializedAccessList = serializeAccessList(accessList);
   const serializedTransaction = [
     toHex(chainId),
-    nonce2 ? toHex(nonce2) : "0x",
+    nonce ? toHex(nonce) : "0x",
     maxPriorityFeePerGas ? toHex(maxPriorityFeePerGas) : "0x",
     maxFeePerGas ? toHex(maxFeePerGas) : "0x",
     gas ? toHex(gas) : "0x",
@@ -6980,12 +6980,12 @@ function serializeTransactionEIP4844(transaction, signature) {
   ]);
 }
 function serializeTransactionEIP1559(transaction, signature) {
-  const { chainId, gas, nonce: nonce2, to, value, maxFeePerGas, maxPriorityFeePerGas, accessList, data } = transaction;
+  const { chainId, gas, nonce, to, value, maxFeePerGas, maxPriorityFeePerGas, accessList, data } = transaction;
   assertTransactionEIP1559(transaction);
   const serializedAccessList = serializeAccessList(accessList);
   const serializedTransaction = [
     toHex(chainId),
-    nonce2 ? toHex(nonce2) : "0x",
+    nonce ? toHex(nonce) : "0x",
     maxPriorityFeePerGas ? toHex(maxPriorityFeePerGas) : "0x",
     maxFeePerGas ? toHex(maxFeePerGas) : "0x",
     gas ? toHex(gas) : "0x",
@@ -7001,12 +7001,12 @@ function serializeTransactionEIP1559(transaction, signature) {
   ]);
 }
 function serializeTransactionEIP2930(transaction, signature) {
-  const { chainId, gas, data, nonce: nonce2, to, value, accessList, gasPrice } = transaction;
+  const { chainId, gas, data, nonce, to, value, accessList, gasPrice } = transaction;
   assertTransactionEIP2930(transaction);
   const serializedAccessList = serializeAccessList(accessList);
   const serializedTransaction = [
     toHex(chainId),
-    nonce2 ? toHex(nonce2) : "0x",
+    nonce ? toHex(nonce) : "0x",
     gasPrice ? toHex(gasPrice) : "0x",
     gas ? toHex(gas) : "0x",
     to ?? "0x",
@@ -7021,10 +7021,10 @@ function serializeTransactionEIP2930(transaction, signature) {
   ]);
 }
 function serializeTransactionLegacy(transaction, signature) {
-  const { chainId = 0, gas, data, nonce: nonce2, to, value, gasPrice } = transaction;
+  const { chainId = 0, gas, data, nonce, to, value, gasPrice } = transaction;
   assertTransactionLegacy(transaction);
   let serializedTransaction = [
-    nonce2 ? toHex(nonce2) : "0x",
+    nonce ? toHex(nonce) : "0x",
     gasPrice ? toHex(gasPrice) : "0x",
     gas ? toHex(gas) : "0x",
     to ?? "0x",
@@ -7505,7 +7505,7 @@ init_formatGwei();
 init_base();
 init_transaction();
 var EstimateGasExecutionError = class extends BaseError {
-  constructor(cause, { account: account2, docsPath: docsPath3, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce: nonce2, to, value }) {
+  constructor(cause, { account: account2, docsPath: docsPath3, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value }) {
     const prettyArgs = prettyPrint({
       from: account2?.address,
       to,
@@ -7515,7 +7515,7 @@ var EstimateGasExecutionError = class extends BaseError {
       gasPrice: typeof gasPrice !== "undefined" && `${formatGwei(gasPrice)} gwei`,
       maxFeePerGas: typeof maxFeePerGas !== "undefined" && `${formatGwei(maxFeePerGas)} gwei`,
       maxPriorityFeePerGas: typeof maxPriorityFeePerGas !== "undefined" && `${formatGwei(maxPriorityFeePerGas)} gwei`,
-      nonce: nonce2
+      nonce
     });
     super(cause.shortMessage, {
       cause,
@@ -7841,7 +7841,7 @@ var defaultParameters = [
 ];
 var eip1559NetworkCache = /* @__PURE__ */ new Map();
 async function prepareTransactionRequest(client, args2) {
-  const { account: account_ = client.account, blobs, chain, gas, kzg, nonce: nonce2, nonceManager, parameters = defaultParameters, type } = args2;
+  const { account: account_ = client.account, blobs, chain, gas, kzg, nonce, nonceManager, parameters = defaultParameters, type } = args2;
   const account2 = account_ ? parseAccount(account_) : account_;
   const request = { ...args2, ...account2 ? { from: account2?.address } : {} };
   let block;
@@ -7863,7 +7863,7 @@ async function prepareTransactionRequest(client, args2) {
     chainId = chainId_;
     return chainId;
   }
-  if (parameters.includes("nonce") && typeof nonce2 === "undefined" && account2) {
+  if (parameters.includes("nonce") && typeof nonce === "undefined" && account2) {
     if (nonceManager) {
       const chainId2 = await getChainId2();
       request.nonce = await nonceManager.consume({
@@ -7970,14 +7970,14 @@ async function estimateGas(client, args2) {
   const { account: account_ = client.account } = args2;
   const account2 = account_ ? parseAccount(account_) : void 0;
   try {
-    let estimateGas_rpc = function(parameters) {
+    let estimateGas_rpc = function (parameters) {
       const { block: block2, request: request2, rpcStateOverride: rpcStateOverride2 } = parameters;
       return client.request({
         method: "eth_estimateGas",
         params: rpcStateOverride2 ? [request2, block2 ?? "latest", rpcStateOverride2] : block2 ? [request2, block2] : [request2]
       });
     };
-    const { accessList, authorizationList, blobs, blobVersionedHashes, blockNumber, blockTag, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce: nonce2, value, stateOverride, ...rest } = await prepareTransactionRequest(client, {
+    const { accessList, authorizationList, blobs, blobVersionedHashes, blockNumber, blockTag, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, value, stateOverride, ...rest } = await prepareTransactionRequest(client, {
       ...args2,
       parameters: (
         // Some RPC Providers do not compute versioned hashes from blobs. We will need
@@ -8016,7 +8016,7 @@ async function estimateGas(client, args2) {
       maxFeePerBlobGas,
       maxFeePerGas,
       maxPriorityFeePerGas,
-      nonce: nonce2,
+      nonce,
       to,
       value
     });
@@ -8132,7 +8132,7 @@ async function sendRawTransaction(client, { serializedTransaction }) {
 // node_modules/viem/_esm/actions/wallet/sendTransaction.js
 var supportsWalletNamespace = new LruMap(128);
 async function sendTransaction(client, parameters) {
-  const { account: account_ = client.account, chain = client.chain, accessList, authorizationList, blobs, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce: nonce2, value, ...rest } = parameters;
+  const { account: account_ = client.account, chain = client.chain, accessList, authorizationList, blobs, data, gas, gasPrice, maxFeePerBlobGas, maxFeePerGas, maxPriorityFeePerGas, nonce, value, ...rest } = parameters;
   if (typeof account_ === "undefined")
     throw new AccountNotFoundError({
       docsPath: "/docs/actions/wallet/sendTransaction"
@@ -8178,7 +8178,7 @@ async function sendTransaction(client, parameters) {
         maxFeePerBlobGas,
         maxFeePerGas,
         maxPriorityFeePerGas,
-        nonce: nonce2,
+        nonce,
         to,
         value
       });
@@ -8225,7 +8225,7 @@ async function sendTransaction(client, parameters) {
         maxFeePerBlobGas,
         maxFeePerGas,
         maxPriorityFeePerGas,
-        nonce: nonce2,
+        nonce,
         nonceManager: account2.nonceManager,
         parameters: [...defaultParameters, "sidecars"],
         value,
@@ -8944,14 +8944,16 @@ init_pad();
 var DOMAIN_NAME = "Uniswap Minimal Delegation";
 var DOMAIN_VERSION = "1";
 var types = {
+  SignedCalls: [
+    { name: "calls", type: "Call[]" },
+    { name: "nonce", type: "uint256" },
+    { name: "keyHash", type: "bytes32" },
+    { name: "shouldRevert", type: "bool" }
+  ],
   Call: [
     { name: "to", type: "address" },
     { name: "value", type: "uint256" },
     { name: "data", type: "bytes" }
-  ],
-  SignedCalls: [
-    { name: "calls", type: "Call[]" },
-    { name: "nonce", type: "uint256" }
   ]
 };
 
@@ -8962,7 +8964,7 @@ if (args.length < 1) {
   process.exit(1);
 }
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, calls, nonce } = jsonInput;
+var { privateKey, verifyingContract, signedCalls } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var domain = {
   name: DOMAIN_NAME,
@@ -8983,10 +8985,7 @@ async function signTypedData3() {
       domain,
       types,
       primaryType: "SignedCalls",
-      message: {
-        calls,
-        nonce
-      }
+      message: signedCalls
     });
     process.stdout.write(signature);
     process.exit(0);

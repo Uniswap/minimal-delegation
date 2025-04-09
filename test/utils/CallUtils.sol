@@ -6,6 +6,7 @@ import {IKeyManagement} from "../../src/interfaces/IKeyManagement.sol";
 import {IERC7821} from "../../src/interfaces/IERC7821.sol";
 import {Settings} from "../../src/libraries/SettingsLib.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
+import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @dev A wrapper around Call that includes callback data for processing after execution

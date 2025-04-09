@@ -16,6 +16,7 @@ import {KeyType} from "../src/libraries/KeyLib.sol";
 import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
+import {INonceManager} from "../src/interfaces/INonceManager.sol";
 
 contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler {
     using CallUtils for Call[];
@@ -41,9 +42,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
-        bytes memory executionData = abi.encode(calls);
-        bytes memory callData =
-            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
+        bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, calls, true);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -75,9 +74,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
-        bytes memory executionData = abi.encode(calls);
-        bytes memory callData =
-            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL, executionData);
+        bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, calls, true);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -95,32 +92,5 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
 
         uint256 tokenBalanceAfter = tokenA.balanceOf(address(receiver));
         assertEq(tokenBalanceAfter, tokenBalanceBefore + 1e18);
-    }
-
-    function test_handleOps_single_eoaSigner_emits_UserOperationRevertReason() public {
-        Call[] memory calls = CallUtils.initArray();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-
-        bytes memory executionData = abi.encode(calls);
-        bytes memory callData =
-            abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-
-        PackedUserOperation memory userOp =
-            UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
-
-        bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
-
-        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
-        userOps[0] = userOp;
-
-        vm.expectEmit(true, true, true, true);
-        emit IEntryPoint.UserOperationRevertReason(
-            entryPoint.getUserOpHash(userOp),
-            address(signerAccount),
-            0,
-            abi.encodeWithSelector(IERC7821.UnsupportedExecutionMode.selector)
-        );
-        entryPoint.handleOps(userOps, bundler);
     }
 }

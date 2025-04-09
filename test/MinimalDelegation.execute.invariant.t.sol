@@ -24,8 +24,9 @@ import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
 import {InvariantBlock} from "./utils/InvariantFixtures.sol";
-
+import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
 // To avoid stack to deep
+
 struct SetupParams {
     IMinimalDelegation _signerAccount;
     TestKey[] _signingKeys;
@@ -43,6 +44,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     using SettingsBuilder for Settings;
     using SettingsLib for Settings;
     using InvariantRevertLib for bytes[];
+    using SignedCallBuilder for SignedCalls;
 
     /// @notice The keys which will be used to sign calls to execute
     TestKey[] public signingKeys;
@@ -50,6 +52,9 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
 
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
+
+    bytes4 public constant EXECUTE_SIGNED_CALLS_SELECTOR =
+        bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool),bytes)"));
 
     constructor(SetupParams memory _params)
         FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB)
@@ -91,13 +96,13 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// TODO: only supports single call arrays for now
     /// - Generates a random call, executes it, then processes any registered callbacks
     /// - Any reverts are expected by the generated handler call
-    function executeBatchedCall(uint256 generatorSeed) public useKey() setBlock() {
+    function executeBatchedCall(uint256 generatorSeed) public useKey setBlock {
         address caller = vm.addr(currentSigningKey.privateKey);
         vm.startPrank(caller);
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
-        try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
+        try signerAccount.execute(handlerCalls.toCalls(), true) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (caller != address(signerAccount)) {
@@ -116,20 +121,20 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey() setBlock() {
+    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
-        bytes32 currentKeyHash = currentSigningKey.toKeyHash();
+        bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
-        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce).hash());
-        bytes memory wrappedSignature =
-            abi.encode(isRootKey ? KeyLib.ROOT_KEY_HASH : currentKeyHash, currentSigningKey.sign(digest));
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
-        bytes memory executionData = abi.encode(calls, opData);
+        SignedCalls memory signedCalls =
+            SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(currentKeyHash);
+
+        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
+        bytes memory signature = currentSigningKey.sign(digest);
 
         bytes[] memory expectedReverts = InvariantRevertLib.initArray();
 
@@ -158,7 +163,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
             expectedReverts = expectedReverts.push(handlerCall.revertData);
         }
 
-        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
+        try signerAccount.execute(signedCalls, signature) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (expectedReverts.length > 0) {
@@ -166,7 +171,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 assertEq(revertData, expectedReverts[0]);
             } else {
                 bytes memory debugCalldata =
-                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+                    abi.encodeWithSelector(EXECUTE_SIGNED_CALLS_SELECTOR, signedCalls, signature);
                 console2.logBytes(debugCalldata);
                 console2.logBytes(revertData);
                 revert("uncaught revert");

@@ -13,14 +13,13 @@ import {
   pad,
 } from 'viem'
 
-import { DOMAIN_NAME, DOMAIN_VERSION, types, Call} from './utils/constants';
+import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedCalls} from './utils/constants';
 
 
 interface InputData {
   privateKey: string;
   verifyingContract: Address;
-  calls: Call[];
-  nonce: number;
+  signedCalls: SignedCalls;
 }
 
 // Read command line arguments
@@ -32,7 +31,7 @@ if (args.length < 1) {
 
 // Parse the JSON input
 const jsonInput = JSON.parse(args[0]) as InputData;
-const { privateKey, verifyingContract, calls, nonce } = jsonInput;
+const { privateKey, verifyingContract, signedCalls } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 
@@ -59,10 +58,7 @@ async function signTypedData(): Promise<void> {
       domain,
       types,
       primaryType: 'SignedCalls',
-      message: {
-        calls: calls,
-        nonce: nonce,
-      }
+      message: signedCalls
     });
     // Return the signature
     process.stdout.write(signature);
