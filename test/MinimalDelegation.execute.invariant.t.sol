@@ -73,7 +73,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     }
 
     /// @notice Sets the tracked revert data if it is not already set
-    function _trackRevert(bytes memory revertData, bytes memory trackedRevertData) internal returns (bytes memory) {
+    function _trackRevert(bytes memory revertData, bytes memory trackedRevertData) internal pure returns (bytes memory) {
         if (trackedRevertData.length == 0) {
             trackedRevertData = revertData;
         }
@@ -219,7 +219,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     }
 
     /// Function called after each invariant test
-    function afterInvariant() public {
+    function afterInvariant() view public {
         console2.log("Number of persisted registered keys");
         console2.logUint(signerAccount.keyCount());
 

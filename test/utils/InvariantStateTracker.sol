@@ -9,10 +9,10 @@ import {Call} from "../../src/libraries/CallLib.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 
 interface IInvariantStateTracker {
-    function registerCallback(Key memory key) external;
-    function revokeCallback(bytes32 keyHash) external;
-    function updateCallback(bytes32 keyHash, Settings settings) external;
-    function executeCallback(Call[] memory calls) external;
+    function registerCallback(Key calldata) external;
+    function revokeCallback(bytes32) external;
+    function updateCallback(bytes32, Settings) external;
+    function executeCallback(Call[] calldata) external;
 }
 
 struct InvariantState {
