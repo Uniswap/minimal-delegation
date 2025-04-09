@@ -22,7 +22,7 @@ interface IKeyManagement {
     error CannotUpdateRootKey();
 
     /// @dev Cannot register the root key.
-    error CannotRegisterSelf();
+    error CannotRegisterRootKey();
 
     /// @dev Only admin keys can self-call.
     error OnlyAdminCanSelfCall();

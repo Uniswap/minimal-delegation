@@ -6,7 +6,7 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC1271} from "../src/interfaces/IERC1271.sol";
 import {IEIP712} from "../src/interfaces/IEIP712.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
-import {CallBuilder} from "./utils/CallBuilder.sol";
+import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
@@ -21,7 +21,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using SignedCallBuilder for SignedCalls;
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
-    using CallBuilder for Call[];
+    using CallUtils for Call[];
     using TestKeyManager for TestKey;
     using SignedCallsLib for SignedCalls;
 
@@ -70,7 +70,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     }
 
     function test_hashTypedData_matches_signedTypedData_ffi() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);

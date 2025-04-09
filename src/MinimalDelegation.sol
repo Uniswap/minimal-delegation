@@ -20,6 +20,7 @@ import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
+import {ERC7914} from "./ERC7914.sol";
 import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
@@ -37,6 +38,7 @@ contract MinimalDelegation is
     Receiver,
     KeyManagement,
     NonceManager,
+    ERC7914,
     ERC7201
 {
     using ModeDecoder for bytes32;
@@ -185,7 +187,7 @@ contract MinimalDelegation is
         if (!isValid) revert IERC7821.InvalidSignature();
     }
 
-    function _onlyThis() internal view override(KeyManagement, NonceManager) {
+    function _onlyThis() internal view override(KeyManagement, NonceManager, ERC7914) {
         if (msg.sender != address(this)) revert IERC7821.Unauthorized();
     }
 

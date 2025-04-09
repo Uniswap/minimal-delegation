@@ -3,13 +3,13 @@ pragma solidity ^0.8.23;
 
 import {Call} from "../../src/libraries/CallLib.sol";
 import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
-import {CallBuilder} from "./CallBuilder.sol";
+import {CallUtils} from "./CallUtils.sol";
 
 library SignedCallBuilder {
-    using CallBuilder for Call[];
+    using CallUtils for Call[];
 
     function init() internal pure returns (SignedCalls memory) {
-        return SignedCalls({calls: CallBuilder.init(), keyHash: bytes32(0), nonce: 0, shouldRevert: true});
+        return SignedCalls({calls: CallUtils.initArray(), keyHash: bytes32(0), nonce: 0, shouldRevert: true});
     }
 
     function withCalls(SignedCalls memory signedCalls, Call[] memory calls)
