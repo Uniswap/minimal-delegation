@@ -27,7 +27,6 @@ struct InvariantState {
     uint256 updateReverted;
     uint256 executeSuccess;
     uint256 executeReverted;
-
     uint256 validationFailed_KeyExpired;
     uint256 validationFailed_KeyDoesNotExist;
     uint256 validationFailed_OnlyAdminCanSelfCall;
@@ -97,19 +96,19 @@ abstract contract InvariantFixtures is Test {
         console2.log("[validationFailed] onlyAdminCanSelfCall %s", _state.validationFailed_OnlyAdminCanSelfCall);
     }
 
-    function registerCallback(Key memory key) external {
+    function registerCallback(Key memory) external {
         _state.registerSuccess++;
     }
 
-    function revokeCallback(bytes32 keyHash) external {
+    function revokeCallback(bytes32) external {
         _state.revokeSuccess++;
     }
 
-    function updateCallback(bytes32 keyHash, Settings settings) external {
+    function updateCallback(bytes32, Settings) external {
         _state.updateSuccess++;
     }
 
-    function executeCallback(Call[] memory calls) external {
+    function executeCallback(Call[] memory) external {
         _state.executeSuccess++;
     }
 }

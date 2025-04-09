@@ -79,7 +79,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         return false;
     }
 
-    function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data)
+    function beforeExecute(bytes32 keyHash, address to, uint256, bytes calldata data)
         external
         view
         override
@@ -91,7 +91,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
     }
 
     /// @dev This hook is a no-op.
-    function afterExecute(bytes32 keyHash, bytes calldata beforeExecuteData) external view override returns (bytes4) {
+    function afterExecute(bytes32, bytes calldata) external pure override returns (bytes4) {
         return IExecutionHook.afterExecute.selector;
     }
 
