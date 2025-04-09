@@ -54,27 +54,20 @@ contract MinimalDelegation is
 
     uint256 public packedEntrypoint;
 
-    function execute(bytes32 mode, bytes memory executionData) public payable override {
-        if (mode.isBatchedCall()) {
-            Call[] memory calls = abi.decode(executionData, (Call[]));
-            _onlyThis();
-            _dispatch(mode, calls, KeyLib.ROOT_KEY_HASH);
-        } else if (mode.supportsOpData()) {
-            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
-            (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
-            (bytes32 keyHash, bytes memory signature, bytes memory witness) =
-                abi.decode(wrappedSignature, (bytes32, bytes, bytes));
+    function execute(Call[] memory calls, bool shouldRevert) public payable {
+        _onlyThis();
+        _dispatch(shouldRevert, calls, KeyLib.ROOT_KEY_HASH);
+    }
 
-            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce, witness), signature);
-            _dispatch(mode, calls, keyHash);
-        } else if (mode.isBatchOfBatches()) {
-            bytes[] memory executeDataArray = abi.decode(executionData, (bytes[]));
-            for (uint256 i = 0; i < executeDataArray.length; i++) {
-                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA, executeDataArray[i]);
-            }
-        } else {
-            revert IERC7821.UnsupportedExecutionMode();
-        }
+    function execute(SignedCalls memory signedCalls, bytes memory signature) public payable {
+        _handleVerifySignature(signedCalls, signature);
+        _dispatch(signedCalls.shouldRevert, signedCalls.calls, signedCalls.keyHash);
+    }
+
+    function execute(bytes32 mode, bytes memory executionData) external payable override {
+        if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
+        Call[] memory calls = abi.decode(executionData, (Call[]));
+        execute(calls, mode.shouldRevert());
     }
 
     /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
@@ -87,17 +80,13 @@ contract MinimalDelegation is
         (bytes32 keyHash,) = abi.decode(userOp.signature, (bytes32, bytes));
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
-        (bytes32 mode, bytes calldata executionData) = userOp.callData.removeSelector().decodeBytes32Bytes();
-        if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
-        Call[] memory calls = abi.decode(executionData, (Call[]));
+        bytes calldata executionData = userOp.callData.removeSelector();
+        (Call[] memory calls, bool shouldRevert) = abi.decode(executionData, (Call[], bool));
 
-        _dispatch(mode, calls, keyHash);
+        _dispatch(shouldRevert, calls, keyHash);
     }
 
-    /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] memory calls, bytes32 keyHash) private {
-        bool shouldRevert = mode.shouldRevert();
-
+    function _dispatch(bool shouldRevert, Call[] memory calls, bytes32 keyHash) private {
         for (uint256 i = 0; i < calls.length; i++) {
             (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
@@ -172,34 +161,19 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    /// @dev Core signature verification logic shared across all verification methods
-    function _verifySignatureCore(bytes32 keyHash, bytes32 digest, bytes memory signature)
-        internal
-        view
-        returns (bool isValid, Settings settings)
-    {
-        isValid = getKey(keyHash).verify(digest, signature);
-
-        // Only if signature is valid, get and check settings
-        if (isValid) {
-            settings = getKeySettings(keyHash);
-
-            // Check expiration and revert if expired
-            (bool isExpired, uint40 expiry) = settings.isExpired();
-            if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-        }
-
-        return (isValid, settings);
-    }
-
-    function _handleVerifySignature(bytes32 keyHash, SignedCalls memory signedCalls, bytes memory signature) private {
+    function _handleVerifySignature(SignedCalls memory signedCalls, bytes memory signature) private {
         _useNonce(signedCalls.nonce);
 
         bytes32 digest = _hashTypedData(signedCalls.hash());
-        (bool isValid, Settings settings) = _verifySignatureCore(keyHash, digest, signature);
 
-        // Revert if signature verification failed
+        Key memory key = getKey(signedCalls.keyHash);
+
+        isValid = key.verify(digest, signature);
         if (!isValid) revert IERC7821.InvalidSignature();
+
+        Settings settings = getKeySettings(signedCalls.keyHash);
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
 
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
