@@ -52,25 +52,32 @@ contract MinimalDelegation is
 
     uint256 public packedEntrypoint;
 
-    function execute(bytes32 mode, bytes memory executionData) public payable override {
-        if (mode.isBatchedCall()) {
-            Call[] memory calls = abi.decode(executionData, (Call[]));
-            _onlyThis();
-            _dispatch(mode, calls, KeyLib.ROOT_KEY_HASH);
-        } else if (mode.supportsOpData()) {
-            (Call[] memory calls, bytes memory opData) = abi.decode(executionData, (Call[], bytes));
-            (uint256 nonce, bytes memory wrappedSignature) = abi.decode(opData, (uint256, bytes));
-            (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+    struct SignedCalls {
+        Call[] calls;
+        uint256 nonce;
+        bool shouldRevert;
+        bytes32 keyHash;
+        bytes signature;
+    }
 
-            _handleVerifySignature(keyHash, calls.toSignedCalls(nonce), signature);
-            _dispatch(mode, calls, keyHash);
-        } else if (mode.isBatchOfBatches()) {
-            bytes[] memory executeDataArray = abi.decode(executionData, (bytes[]));
-            for (uint256 i = 0; i < executeDataArray.length; i++) {
-                execute(ModeDecoder.BATCHED_CALL_SUPPORTS_OPDATA, executeDataArray[i]);
-            }
-        } else {
-            revert IERC7821.UnsupportedExecutionMode();
+    /// ERC7821, batched call mode
+    function execute(bytes32 mode, bytes memory encodedCalls) public payable override {
+        if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
+        Call[] memory calls = abi.decode(encodedCalls, (Call[]));
+        _onlyThis();
+        _dispatch(mode.shouldRevert(), calls, KeyLib.ROOT_KEY_HASH);
+    }
+
+    /// Custom function for signature based execution
+    function execute(SignedCalls memory signedCalls) public payable {
+        _handleVerifySignature(signedCalls);
+        _dispatch(signedCalls.shouldRevert, signedCalls.calls, signedCalls.keyHash);
+    }
+
+    /// Custom function for handling batch of batches
+    function execute(SignedCalls[] memory signedCalls) public payable {
+        for (uint256 i = 0; i < signedCalls.length; i++) {
+            execute(signedCalls[i]);
         }
     }
 
@@ -88,13 +95,11 @@ contract MinimalDelegation is
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
 
-        _dispatch(mode, calls, keyHash);
+        _dispatch(mode.shouldRevert(), calls, keyHash);
     }
 
     /// @dev Dispatches a batch of calls.
-    function _dispatch(bytes32 mode, Call[] memory calls, bytes32 keyHash) private {
-        bool shouldRevert = mode.shouldRevert();
-
+    function _dispatch(bool shouldRevert, Call[] memory calls, bytes32 keyHash) private {
         for (uint256 i = 0; i < calls.length; i++) {
             (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
@@ -176,7 +181,10 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(bytes32 keyHash, SignedCalls memory signedCalls, bytes memory signature) private {
+    function _handleVerifySignature(SignedCalls memory signedCalls) private {
+        bytes32 keyHash = signedCalls.keyHash;
+        bytes memory signature = signedCalls.signature;
+
         _useNonce(signedCalls.nonce);
 
         Key memory key = getKey(keyHash);
