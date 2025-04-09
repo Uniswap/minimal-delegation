@@ -14,6 +14,7 @@ import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
+import {SignedCallsBuilder} from "./utils/SignedCallsBuilder.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using WrappedDataHash for bytes32;
@@ -21,6 +22,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using CallUtils for Call[];
     using TestKeyManager for TestKey;
     using SignedCallsLib for SignedCalls;
+    using SignedCallsBuilder for SignedCalls;
 
     address receiver = makeAddr("receiver");
 
@@ -59,10 +61,12 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
         Call[] memory calls = CallUtils.initArray();
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: 0});
-        bytes32 hashTypedData = signerAccount.hashTypedData(signedCalls.hash());
+        SignedCalls memory signedCalls = SignedCallsBuilder.init()
+            .withCalls(calls);
+            
+        bytes32 hashTypedData = signerAccount.hashTypedData(SignedCallsLib.hash(signedCalls));
         // re-implement 712 hash
-        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), signedCalls.hash()));
+        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), SignedCallsLib.hash(signedCalls)));
         assertEq(expected, hashTypedData);
     }
 
@@ -70,13 +74,13 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCallsBuilder.from(calls, nonce);
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
 
         (bytes memory signature) = ffi_signTypedData(signerPrivateKey, calls, nonce, verifyingContract);
 
-        assertEq(signature, key.sign(signerAccount.hashTypedData(signedCalls.hash())));
+        assertEq(signature, key.sign(signerAccount.hashTypedData(SignedCallsLib.hash(signedCalls))));
     }
 }

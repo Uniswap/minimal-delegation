@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Test} from "forge-std/Test.sol";
 import {Call, CallLib} from "../../src/libraries/CallLib.sol";
 import {SignedCalls, SignedCallsLib} from "../../src/libraries/SignedCallsLib.sol";
+import {SignedCallsBuilder} from "../utils/SignedCallsBuilder.sol";
 
 contract SignedCallsLibTest is Test {
     using CallLib for Call[];
@@ -11,15 +12,22 @@ contract SignedCallsLibTest is Test {
     /// @notice Test to catch accidental changes to the typehash
     function test_constant_execution_data_typehash() public pure {
         bytes32 expectedTypeHash =
-            keccak256("SignedCalls(Call[] calls,uint256 nonce)Call(address to,uint256 value,bytes data)");
+            keccak256("SignedCalls(Call[] calls,uint256 nonce,bool shouldRevert,bytes32 keyHash)Call(address to,uint256 value,bytes data)");
         assertEq(SignedCallsLib.SIGNED_CALLS_TYPEHASH, expectedTypeHash);
     }
 
     function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce) public pure {
-        SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});
+        SignedCalls memory signedCalls = SignedCallsBuilder.from(calls, nonce);
+            
         bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
-        bytes32 expectedHash = keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce));
+        bytes32 expectedHash = keccak256(abi.encode(
+            SignedCallsLib.SIGNED_CALLS_TYPEHASH, 
+            calls.hash(), 
+            nonce,
+            false,
+            bytes32(0)
+        ));
         assertEq(actualHash, expectedHash);
     }
 }

@@ -14,7 +14,9 @@ export const types = {
     ],
     SignedCalls: [
       { name: 'calls', type: 'Call[]' },
-      { name: 'nonce', type: 'uint256' }
+      { name: 'nonce', type: 'uint256' },
+      { name: 'shouldRevert', type: 'bool' },
+      { name: 'keyHash', type: 'bytes32' }
     ]
     } as const;
 

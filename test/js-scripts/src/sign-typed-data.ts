@@ -62,6 +62,8 @@ async function signTypedData(): Promise<void> {
       message: {
         calls: calls,
         nonce: nonce,
+        shouldRevert: false,
+        keyHash: '0x0000000000000000000000000000000000000000000000000000000000000000'
       }
     });
     // Return the signature

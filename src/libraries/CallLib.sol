@@ -33,6 +33,12 @@ library CallLib {
     }
 
     function toSignedCalls(Call[] memory calls, uint256 nonce) internal pure returns (SignedCalls memory signedCalls) {
-        return SignedCalls({calls: calls, nonce: nonce});
+        return SignedCalls({
+            calls: calls, 
+            nonce: nonce,
+            shouldRevert: false,
+            keyHash: bytes32(0),
+            signature: bytes("")
+        });
     }
 }

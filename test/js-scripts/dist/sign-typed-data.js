@@ -8951,7 +8951,9 @@ var types = {
   ],
   SignedCalls: [
     { name: "calls", type: "Call[]" },
-    { name: "nonce", type: "uint256" }
+    { name: "nonce", type: "uint256" },
+    { name: "shouldRevert", type: "bool" },
+    { name: "keyHash", type: "bytes32" }
   ]
 };
 
@@ -8985,7 +8987,9 @@ async function signTypedData3() {
       primaryType: "SignedCalls",
       message: {
         calls,
-        nonce
+        nonce,
+        shouldRevert: false,
+        keyHash: "0x0000000000000000000000000000000000000000000000000000000000000000"
       }
     });
     process.stdout.write(signature);

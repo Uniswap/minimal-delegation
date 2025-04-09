@@ -9,6 +9,7 @@ import {IEIP712} from "./IEIP712.sol";
 import {IERC7201} from "./IERC7201.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {IERC4337Account} from "./IERC4337Account.sol";
+import {SignedCalls} from "../libraries/SignedCallsLib.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
 /// This implementation supports:
@@ -27,4 +28,7 @@ interface IMinimalDelegation is
     IERC5267,
     IERC7201,
     INonceManager
-{}
+{
+    function execute(SignedCalls memory signedCalls) external;
+    function execute(SignedCalls[] memory signedCalls) external;
+}
