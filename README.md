@@ -14,3 +14,8 @@ a minimal, non-upgradeable implementation contract that can be set on an EIP-770
 ## Architecture
 - **Non-Upgradeability**: Upgradability is only allowed through re-delegation rather than a proxy.
 - **Singleton:** One canonical contract is delegated to.
+
+## Special areas of interest for audits
+- Ordering of `execute` calls within a multicall
+- TransientAllowance does not work with custom `layout` storage in solc 0.8.29. Can there ever be a collision?
+
