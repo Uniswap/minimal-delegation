@@ -363,9 +363,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory signature = signerTestKey.sign(hashToSign);
 
         // Execute the batch of calls with the signature
         signerAccount.execute(signedCalls, signature);
@@ -588,7 +588,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         calls = calls.push(CallUtils.encodeRegisterCall(newKey));
         calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
-        SignedCalls memory signedCalls = calls.toSignedCalls(DEFAULT_NONCE, KeyLib.ROOT_KEY_HASH, true);
+        SignedCalls memory signedCalls =
+            SignedCallBuilder.init().withCalls(calls).withNonce(DEFAULT_NONCE).withKeyHash(KeyLib.ROOT_KEY_HASH);
 
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(digest);

@@ -23,6 +23,7 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
+import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
 
 // To avoid stack to deep
 struct SetupParams {
@@ -42,6 +43,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     using SettingsBuilder for Settings;
     using SettingsLib for Settings;
     using InvariantRevertLib for bytes[];
+    using SignedCallBuilder for SignedCalls;
 
     /// @notice The keys which will be used to sign calls to execute
     TestKey[] public signingKeys;
@@ -115,7 +117,9 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
-        SignedCalls memory signedCalls = calls.toSignedCalls(nonce, currentKeyHash, true);
+        SignedCalls memory signedCalls =
+            SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(currentKeyHash);
+
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = currentSigningKey.sign(digest);
 

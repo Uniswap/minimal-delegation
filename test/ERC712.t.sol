@@ -15,7 +15,6 @@ import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
-import {console2} from "forge-std/console2.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using SignedCallBuilder for SignedCalls;
