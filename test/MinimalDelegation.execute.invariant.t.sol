@@ -23,6 +23,7 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
+import {InvariantBlock} from "./utils/InvariantFixtures.sol";
 
 // To avoid stack to deep
 struct SetupParams {
@@ -55,6 +56,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     {
         for (uint256 i = 0; i < _params._signingKeys.length; i++) {
             signingKeys.push(_params._signingKeys[i]);
+            fixtureKeys.push(_params._signingKeys[i]);
         }
         tokenA = ERC20Mock(_params._tokenA);
         tokenB = ERC20Mock(_params._tokenB);
@@ -62,8 +64,19 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
 
     /// @notice Sets the current key for the test
     /// if the test uses `caller`, we prank the key's public key
-    modifier useKey(uint256 keyIndexSeed) {
-        (currentSigningKey,) = _rand(signingKeys, keyIndexSeed);
+    modifier useKey() {
+        currentSigningKey = _randKeyFromArray(signingKeys);
+        _;
+    }
+
+    modifier setBlock() {
+        InvariantBlock memory _block = _randBlock();
+        if (_block.blockNumber != block.number) {
+            vm.roll(_block.blockNumber);
+        }
+        if (_block.blockTimestamp != block.timestamp) {
+            vm.warp(_block.blockTimestamp);
+        }
         _;
     }
 
@@ -78,7 +91,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// TODO: only supports single call arrays for now
     /// - Generates a random call, executes it, then processes any registered callbacks
     /// - Any reverts are expected by the generated handler call
-    function executeBatchedCall(uint256 generatorSeed, uint256 signerSeed) public useKey(signerSeed) {
+    function executeBatchedCall(uint256 generatorSeed) public useKey() setBlock() {
         address caller = vm.addr(currentSigningKey.privateKey);
         vm.startPrank(caller);
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
@@ -103,7 +116,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed, uint256 signerSeed) public useKey(signerSeed) {
+    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey() setBlock() {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = currentSigningKey.toKeyHash();
 
@@ -127,12 +140,15 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 // Expect revert if expired
                 (bool isExpired,) = settings.isExpired();
                 if (isExpired) {
+                    _state.validationFailed_KeyExpired++;
                     expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector));
                 } else if (!settings.isAdmin() && calls.containsSelfCall()) {
+                    _state.validationFailed_OnlyAdminCanSelfCall++;
                     expectedReverts =
                         expectedReverts.push(abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector));
                 }
             } catch (bytes memory revertData) {
+                _state.validationFailed_KeyDoesNotExist++;
                 assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
                 expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyDoesNotExist.selector));
             }

@@ -14,45 +14,32 @@ import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {HandlerCall, CallUtils} from "./CallUtils.sol";
 import {ExecuteFixtures} from "./ExecuteFixtures.sol";
-import {IInvariantStateTracker, InvariantStateTracker} from "./InvariantStateTracker.sol";
+import {IInvariantCallbacks, InvariantFixtures} from "./InvariantFixtures.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
+import {SettingsBuilder} from "./SettingsBuilder.sol";
 
 /**
  * @title FunctionCallGenerator
  * @dev Helper contract to generate random function calls for MinimalDelegation invariant testing
  */
-abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
+abstract contract FunctionCallGenerator is InvariantFixtures {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallUtils for *;
     using TestKeyManager for TestKey;
+    using SettingsBuilder for Settings;
 
     uint256 public constant FUZZED_FUNCTION_COUNT = 3;
-
-    uint256 public constant MAX_DEPTH = 5;
-    uint256 public constant MAX_KEYS = 10;
 
     /// Member variables passed in by inheriting contract
     IMinimalDelegation internal signerAccount;
     address private immutable _tokenA;
     address private immutable _tokenB;
 
-    // Keys that will be operated over in generated calldata
-    TestKey[] public fixture_keys;
-
     constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
         _tokenA = tokenA;
         _tokenB = tokenB;
-
-        // Generate MAX_KEYS and add to fixtureKey
-        for (uint256 i = 0; i < MAX_KEYS; i++) {
-            fixture_keys.push(TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint()));
-        }
-    }
-
-    function _rand(TestKey[] storage keys, uint256 seed) internal view returns (TestKey memory, uint256) {
-        return (keys[seed % keys.length], seed % keys.length);
     }
 
     function _testKeyIsSignerAccount(TestKey memory testKey) internal view returns (bool) {
@@ -70,16 +57,18 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         returns (HandlerCall memory)
     {
         if (revertData.length > 0) _state.registerReverted++;
+
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRegisterCall(newKey)).withCallback(
-            abi.encodeWithSelector(IInvariantStateTracker.registerCallback.selector, newKey.toKey())
+            abi.encodeWithSelector(IInvariantCallbacks.registerCallback.selector, newKey.toKey())
         ).withRevertData(revertData);
     }
 
     /// @return calldata to revoke a key along with its callback
     function _revokeCall(bytes32 keyHash, bytes memory revertData) internal virtual returns (HandlerCall memory) {
         if (revertData.length > 0) _state.revokeReverted++;
+
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRevokeCall(keyHash)).withCallback(
-            abi.encodeWithSelector(IInvariantStateTracker.revokeCallback.selector, keyHash)
+            abi.encodeWithSelector(IInvariantCallbacks.revokeCallback.selector, keyHash)
         ).withRevertData(revertData);
     }
 
@@ -90,8 +79,9 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         returns (HandlerCall memory)
     {
         if (revertData.length > 0) _state.updateReverted++;
+
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeUpdateCall(keyHash, settings)).withCallback(
-            abi.encodeWithSelector(IInvariantStateTracker.updateCallback.selector, keyHash, settings)
+            abi.encodeWithSelector(IInvariantCallbacks.updateCallback.selector, keyHash, settings)
         ).withRevertData(revertData);
     }
 
@@ -111,8 +101,8 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
      * @param randomSeed Random seed for generation
      * @return A call object for the generated function
      */
-    function _generateHandlerCall(uint256 randomSeed) public returns (HandlerCall memory) {
-        (TestKey memory testKey,) = _rand(fixture_keys, randomSeed);
+    function _generateHandlerCall(uint256 randomSeed) internal returns (HandlerCall memory) {
+        TestKey memory testKey = _randKeyFromArray(fixtureKeys);
         bytes32 keyHash = testKey.toKeyHash();
 
         bool isRegistered;
@@ -141,13 +131,13 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         }
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
-            if (_testKeyIsSignerAccount(testKey)) {
-                revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
-            } else if (!isRegistered) {
+            Settings settings = _randSettings();
+            if (!isRegistered) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
+            } else if (_testKeyIsSignerAccount(testKey)) {
+                revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
             }
-            // TODO: fuzz settings
-            return _updateCall(keyHash, Settings.wrap(0), revertData);
+            return _updateCall(keyHash, settings, revertData);
         } else {
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
