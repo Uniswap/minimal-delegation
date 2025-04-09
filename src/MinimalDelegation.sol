@@ -52,14 +52,6 @@ contract MinimalDelegation is
 
     uint256 public packedEntrypoint;
 
-    struct SignedCalls {
-        Call[] calls;
-        uint256 nonce;
-        bool shouldRevert;
-        bytes32 keyHash;
-        bytes signature;
-    }
-
     /// ERC7821, batched call mode
     function execute(bytes32 mode, bytes memory encodedCalls) public payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
@@ -69,12 +61,14 @@ contract MinimalDelegation is
     }
 
     /// Custom function for signature based execution
-    function execute(SignedCalls memory signedCalls) public payable {
-        _handleVerifySignature(signedCalls);
-        _dispatch(signedCalls.shouldRevert, signedCalls.calls, signedCalls.keyHash);
+    function execute(SignedCalls memory signedCall) public payable {
+        _handleVerifySignature(signedCall);
+        _dispatch(signedCall.shouldRevert, signedCall.calls, signedCall.keyHash);
     }
 
     /// Custom function for handling batch of batches
+    /// @dev Use nonces to enforce order of execution
+    /// Requires a signature per signedCalls
     function execute(SignedCalls[] memory signedCalls) public payable {
         for (uint256 i = 0; i < signedCalls.length; i++) {
             execute(signedCalls[i]);
