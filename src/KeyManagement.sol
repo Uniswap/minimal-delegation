@@ -23,7 +23,7 @@ abstract contract KeyManagement is IKeyManagement {
     function register(Key memory key) external {
         _onlyThis();
 
-        if (key.isRootKey()) revert CannotRegisterSelf();
+        if (key.isRootKey()) revert CannotRegisterRootKey();
 
         bytes32 keyHash = key.hash();
         keyStorage[keyHash] = abi.encode(key);
