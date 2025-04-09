@@ -25,26 +25,29 @@ library HooksLib {
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
-        bytes memory witness
+        bytes memory hookData
     ) internal view returns (uint256 validationData) {
         (bytes4 hookSelector, uint256 hookValidationData) =
-            self.afterValidateUserOp(keyHash, userOp, userOpHash, witness);
+            self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
         if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
         return hookValidationData;
     }
 
-    function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory witness)
+    function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
         returns (bytes4 magicValue)
     {
-        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, witness);
+        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, hookData);
         if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
         return hookMagicValue;
     }
 
-    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory witness) internal view {
-        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, witness);
+    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
+        internal
+        view
+    {
+        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
         if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
     }
 

@@ -46,41 +46,41 @@ contract MultiSignerValidatorHook is IValidationHook {
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
-        bytes calldata witness
+        bytes calldata hookData
     ) external view returns (bytes4 selector, uint256 validationData) {
         return (
             IValidationHook.afterValidateUserOp.selector,
-            _hasAllRequiredSignatures(keyHash, userOpHash, witness) ? 0 : 1
+            _hasAllRequiredSignatures(keyHash, userOpHash, hookData) ? 0 : 1
         );
     }
 
-    function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata witness)
+    function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
         returns (bytes4 selector, bytes4 magicValue)
     {
-        (bytes[] memory wrappedSignerSignatures) = abi.decode(witness, (bytes[]));
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
         return (
             IValidationHook.afterIsValidSignature.selector,
-            _hasAllRequiredSignatures(keyHash, digest, witness) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE
+            _hasAllRequiredSignatures(keyHash, digest, hookData) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE
         );
     }
 
-    function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata witness)
+    function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
         returns (bytes4 selector)
     {
-        if (!_hasAllRequiredSignatures(keyHash, digest, witness)) revert InvalidSignature();
+        if (!_hasAllRequiredSignatures(keyHash, digest, hookData)) revert InvalidSignature();
         return IValidationHook.afterVerifySignature.selector;
     }
 
-    function _hasAllRequiredSignatures(bytes32 keyHash, bytes32 digest, bytes calldata witness)
+    function _hasAllRequiredSignatures(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         internal
         view
         returns (bool isValid)
     {
-        (bytes[] memory wrappedSignerSignatures) = abi.decode(witness, (bytes[]));
+        (bytes[] memory wrappedSignerSignatures) = abi.decode(hookData, (bytes[]));
         AccountKeyHash accountKeyHash = keyHash.wrap(msg.sender);
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 

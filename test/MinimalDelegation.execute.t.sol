@@ -83,7 +83,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
     function test_execute_auth_reverts() public {
         vm.expectRevert(IERC7821.Unauthorized.selector);
-        signerAccount.execute(CallBuilder.init(), true);
+        signerAccount.execute(CallUtils.initArray(), true);
     }
 
     function test_execute() public {
@@ -205,9 +205,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
     function test_execute_batch_opData_rootEOA_withKeyHash_reverts() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         uint256 nonceKey = 0;
-        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
@@ -233,11 +234,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce, bytes("")).hash());
-        bytes memory opData = abi.encode(nonce, abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
-        bytes memory executionData = abi.encode(calls, opData);
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
+        bytes memory signature = signerTestKey.sign(digest);
 
-        signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData);
+        signerAccount.execute(signedCalls, signature);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
@@ -283,14 +284,15 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.expectRevert(IERC7821.InvalidSignature.selector);
         signerAccount.execute(signedCalls, signature);
 
-        // Expect the signature to be valid after adding the hook
         vm.prank(address(signerAccount));
         Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         mockHook.setVerifySignatureReturnValue(true);
 
+        // Even if the hook would successful verify the signature, it should still revert
+        // because we never call hooks unless the signature is valid
+        vm.expectRevert(IERC7821.InvalidSignature.selector);
         signerAccount.execute(signedCalls, signature);
-        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
     function test_execute_batch_opData_withHook_beforeExecute() public {

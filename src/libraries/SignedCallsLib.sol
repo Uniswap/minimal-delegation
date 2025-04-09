@@ -8,13 +8,14 @@ struct SignedCalls {
     uint256 nonce;
     bytes32 keyHash;
     bool shouldRevert;
+    bytes hookData;
 }
 
 library SignedCallsLib {
     using CallLib for Call[];
 
     bytes internal constant SIGNED_CALLS_TYPE =
-        "SignedCalls(Call[] calls,uint256 nonce,bytes32 keyHash,bool shouldRevert)Call(address to,uint256 value,bytes data)";
+        "SignedCalls(Call[] calls,uint256 nonce,bytes32 keyHash,bool shouldRevert,bytes hookData)Call(address to,uint256 value,bytes data)";
 
     /// @dev The typehash for the SignedCalls struct
     bytes32 internal constant SIGNED_CALLS_TYPEHASH = keccak256(SIGNED_CALLS_TYPE);
@@ -27,7 +28,8 @@ library SignedCallsLib {
                 signedCalls.calls.hash(),
                 signedCalls.nonce,
                 signedCalls.keyHash,
-                signedCalls.shouldRevert
+                signedCalls.shouldRevert,
+                signedCalls.hookData
             )
         );
     }

@@ -22,6 +22,7 @@ import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
+import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
 
 // To avoid stack to deep
 struct SetupParams {
@@ -40,6 +41,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     using CallUtils for *;
     using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
+    using SignedCallBuilder for SignedCalls;
 
     address[] public callers;
     address public currentCaller;
@@ -130,13 +132,15 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
 
         Call[] memory calls = handlerCalls.toCalls();
 
-        bytes32 digest = signerAccount.hashTypedData(calls.toSignedCalls(nonce, bytes("")).hash());
-        bytes memory wrappedSignature =
-            abi.encode(isRootKey ? bytes32(0) : currentKeyHash, currentSigningKey.sign(digest));
-        bytes memory opData = abi.encode(nonce, wrappedSignature);
-        bytes memory executionData = abi.encode(calls, opData);
+        // TODO: remove these
+        bool shouldRevert = false;
+        bytes memory hookData = bytes("");
 
-        try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withShouldRevert(shouldRevert).withHookData(hookData);
+        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
+        bytes memory signature = currentSigningKey.sign(digest);
+
+        try signerAccount.execute(signedCalls, signature) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (!signatureIsValid) {
@@ -144,9 +148,6 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {
-                bytes memory debugCalldata =
-                    abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
-                console2.logBytes(debugCalldata);
                 console2.logBytes(revertData);
                 revert("uncaught revert");
             }

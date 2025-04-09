@@ -5,6 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
+import {HookHandler} from "./utils/HookHandler.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
@@ -18,7 +19,7 @@ import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 
-contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHandler {
+contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHandler, HookHandler {
     using CallUtils for Call[];
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;
@@ -29,7 +30,8 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
     function setUp() public {
         setUpDelegation();
         setUpTokens();
-
+        setUpHooks();
+        
         vm.deal(address(signerAccount), 100e18);
         tokenA.mint(address(signerAccount), 100e18);
         tokenB.mint(address(signerAccount), 100e18);
@@ -48,7 +50,7 @@ contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHa
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
+        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest), EMPTY_HOOK_DATA));
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;

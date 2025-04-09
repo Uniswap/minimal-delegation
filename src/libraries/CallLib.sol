@@ -31,12 +31,4 @@ library CallLib {
         }
         return keccak256(abi.encodePacked(hashes));
     }
-
-    function toSignedCalls(Call[] memory calls, uint256 nonce, bytes32 keyHash, bool shouldRevert)
-        internal
-        pure
-        returns (SignedCalls memory signedCalls)
-    {
-        return SignedCalls({calls: calls, nonce: nonce, keyHash: keyHash, shouldRevert: shouldRevert});
-    }
 }
