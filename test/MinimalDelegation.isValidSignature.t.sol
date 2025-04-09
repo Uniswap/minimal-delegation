@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {HookHandler} from "./utils/HookHandler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";

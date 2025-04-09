@@ -2,7 +2,6 @@
 pragma solidity ^0.8.29;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
-import {MinimalDelegation} from "../src/MinimalDelegation.sol";
 
 contract MinimalDelegationStorageTest is DelegationHandler {
     /**

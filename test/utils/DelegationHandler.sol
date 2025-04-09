@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
-import {MinimalDelegationEntry} from "../../src/MinimalDelegationEntry.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -17,7 +16,7 @@ contract DelegationHandler is Test {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
 
-    MinimalDelegationEntry public minimalDelegation;
+    IMinimalDelegation public minimalDelegation;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
     TestKey signerTestKey = TestKey(KeyType.Secp256k1, abi.encode(signer), signerPrivateKey);
@@ -36,7 +35,8 @@ contract DelegationHandler is Test {
     IMinimalDelegation public signerAccount;
 
     function setUpDelegation() public {
-        minimalDelegation = new MinimalDelegationEntry();
+        minimalDelegation =
+            IMinimalDelegation(create2(vm.getCode("MinimalDelegationEntry.sol:MinimalDelegationEntry"), bytes32(0)));
         _delegate(signer, address(minimalDelegation));
         signerAccount = IMinimalDelegation(signer);
 
@@ -44,6 +44,18 @@ contract DelegationHandler is Test {
         vm.label(Constants.ENTRY_POINT_V_0_8, "EntryPoint");
 
         entryPoint = EntryPoint(payable(Constants.ENTRY_POINT_V_0_8));
+    }
+
+    function create2(bytes memory initcode, bytes32 salt) internal returns (address contractAddress) {
+        assembly {
+            contractAddress := create2(0, add(initcode, 32), mload(initcode), salt)
+            if iszero(contractAddress) {
+                let ptr := mload(0x40)
+                let errorSize := returndatasize()
+                returndatacopy(ptr, 0, errorSize)
+                revert(ptr, errorSize)
+            }
+        }
     }
 
     function _delegate(address _signer, address _implementation) internal {

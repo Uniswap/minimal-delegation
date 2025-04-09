@@ -11,6 +11,7 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 abstract contract KeyManagement is IKeyManagement {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
+    using KeyLib for bytes32;
 
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
@@ -34,7 +35,7 @@ abstract contract KeyManagement is IKeyManagement {
 
     function update(bytes32 keyHash, Settings settings) external {
         _onlyThis();
-        if (keyHash == KeyLib.ROOT_KEY_HASH) revert CannotUpdateRootKey();
+        if (keyHash.isRootKey()) revert CannotUpdateRootKey();
         if (!keyHashes.contains(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
     }
@@ -62,14 +63,14 @@ abstract contract KeyManagement is IKeyManagement {
 
     /// @inheritdoc IKeyManagement
     function getKey(bytes32 keyHash) public view returns (Key memory) {
-        if (keyHash == KeyLib.ROOT_KEY_HASH) return KeyLib.toRootKey();
+        if (keyHash.isRootKey()) return KeyLib.toRootKey();
         if (keyHashes.contains(keyHash)) return abi.decode(keyStorage[keyHash], (Key));
         revert KeyDoesNotExist();
     }
 
     /// @inheritdoc IKeyManagement
     function getKeySettings(bytes32 keyHash) public view returns (Settings) {
-        if (keyHash == KeyLib.ROOT_KEY_HASH) return SettingsLib.ROOT_KEY_SETTINGS;
+        if (keyHash.isRootKey()) return SettingsLib.ROOT_KEY_SETTINGS;
         if (keyHashes.contains(keyHash)) return keySettings[keyHash];
         revert KeyDoesNotExist();
     }

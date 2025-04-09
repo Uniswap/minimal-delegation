@@ -27,6 +27,10 @@ library KeyLib {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
     }
 
+    function isRootKey(bytes32 keyHash) internal pure returns (bool) {
+        return keyHash == ROOT_KEY_HASH;
+    }
+
     /// @notice A helper function to get the root key object.
     function toRootKey() internal view returns (Key memory) {
         return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
