@@ -26,23 +26,23 @@ abstract contract ERC7914 is IERC7914 {
     }
 
     /// @inheritdoc IERC7914
-    function transferFromNative(address from, address recipient, uint256 amount)
-        external
-        override
-        returns (bool success)
-    {
-        success = _transferFrom(from, recipient, amount, false);
+    function transferFromNative(address from, address recipient, uint256 amount) external override returns (bool) {
+        if (amount == 0) return false;
+        _transferFrom(from, recipient, amount, false);
         emit TransferFromNative(address(this), recipient, amount);
+        return true;
     }
 
     /// @inheritdoc IERC7914
     function transferFromNativeTransient(address from, address recipient, uint256 amount)
         external
         override
-        returns (bool success)
+        returns (bool)
     {
-        success = _transferFrom(from, recipient, amount, true);
+        if (amount == 0) return false;
+        _transferFrom(from, recipient, amount, true);
         emit TransferFromNativeTransient(address(this), recipient, amount);
+        return true;
     }
 
     /// @inheritdoc IERC7914
@@ -55,11 +55,9 @@ abstract contract ERC7914 is IERC7914 {
     /// @param recipient The address to receive the funds
     /// @param amount The amount to transfer
     /// @param isTransient Whether this is transient allowance or not
-    /// @return success Whether the transfer was successful
-    function _transferFrom(address from, address recipient, uint256 amount, bool isTransient) internal returns (bool) {
+    function _transferFrom(address from, address recipient, uint256 amount, bool isTransient) internal {
         // Validate inputs
         if (from != address(this)) revert IncorrectSender();
-        if (amount == 0) return false;
 
         // Check allowance
         uint256 currentAllowance = isTransient ? transientAllowance(msg.sender) : allowance[msg.sender];
@@ -83,8 +81,6 @@ abstract contract ERC7914 is IERC7914 {
         if (!success) {
             revert TransferNativeFailed();
         }
-
-        return true;
     }
 
     /// @dev Must be overridden by the implementation
