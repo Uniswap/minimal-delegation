@@ -14,18 +14,20 @@ import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {HandlerCall, CallUtils} from "./CallUtils.sol";
 import {ExecuteFixtures} from "./ExecuteFixtures.sol";
-import {IInvariantStateTracker, InvariantStateTracker} from "./InvariantStateTracker.sol";
+import {IInvariantCallbacks, InvariantFixtures} from "./InvariantFixtures.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
+import {SettingsBuilder} from "./SettingsBuilder.sol";
 
 /**
  * @title FunctionCallGenerator
  * @dev Helper contract to generate random function calls for MinimalDelegation invariant testing
  */
-abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
+abstract contract FunctionCallGenerator is Test, InvariantFixtures {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using CallUtils for *;
     using TestKeyManager for TestKey;
+    using SettingsBuilder for Settings;
 
     uint256 public constant FUZZED_FUNCTION_COUNT = 3;
 
@@ -39,6 +41,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
 
     // Keys that will be operated over in generated calldata
     TestKey[] public fixture_keys;
+    Settings[] public fixtureSettings;
 
     constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
@@ -49,6 +52,9 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
         for (uint256 i = 0; i < MAX_KEYS; i++) {
             fixture_keys.push(TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint()));
         }
+
+        fixtureSettings.push(SettingsLib.DEFAULT);
+        fixtureSettings.push(SettingsBuilder.init().fromIsAdmin(true));
     }
 
     function _rand(TestKey[] storage keys, uint256 seed) internal view returns (TestKey memory, uint256) {
@@ -71,7 +77,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     {
         if (revertData.length > 0) _state.registerReverted++;
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRegisterCall(newKey)).withCallback(
-            abi.encodeWithSelector(IInvariantStateTracker.registerCallback.selector, newKey.toKey())
+            abi.encodeWithSelector(IInvariantCallbacks.registerCallback.selector, newKey.toKey())
         ).withRevertData(revertData);
     }
 
@@ -79,7 +85,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     function _revokeCall(bytes32 keyHash, bytes memory revertData) internal virtual returns (HandlerCall memory) {
         if (revertData.length > 0) _state.revokeReverted++;
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeRevokeCall(keyHash)).withCallback(
-            abi.encodeWithSelector(IInvariantStateTracker.revokeCallback.selector, keyHash)
+            abi.encodeWithSelector(IInvariantCallbacks.revokeCallback.selector, keyHash)
         ).withRevertData(revertData);
     }
 
@@ -91,7 +97,7 @@ abstract contract FunctionCallGenerator is Test, InvariantStateTracker {
     {
         if (revertData.length > 0) _state.updateReverted++;
         return CallUtils.initHandlerDefault().withCall(CallUtils.encodeUpdateCall(keyHash, settings)).withCallback(
-            abi.encodeWithSelector(IInvariantStateTracker.updateCallback.selector, keyHash, settings)
+            abi.encodeWithSelector(IInvariantCallbacks.updateCallback.selector, keyHash, settings)
         ).withRevertData(revertData);
     }
 

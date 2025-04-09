@@ -7,8 +7,9 @@ import {Key, KeyLib} from "../../src/libraries/KeyLib.sol";
 import {TestKey, TestKeyManager} from "./TestKeyManager.sol";
 import {Call} from "../../src/libraries/CallLib.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
+import {SettingsBuilder} from "./SettingsBuilder.sol";
 
-interface IInvariantStateTracker {
+interface IInvariantCallbacks {
     function registerCallback(Key calldata) external;
     function revokeCallback(bytes32) external;
     function updateCallback(bytes32, Settings) external;
@@ -28,8 +29,11 @@ struct InvariantState {
 
 /// Base contract for mirroring the state of signerAccount
 /// Internal state must only be updated by callbacks, which are triggered sequentially in order of Call[] after each top level call to execute
-abstract contract InvariantStateTracker {
+abstract contract InvariantFixtures {
+    using SettingsBuilder for Settings;
+
     InvariantState internal _state;
+    Settings[] internal fixtureSettings;
 
     function logState() public view {
         console2.log("[register] success %s", _state.registerSuccess);
