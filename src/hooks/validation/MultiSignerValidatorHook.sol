@@ -31,7 +31,7 @@ contract MultiSignerValidatorHook is IValidationHook {
         bytes32 signerKeyHash = signerKey.hash();
 
         keyStorage[signerKeyHash] = encodedKey;
-        requiredSigners[keyHash.wrap(msg.sender)].add(signerKeyHash);
+        requiredSigners[keyHash.hashSender(msg.sender)].add(signerKeyHash);
     }
 
     function overrideValidateUserOp(bytes32, PackedUserOperation calldata, bytes32)
@@ -52,7 +52,7 @@ contract MultiSignerValidatorHook is IValidationHook {
         returns (bytes4, bool isValid)
     {
         (bytes[] memory wrappedSignerSignatures) = abi.decode(data, (bytes[]));
-        AccountKeyHash accountKeyHash = keyHash.wrap(msg.sender);
+        AccountKeyHash accountKeyHash = keyHash.hashSender(msg.sender);
 
         if (wrappedSignerSignatures.length != requiredSigners[accountKeyHash].length()) revert InvalidSignatureCount();
 
