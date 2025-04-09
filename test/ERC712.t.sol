@@ -6,7 +6,7 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC1271} from "../src/interfaces/IERC1271.sol";
 import {IEIP712} from "../src/interfaces/IEIP712.sol";
 import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
-import {CallBuilder} from "./utils/CallBuilder.sol";
+import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
@@ -18,7 +18,7 @@ import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
-    using CallBuilder for Call[];
+    using CallUtils for Call[];
     using TestKeyManager for TestKey;
     using SignedCallsLib for SignedCalls;
 
@@ -58,7 +58,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
 
     /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: 0});
         bytes32 hashTypedData = signerAccount.hashTypedData(signedCalls.hash());
         // re-implement 712 hash
@@ -67,7 +67,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     }
 
     function test_hashTypedData_matches_signedTypedData_ffi() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
         SignedCalls memory signedCalls = SignedCalls({calls: calls, nonce: nonce});

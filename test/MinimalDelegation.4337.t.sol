@@ -9,7 +9,7 @@ import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC4337Account} from "../src/ERC4337Account.sol";
 import {UserOpBuilder} from "./utils/UserOpBuilder.sol";
-import {CallBuilder} from "./utils/CallBuilder.sol";
+import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
@@ -17,8 +17,8 @@ import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.so
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 
-contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHandler {
-    using CallBuilder for Call[];
+contract MinimalDelegation4337Test is ExecuteHandler, DelegationHandler, TokenHandler {
+    using CallUtils for Call[];
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;
 
@@ -37,7 +37,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
     function test_handleOps_single_eoaSigner_gas() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
@@ -71,7 +71,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
         vm.prank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
 
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
@@ -98,7 +98,7 @@ contract MinimalDelegation4337Test is DelegationHandler, TokenHandler, ExecuteHa
     }
 
     function test_handleOps_single_eoaSigner_emits_UserOperationRevertReason() public {
-        Call[] memory calls = CallBuilder.init();
+        Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
         bytes memory executionData = abi.encode(calls);
