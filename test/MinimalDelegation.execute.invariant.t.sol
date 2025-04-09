@@ -22,6 +22,7 @@ import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
+import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
 
 // To avoid stack to deep
 struct SetupParams {
@@ -40,6 +41,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
     using SettingsLib for Settings;
+    using InvariantRevertLib for bytes[];
 
     /// @notice The keys which will be used to sign calls to execute
     TestKey[] public signingKeys;
@@ -61,8 +63,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// @notice Sets the current key for the test
     /// if the test uses `caller`, we prank the key's public key
     modifier useKey(uint256 keyIndexSeed) {
-        uint256 index;
-        (currentSigningKey, index) = _rand(signingKeys, keyIndexSeed);
+        (currentSigningKey,) = _rand(signingKeys, keyIndexSeed);
         _;
     }
 
@@ -70,14 +71,6 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     function _buildNextValidNonce(uint256 key) internal view returns (uint256 nonce, uint64 seq) {
         seq = uint64(signerAccount.getSeq(key));
         nonce = key << 64 | seq;
-    }
-
-    /// @notice Sets the tracked revert data if it is not already set
-    function _trackRevert(bytes memory revertData, bytes memory trackedRevertData) internal pure returns (bytes memory) {
-        if (trackedRevertData.length == 0) {
-            trackedRevertData = revertData;
-        }
-        return trackedRevertData;
     }
 
     /// @notice Executes a batched call with the current caller
@@ -125,38 +118,36 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         bytes memory opData = abi.encode(nonce, wrappedSignature);
         bytes memory executionData = abi.encode(calls, opData);
 
-        // Track just the first expected revert
-        bytes memory expectedRevert;
-        // Signature validation reverts happen first
+        bytes[] memory expectedReverts = InvariantRevertLib.initArray();
+
+        // Add signature validation reverts since they are checked first
         if (!isRootKey) {
             try signerAccount.getKey(currentKeyHash) {
                 Settings settings = signerAccount.getKeySettings(currentKeyHash);
                 // Expect revert if expired
                 (bool isExpired,) = settings.isExpired();
                 if (isExpired) {
-                    expectedRevert =
-                        _trackRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector), expectedRevert);
+                    expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector));
                 } else if (!settings.isAdmin() && calls.containsSelfCall()) {
-                    expectedRevert = _trackRevert(
-                        abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector), expectedRevert
-                    );
+                    expectedReverts =
+                        expectedReverts.push(abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector));
                 }
             } catch (bytes memory revertData) {
                 assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-                expectedRevert =
-                    _trackRevert(abi.encodeWithSelector(IKeyManagement.KeyDoesNotExist.selector), expectedRevert);
+                expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyDoesNotExist.selector));
             }
         }
-        // Handler call reverts
+        // Add any expected execution level reverts
         if (handlerCall.revertData.length > 0) {
-            expectedRevert = _trackRevert(handlerCall.revertData, expectedRevert);
+            expectedReverts = expectedReverts.push(handlerCall.revertData);
         }
 
         try signerAccount.execute(BATCHED_CALL_SUPPORTS_OPDATA, executionData) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (expectedRevert.length > 0) {
-                assertEq(revertData, expectedRevert);
+            if (expectedReverts.length > 0) {
+                // Only assert against the first expected revert
+                assertEq(revertData, expectedReverts[0]);
             } else {
                 bytes memory debugCalldata =
                     abi.encodeWithSelector(IERC7821.execute.selector, BATCHED_CALL_SUPPORTS_OPDATA, executionData);
@@ -219,7 +210,7 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     }
 
     /// Function called after each invariant test
-    function afterInvariant() view public {
+    function afterInvariant() public view {
         console2.log("Number of persisted registered keys");
         console2.logUint(signerAccount.keyCount());
 
