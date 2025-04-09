@@ -7,7 +7,7 @@ import {TransientAllowance} from "./libraries/TransientAllowance.sol";
 /// @title ERC-7914
 /// @notice Abstract ERC-7914 implementation
 abstract contract ERC7914 is IERC7914 {
-    mapping(address => uint256) public allowance;
+    mapping(address spender => uint256 allowance) public allowance;
 
     /// @inheritdoc IERC7914
     function approveNative(address spender, uint256 amount) external override returns (bool) {
