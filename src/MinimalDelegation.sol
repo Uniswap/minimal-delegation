@@ -175,14 +175,13 @@ contract MinimalDelegation is
         _useNonce(signedCalls.nonce);
 
         Key memory key = getKey(keyHash);
-
         bytes32 digest = _hashTypedData(signedCalls.hash());
         if(!key.verify(digest, signature)) revert IERC7821.InvalidSignature();
-        
+
         Settings settings = getKeySettings(keyHash);
         (bool isExpired, uint40 expiry) = settings.isExpired();
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-
+        
         IHook hook = settings.hook();
         if(hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
             // Will revert if validation should fail
@@ -204,12 +203,12 @@ contract MinimalDelegation is
         (bytes32 keyHash, bytes memory signature, bytes memory witness) = abi.decode(wrappedSignature, (bytes32, bytes, bytes));
         
         Key memory key = getKey(keyHash);
+        bytes32 digest = _hashTypedData(data.hashWithWrappedType());
+        result = key.verify(digest, signature) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE;
+
         Settings settings = getKeySettings(keyHash);
         (bool isExpired, uint40 expiry) = settings.isExpired();
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-
-        bytes32 digest = _hashTypedData(data.hashWithWrappedType());
-        result = key.verify(digest, signature) ? _1271_MAGIC_VALUE : _1271_INVALID_VALUE;
 
         IHook hook = settings.hook();
         if(hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
