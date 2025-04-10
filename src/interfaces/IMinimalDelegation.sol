@@ -35,6 +35,10 @@ interface IMinimalDelegation is
     IERC7914,
     INonceManager
 {
+    error Unauthorized();
+    error CallFailed(bytes reason);
+    error InvalidSignature();
+
     function execute(Call[] memory calls, bool shouldRevert) external payable;
     function execute(SignedCalls memory signedCalls, bytes memory signature) external payable;
 }

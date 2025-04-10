@@ -2,10 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface IERC7821 {
+    /// @dev Thrown when an unsupported execution mode is provided.
     error UnsupportedExecutionMode();
-    error Unauthorized();
-    error CallFailed(bytes reason);
-    error InvalidSignature();
 
     function execute(bytes32 mode, bytes calldata executionData) external payable;
 

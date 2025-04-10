@@ -106,7 +106,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (caller != address(signerAccount)) {
-                assertEq(bytes4(revertData), IERC7821.Unauthorized.selector);
+                assertEq(bytes4(revertData), IMinimalDelegation.Unauthorized.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {

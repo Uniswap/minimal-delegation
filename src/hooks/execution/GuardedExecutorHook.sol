@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {LibBytes} from "solady/utils/LibBytes.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {IERC7821} from "../../interfaces/IERC7821.sol";
+import {IMinimalDelegation} from "../../interfaces/IMinimalDelegation.sol";
 import {Call} from "../../libraries/CallLib.sol";
 import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
@@ -66,7 +66,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
 
         // This check is required to ensure that authorizing any function selector
         // or any target will still NOT allow for self execution.
-        if (_isSelfExecute(to, fnSel)) return false;
+        if (_isSelfCall(to, fnSel)) return false;
 
         EnumerableSetLib.Bytes32Set storage c = canExecute[keyHash.wrap(msg.sender)];
         if (c.length() != 0) {
@@ -86,7 +86,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         returns (bytes4, bytes memory)
     {
         // TODO: check value
-        if (!_canExecute(keyHash, to, data)) revert IERC7821.Unauthorized();
+        if (!_canExecute(keyHash, to, data)) revert IMinimalDelegation.Unauthorized();
         return (IExecutionHook.beforeExecute.selector, bytes(""));
     }
 
@@ -95,9 +95,9 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         return IExecutionHook.afterExecute.selector;
     }
 
-    /// @dev Returns true if the call is a self-execute call.
-    function _isSelfExecute(address to, bytes4 selector) internal view returns (bool) {
-        return to == msg.sender && selector == IERC7821.execute.selector;
+    /// @dev Returns true if the call is to the same contract.
+    function _isSelfCall(address to, bytes4) internal view returns (bool) {
+        return to == msg.sender;
     }
 
     /// @dev Returns a bytes32 value that contains `to` and `selector`.

@@ -1,12 +1,12 @@
 {
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "91398",
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "128255",
-  "execute_BATCHED_CALL_opData_P256_singleCall": "116859",
-  "execute_BATCHED_CALL_opData_singleCall": "91398",
-  "execute_BATCHED_CALL_opData_singleCall_native": "92285",
-  "execute_BATCHED_CALL_opData_twoCalls": "128255",
-  "execute_BATCHED_CALL_singleCall": "59524",
-  "execute_BATCHED_CALL_singleCall_native": "59445",
-  "execute_BATCHED_CALL_twoCalls": "95690",
-  "execute_invalidMode_reverts": "22940"
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "90981",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "127415",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "116293",
+  "execute_BATCHED_CALL_opData_singleCall": "90981",
+  "execute_BATCHED_CALL_opData_singleCall_native": "91907",
+  "execute_BATCHED_CALL_opData_twoCalls": "127415",
+  "execute_BATCHED_CALL_singleCall": "59180",
+  "execute_BATCHED_CALL_singleCall_native": "59228",
+  "execute_BATCHED_CALL_twoCalls": "94805",
+  "execute_invalidMode_reverts": "23025"
 }
