@@ -2,6 +2,14 @@
 
 a minimal, non-upgradeable implementation contract that can be set on an EIP-7702 delegation txn
 
+## Installation
+```bash
+foundryup --install nightly
+
+cd test/js-scripts && yarn && yarn build
+
+forge test
+```
 
 ## Features
 
