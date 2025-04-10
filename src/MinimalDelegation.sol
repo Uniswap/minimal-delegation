@@ -165,7 +165,7 @@ contract MinimalDelegation is
     }
 
     /// @notice Reverts if the key settings are expired
-    function _checkExpiry(Settings settings) private {
+    function _checkExpiry(Settings settings) private view {
         (bool isExpired, uint40 expiry) = settings.isExpired();
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
     }
