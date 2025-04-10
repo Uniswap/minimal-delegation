@@ -27,7 +27,7 @@ contract SignedCallsLibTest is Test {
         bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
         bytes32 expectedHash =
-            keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert, hookData));
+            keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert, keccak256(hookData)));
         assertEq(actualHash, expectedHash);
     }
 }
