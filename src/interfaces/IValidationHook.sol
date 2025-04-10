@@ -17,7 +17,10 @@ interface IValidationHook {
     /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback
     /// @return selector Must be afterIsValidSignature.selector
     /// @return magicValue The EIP-1271 magic value (or invalid value) to return, overriding the validation done within the account
-    function afterIsValidSignature(bytes32 keyHash, bytes32 digest) external view returns (bytes4 selector, bytes4 magicValue);
+    function afterIsValidSignature(bytes32 keyHash, bytes32 digest)
+        external
+        view
+        returns (bytes4 selector, bytes4 magicValue);
 
     /// @notice Hook called after verifying a signature over `SignedCalls`. MUST revert if the signature is invalid
     /// @return selector Must be afterVerifySignature.selector
