@@ -10,7 +10,6 @@ import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol
 
 /// @title MultiSignerValidatorHook
 /// Require signatures from additional, arbitary signers for a key
-/// TODO: add threshold signature verification
 contract MultiSignerValidatorHook is IValidationHook {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
@@ -42,6 +41,7 @@ contract MultiSignerValidatorHook is IValidationHook {
         emit RequiredSignerAdded(keyHash, signerKeyHash);
     }
 
+    /// @inheritdoc IValidationHook
     function afterValidateUserOp(
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
@@ -54,6 +54,7 @@ contract MultiSignerValidatorHook is IValidationHook {
         );
     }
 
+    /// @inheritdoc IValidationHook
     function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
@@ -66,6 +67,7 @@ contract MultiSignerValidatorHook is IValidationHook {
         );
     }
 
+    /// @inheritdoc IValidationHook
     function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
@@ -75,6 +77,8 @@ contract MultiSignerValidatorHook is IValidationHook {
         return IValidationHook.afterVerifySignature.selector;
     }
 
+    /// @notice Check if all required signers have signed over the digest
+    /// @dev verifies `hookData` is an array of wrapped signer signatures matching the requiredSigners for the keyHash
     function _hasAllRequiredSignatures(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         internal
         view
