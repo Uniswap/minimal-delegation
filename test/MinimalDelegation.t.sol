@@ -280,7 +280,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         bytes memory signature = p256Key.sign(userOpHash);
-        userOp.signature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
 
         vm.prank(address(entryPoint));
         uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
@@ -304,7 +304,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         // incorrect private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
         bytes memory signature = abi.encodePacked(r, s, v);
-        userOp.signature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
 
         vm.prank(address(entryPoint));
         uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
@@ -323,7 +323,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
         PackedUserOperation memory userOp;
         // Spoofed signature and userOpHash
-        userOp.signature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
         bytes32 userOpHash = KeyLib.ROOT_KEY_HASH;
 
         mockHook.setValidateUserOpReturnValue(0);
@@ -347,7 +347,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         bytes memory signature = p256Key.sign(userOpHash);
-        userOp.signature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(p256Key.toKeyHash(), signature);
 
         vm.prank(address(entryPoint));
         vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
@@ -359,7 +359,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         // incorrect private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
-        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, abi.encodePacked(r, s, v), EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, abi.encodePacked(r, s, v));
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
@@ -370,7 +370,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 missingAccountFunds = 1e18;
-        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(userOpHash), EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(userOpHash));
 
         deal(address(signerAccount), 1e18);
 
@@ -424,7 +424,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         bytes memory signature = signerTestKey.sign(userOpHash);
-        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
@@ -438,7 +438,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         bytes memory signature = signerTestKey.sign(userOpHash);
-        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
 
         vm.prank(address(entryPoint));
         signerAccount.validateUserOp(userOp, userOpHash, 0);
@@ -452,7 +452,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 missingAccountFunds = 1e18;
         bytes memory signature = signerTestKey.sign(userOpHash);
-        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        userOp.signature = abi.encode(KeyLib.ROOT_KEY_HASH, signature);
 
         deal(address(signerAccount), 1e18);
 

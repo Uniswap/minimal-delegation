@@ -13,7 +13,7 @@ contract SignedCallsLibTest is Test {
     /// @notice Test to catch accidental changes to the typehash
     function test_constant_execution_data_typehash() public pure {
         bytes32 expectedTypeHash = keccak256(
-            "SignedCalls(Call[] calls,uint256 nonce,bytes32 keyHash,bool shouldRevert,bytes hookData)Call(address to,uint256 value,bytes data)"
+            "SignedCalls(Call[] calls,uint256 nonce,bytes32 keyHash,bool shouldRevert)Call(address to,uint256 value,bytes data)"
         );
         assertEq(SignedCallsLib.SIGNED_CALLS_TYPEHASH, expectedTypeHash);
     }
@@ -22,16 +22,15 @@ contract SignedCallsLibTest is Test {
         Call[] memory calls,
         uint256 nonce,
         bytes32 keyHash,
-        bool shouldRevert,
-        bytes memory hookData
+        bool shouldRevert
     ) public pure {
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(keyHash)
-            .withShouldRevert(shouldRevert).withHookData(hookData);
+            .withShouldRevert(shouldRevert);
         bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
         bytes32 expectedHash = keccak256(
             abi.encode(
-                SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert, keccak256(hookData)
+                SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert
             )
         );
         assertEq(actualHash, expectedHash);

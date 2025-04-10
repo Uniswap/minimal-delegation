@@ -117,8 +117,8 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(userOp.signature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes memory signature) =
+            abi.decode(userOp.signature, (bytes32, bytes));
 
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
@@ -137,7 +137,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
             // The hook can override the validation data
-            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
+            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash);
         }
     }
 
@@ -152,7 +152,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
             // Hook must revert to signal that signature verification
-            hook.handleAfterVerifySignature(signedCalls.keyHash, digest, signedCalls.hookData);
+            hook.handleAfterVerifySignature(signedCalls.keyHash, digest);
         }
     }
 
@@ -163,8 +163,8 @@ contract MinimalDelegation is
         override(ERC1271, IERC1271)
         returns (bytes4 result)
     {
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(wrappedSignature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes memory signature) =
+            abi.decode(wrappedSignature, (bytes32, bytes));
         bytes32 digest = _hashTypedData(data.hashWithWrappedType());
 
         (bool isValid, Settings settings) = _verifySignatureAndReturnSettings(keyHash, digest, signature);
@@ -175,7 +175,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
+            result = hook.handleAfterIsValidSignature(keyHash, digest);
         }
     }
 

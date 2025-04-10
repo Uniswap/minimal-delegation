@@ -13,8 +13,7 @@ library SignedCallBuilder {
             calls: CallUtils.initArray(),
             keyHash: bytes32(0),
             nonce: 0,
-            shouldRevert: true,
-            hookData: bytes("")
+            shouldRevert: true
         });
     }
 
@@ -27,8 +26,7 @@ library SignedCallBuilder {
             calls: calls,
             keyHash: signedCalls.keyHash,
             nonce: signedCalls.nonce,
-            shouldRevert: signedCalls.shouldRevert,
-            hookData: signedCalls.hookData
+            shouldRevert: signedCalls.shouldRevert
         });
     }
 
@@ -37,8 +35,7 @@ library SignedCallBuilder {
             calls: signedCalls.calls,
             keyHash: keyHash,
             nonce: signedCalls.nonce,
-            shouldRevert: signedCalls.shouldRevert,
-            hookData: signedCalls.hookData
+            shouldRevert: signedCalls.shouldRevert
         });
     }
 
@@ -47,8 +44,7 @@ library SignedCallBuilder {
             calls: signedCalls.calls,
             keyHash: signedCalls.keyHash,
             nonce: nonce,
-            shouldRevert: signedCalls.shouldRevert,
-            hookData: signedCalls.hookData
+            shouldRevert: signedCalls.shouldRevert
         });
     }
 
@@ -61,22 +57,7 @@ library SignedCallBuilder {
             calls: signedCalls.calls,
             keyHash: signedCalls.keyHash,
             nonce: signedCalls.nonce,
-            shouldRevert: shouldRevert,
-            hookData: signedCalls.hookData
-        });
-    }
-
-    function withHookData(SignedCalls memory signedCalls, bytes memory hookData)
-        internal
-        pure
-        returns (SignedCalls memory)
-    {
-        return SignedCalls({
-            calls: signedCalls.calls,
-            keyHash: signedCalls.keyHash,
-            nonce: signedCalls.nonce,
-            shouldRevert: signedCalls.shouldRevert,
-            hookData: hookData
+            shouldRevert: shouldRevert
         });
     }
 }
