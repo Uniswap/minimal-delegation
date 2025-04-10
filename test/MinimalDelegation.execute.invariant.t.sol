@@ -131,7 +131,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         Call[] memory calls = handlerCalls.toCalls();
 
         // TODO: remove these once we can test for them, right now we rely on reverts for assertions
-        bool shouldRevert = false;
+        bool shouldRevert = true;
         bytes memory hookData = bytes("");
 
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withKeyHash(currentKeyHash).withNonce(
