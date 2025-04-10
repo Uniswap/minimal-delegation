@@ -4,7 +4,6 @@ pragma solidity ^0.8.29;
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
 import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {IERC7821} from "./interfaces/IERC7821.sol";
 import {Call, CallLib} from "./libraries/CallLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
@@ -29,9 +28,11 @@ import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
+import {ERC7821} from "./ERC7821.sol";
+import {IERC7821} from "./interfaces/IERC7821.sol";
 
 contract MinimalDelegation is
-    IERC7821,
+    ERC7821,
     ERC1271,
     EIP712,
     ERC4337Account,
@@ -90,7 +91,7 @@ contract MinimalDelegation is
         for (uint256 i = 0; i < calls.length; i++) {
             (bool success, bytes memory output) = _execute(calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && shouldRevert) revert IERC7821.CallFailed(output);
+            if (!success && shouldRevert) revert IMinimalDelegation.CallFailed(output);
         }
     }
 
@@ -111,10 +112,6 @@ contract MinimalDelegation is
         (success, output) = to.call{value: _call.value}(_call.data);
 
         if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
-    }
-
-    function supportsExecutionMode(bytes32 mode) external pure override returns (bool result) {
-        return mode.isBatchedCall() || mode.supportsOpData() || mode.isBatchOfBatches();
     }
 
     /// @inheritdoc IERC4337Account
@@ -148,7 +145,6 @@ contract MinimalDelegation is
             : _handleValidateUserOp(keyHash, signature, userOp, userOpHash, expiry);
     }
 
-    /// TODO: This is left as an internal function to handle wrapping the returned validation data accoring to ERC-4337 spec.
     function _handleValidateUserOp(
         bytes32 keyHash,
         bytes memory signature,
@@ -184,11 +180,11 @@ contract MinimalDelegation is
             ? hook.verifySignature(signedCalls.keyHash, digest, signature)
             : key.verify(digest, signature);
 
-        if (!isValid) revert IERC7821.InvalidSignature();
+        if (!isValid) revert IMinimalDelegation.InvalidSignature();
     }
 
     function _onlyThis() internal view override(KeyManagement, NonceManager, ERC7914) {
-        if (msg.sender != address(this)) revert IERC7821.Unauthorized();
+        if (msg.sender != address(this)) revert IMinimalDelegation.Unauthorized();
     }
 
     /// @inheritdoc ERC1271
