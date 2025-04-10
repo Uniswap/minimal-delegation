@@ -117,8 +117,7 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature) =
-            abi.decode(userOp.signature, (bytes32, bytes));
+        (bytes32 keyHash, bytes memory signature) = abi.decode(userOp.signature, (bytes32, bytes));
 
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
@@ -163,8 +162,7 @@ contract MinimalDelegation is
         override(ERC1271, IERC1271)
         returns (bytes4 result)
     {
-        (bytes32 keyHash, bytes memory signature) =
-            abi.decode(wrappedSignature, (bytes32, bytes));
+        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
         bytes32 digest = _hashTypedData(data.hashWithWrappedType());
 
         (bool isValid, Settings settings) = _verifySignatureAndReturnSettings(keyHash, digest, signature);

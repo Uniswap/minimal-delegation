@@ -9,12 +9,7 @@ library SignedCallBuilder {
     using CallUtils for Call[];
 
     function init() internal pure returns (SignedCalls memory) {
-        return SignedCalls({
-            calls: CallUtils.initArray(),
-            keyHash: bytes32(0),
-            nonce: 0,
-            shouldRevert: true
-        });
+        return SignedCalls({calls: CallUtils.initArray(), keyHash: bytes32(0), nonce: 0, shouldRevert: true});
     }
 
     function withCalls(SignedCalls memory signedCalls, Call[] memory calls)

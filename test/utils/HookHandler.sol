@@ -10,7 +10,6 @@ abstract contract HookHandler is Test {
     MockHook internal mockValidationHook;
     MockHook internal mockExecutionHook;
 
-
     /// 0x1111 ... 1111
     address payable constant ALL_HOOKS = payable(0xf00000000000000000000000000000000000000f);
     /// 0x1111 ... 0111

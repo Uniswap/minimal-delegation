@@ -26,8 +26,7 @@ library HooksLib {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view returns (uint256 validationData) {
-        (bytes4 hookSelector, uint256 hookValidationData) =
-            self.afterValidateUserOp(keyHash, userOp, userOpHash);
+        (bytes4 hookSelector, uint256 hookValidationData) = self.afterValidateUserOp(keyHash, userOp, userOpHash);
         if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
         return hookValidationData;
     }
@@ -42,10 +41,7 @@ library HooksLib {
         return hookMagicValue;
     }
 
-    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest)
-        internal
-        view
-    {
+    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest) internal view {
         bytes4 hookSelector = self.afterVerifySignature(keyHash, digest);
         if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
     }

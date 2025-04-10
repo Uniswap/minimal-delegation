@@ -72,8 +72,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
-        SignedCalls memory signedCalls =
-            SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
