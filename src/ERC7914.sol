@@ -4,9 +4,9 @@ pragma solidity ^0.8.23;
 import {IERC7914} from "./interfaces/IERC7914.sol";
 import {TransientAllowance} from "./libraries/TransientAllowance.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
+
 /// @title ERC-7914
 /// @notice Abstract ERC-7914 implementation
-
 abstract contract ERC7914 is IERC7914, BaseAuthorization {
     mapping(address spender => uint256 allowance) public allowance;
 
