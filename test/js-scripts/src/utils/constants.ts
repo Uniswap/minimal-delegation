@@ -11,7 +11,8 @@ export const types = {
     { name: 'calls', type: 'Call[]' },
     { name: 'nonce', type: 'uint256' },
     { name: 'keyHash', type: 'bytes32' },
-    { name: 'shouldRevert', type: 'bool' }
+    { name: 'shouldRevert', type: 'bool' },
+    { name: 'hookData', type: 'bytes' }
   ],
   Call: [
     { name: 'to', type: 'address' },
@@ -32,4 +33,5 @@ export type SignedCalls = {
     nonce: number;
     keyHash: string;
     shouldRevert: boolean;
+    hookData: string;
   }
