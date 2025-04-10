@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {Call} from "../../src/libraries/CallLib.sol";
 import {IKeyManagement} from "../../src/interfaces/IKeyManagement.sol";
 import {IERC7821} from "../../src/interfaces/IERC7821.sol";
 import {Settings} from "../../src/libraries/SettingsLib.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
+import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @dev A wrapper around Call that includes callback data for processing after execution
@@ -45,6 +45,15 @@ library CallUtils {
         }
         newCalls[calls.length] = call;
         return newCalls;
+    }
+
+    function containsSelfCall(Call[] memory calls) internal pure returns (bool) {
+        for (uint256 i = 0; i < calls.length; i++) {
+            if (calls[i].to == SELF_CALL) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Call manipulation

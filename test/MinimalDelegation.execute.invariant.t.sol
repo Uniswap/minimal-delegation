@@ -7,7 +7,7 @@ import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {ERC20Mock} from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
-import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
+import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
@@ -22,18 +22,19 @@ import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
+import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
+import {InvariantBlock} from "./utils/InvariantFixtures.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
-
 // To avoid stack to deep
+
 struct SetupParams {
     IMinimalDelegation _signerAccount;
-    TestKey[] _keys;
-    address[] _callers;
+    TestKey[] _signingKeys;
     address _tokenA;
     address _tokenB;
 }
 
-contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCallGenerator {
+contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerator {
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
@@ -41,40 +42,47 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     using CallUtils for *;
     using SignedCallsLib for SignedCalls;
     using SettingsBuilder for Settings;
+    using SettingsLib for Settings;
+    using InvariantRevertLib for bytes[];
     using SignedCallBuilder for SignedCalls;
 
-    address[] public callers;
-    address public currentCaller;
-
-    TestKey[] public keys;
+    /// @notice The keys which will be used to sign calls to execute
+    TestKey[] public signingKeys;
     TestKey public currentSigningKey;
 
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
+    bytes4 public constant EXECUTE_SIGNED_CALLS_SELECTOR =
+        bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool),bytes)"));
+
     constructor(SetupParams memory _params)
         FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB)
     {
-        for (uint256 i = 0; i < _params._keys.length; i++) {
-            keys.push(_params._keys[i]);
+        for (uint256 i = 0; i < _params._signingKeys.length; i++) {
+            signingKeys.push(_params._signingKeys[i]);
+            fixtureKeys.push(_params._signingKeys[i]);
         }
-        callers = _params._callers;
         tokenA = ERC20Mock(_params._tokenA);
         tokenB = ERC20Mock(_params._tokenB);
     }
 
-    /// @notice Sets the current signing key for the test
-    modifier useSigningKey(uint256 keyIndexSeed) {
-        currentSigningKey = keys[_bound(keyIndexSeed, 0, keys.length - 1)];
+    /// @notice Sets the current key for the test
+    /// if the test uses `caller`, we prank the key's public key
+    modifier useKey() {
+        currentSigningKey = _randKeyFromArray(signingKeys);
         _;
     }
 
-    /// @notice Sets the current caller for the test
-    modifier useCaller(uint256 callerIndexSeed) {
-        currentCaller = callers[_bound(callerIndexSeed, 0, callers.length - 1)];
-        vm.startPrank(currentCaller);
+    modifier setBlock() {
+        InvariantBlock memory _block = _randBlock();
+        if (_block.blockNumber != block.number) {
+            vm.roll(_block.blockNumber);
+        }
+        if (_block.blockTimestamp != block.timestamp) {
+            vm.warp(_block.blockTimestamp);
+        }
         _;
-        vm.stopPrank();
     }
 
     /// Helper function to get the next available nonce
@@ -88,14 +96,16 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
     /// TODO: only supports single call arrays for now
     /// - Generates a random call, executes it, then processes any registered callbacks
     /// - Any reverts are expected by the generated handler call
-    function executeBatchedCall(uint256 seed) public useCaller(seed) {
-        HandlerCall memory handlerCall = _generateHandlerCall(seed);
+    function executeBatchedCall(uint256 generatorSeed) public useKey setBlock {
+        address caller = vm.addr(currentSigningKey.privateKey);
+        vm.startPrank(caller);
+        HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
-        try signerAccount.execute(BATCHED_CALL, abi.encode(handlerCalls.toCalls())) {
+        try signerAccount.execute(handlerCalls.toCalls(), true) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (currentCaller != address(signerAccount)) {
+            if (caller != address(signerAccount)) {
                 assertEq(bytes4(revertData), IERC7821.Unauthorized.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
@@ -103,36 +113,23 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
                 revert("uncaught revert");
             }
         }
+
+        vm.stopPrank();
     }
 
     /// @notice Executes a call with operation data (with signature)
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 seed) public useSigningKey(seed) {
+    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
+        bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
-        bytes32 currentKeyHash = currentSigningKey.toKeyHash();
-        bool signatureIsValid;
-        if (!isRootKey) {
-            // TODO: check expiry here, settings, etc.
-            try signerAccount.getKey(currentKeyHash) {}
-            catch (bytes memory revertData) {
-                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-                signatureIsValid = false;
-            }
-        } else {
-            signatureIsValid = true;
-        }
-
-        HandlerCall memory handlerCall = _generateHandlerCall(seed);
+        HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
-
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-
         Call[] memory calls = handlerCalls.toCalls();
 
-        // TODO: remove these
         bool shouldRevert = false;
         bytes memory hookData = bytes("");
 
@@ -140,14 +137,43 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteHandler, FunctionCal
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = currentSigningKey.sign(digest);
 
+        bytes[] memory expectedReverts = InvariantRevertLib.initArray();
+
+        // Add signature validation reverts since they are checked first
+        if (!isRootKey) {
+            try signerAccount.getKey(currentKeyHash) {
+                Settings settings = signerAccount.getKeySettings(currentKeyHash);
+                // Expect revert if expired
+                (bool isExpired,) = settings.isExpired();
+                if (isExpired) {
+                    _state.validationFailed_KeyExpired++;
+                    expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector));
+                } else if (!settings.isAdmin() && calls.containsSelfCall()) {
+                    _state.validationFailed_OnlyAdminCanSelfCall++;
+                    expectedReverts =
+                        expectedReverts.push(abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector));
+                }
+            } catch (bytes memory revertData) {
+                _state.validationFailed_KeyDoesNotExist++;
+                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+                expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyDoesNotExist.selector));
+            }
+        }
+        // Add any expected execution level reverts
+        if (handlerCall.revertData.length > 0) {
+            expectedReverts = expectedReverts.push(handlerCall.revertData);
+        }
+
         try signerAccount.execute(signedCalls, signature) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (!signatureIsValid) {
-                assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
-            } else if (handlerCall.revertData.length > 0) {
-                assertEq(revertData, handlerCall.revertData);
+            if (expectedReverts.length > 0) {
+                // Only assert against the first expected revert
+                assertEq(revertData, expectedReverts[0]);
             } else {
+                bytes memory debugCalldata =
+                    abi.encodeWithSelector(EXECUTE_SIGNED_CALLS_SELECTOR, signedCalls, signature);
+                console2.logBytes(debugCalldata);
                 console2.logBytes(revertData);
                 revert("uncaught revert");
             }
@@ -170,9 +196,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
 
     address internal sender = makeAddr("sender");
 
-    TestKey[] internal _keys;
-    TestKey internal untrustedKey;
-
     function setUp() public {
         setUpDelegation();
         setUpTokens();
@@ -181,25 +204,15 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
         tokenA.mint(address(signerAccount), 100e18);
         tokenB.mint(address(signerAccount), 100e18);
 
-        address[] memory callers = new address[](2);
-        // Add trusted root caller
-        callers[0] = address(signerAccount);
-        vm.label(callers[0], "signerAccount");
-        // Add untrusted caller
-        callers[1] = untrustedCaller;
-        vm.label(callers[1], "untrustedCaller");
-
-        untrustedKey = TestKeyManager.withSeed(KeyType.Secp256k1, untrustedPrivateKey);
-
+        TestKey[] memory _signingKeys = new TestKey[](2);
         // Add trusted root key
-        _keys.push(TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey));
+        _signingKeys[0] = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Add untrusted key
-        _keys.push(untrustedKey);
+        _signingKeys[1] = TestKeyManager.withSeed(KeyType.Secp256k1, untrustedPrivateKey);
 
         SetupParams memory params = SetupParams({
             _signerAccount: signerAccount,
-            _keys: _keys,
-            _callers: callers,
+            _signingKeys: _signingKeys,
             _tokenA: address(tokenA),
             _tokenB: address(tokenB)
         });
@@ -219,9 +232,11 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     }
 
     /// Function called after each invariant test
-    function afterInvariant() public {
+    function afterInvariant() public view {
         console2.log("Number of persisted registered keys");
         console2.logUint(signerAccount.keyCount());
+
+        invariantHandler.logState();
     }
 
     /// @notice Verifies that the root key can always register other signing keys

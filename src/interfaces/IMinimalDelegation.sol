@@ -9,6 +9,8 @@ import {IEIP712} from "./IEIP712.sol";
 import {IERC7201} from "./IERC7201.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {IERC4337Account} from "./IERC4337Account.sol";
+import {SignedCalls} from "../libraries/SignedCallsLib.sol";
+import {Call} from "../libraries/CallLib.sol";
 import {IERC7914} from "./IERC7914.sol";
 import {SignedCalls} from "../libraries/SignedCallsLib.sol";
 import {Call} from "../libraries/CallLib.sol";

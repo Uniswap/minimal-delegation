@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
-import {ExecuteHandler} from "./utils/ExecuteHandler.sol";
+import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {HookHandler} from "./utils/HookHandler.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
@@ -24,7 +24,7 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
 
-contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandler, DelegationHandler {
+contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, DelegationHandler {
     using TestKeyManager for TestKey;
     using KeyLib for Key;
     using CallUtils for Call[];
@@ -188,11 +188,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
             Call(address(0), 0, abi.encodeWithSelector(IKeyManagement.register.selector, secp256k1Key.toKey()));
         calls = calls.push(registerCall);
 
-        uint256 nonceKey = 0;
-        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
-
         SignedCalls memory signedCalls =
-            SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(p256Key.toKeyHash());
+            SignedCallBuilder.init().withCalls(calls).withNonce(DEFAULT_NONCE).withKeyHash(p256Key.toKeyHash());
 
         // Sign using the registered P256 key
         bytes memory signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
@@ -211,19 +208,14 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
-        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+        SignedCalls memory signedCalls =
+            SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(signerTestKey.toKeyHash());
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
 
         bytes memory signature = signerTestKey.sign(hashToSign);
 
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
         signerAccount.execute(signedCalls, signature);
-
-        // Verify the transfers succeeded
-        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
-        assertEq(tokenB.balanceOf(address(receiver)), 1e18);
-
-        // Verify the nonce was incremented - sequence should increase by 1
-        assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
     // Root EOA must use bytes32(0) as their keyHash
@@ -234,7 +226,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(signerTestKey.toKeyHash());
+
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(digest);
 
@@ -372,9 +365,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, hashToSign);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory signature = signerTestKey.sign(hashToSign);
 
         // Execute the batch of calls with the signature
         signerAccount.execute(signedCalls, signature);
@@ -467,10 +460,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.prank(address(signer));
         signerAccount.register(p256Key.toKey());
 
-        uint256 nonceKey = 0;
-        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         SignedCalls memory signedCalls =
-            SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(p256Key.toKeyHash());
+            SignedCallBuilder.init().withCalls(calls).withNonce(DEFAULT_NONCE).withKeyHash(p256Key.toKeyHash());
 
         bytes memory signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
 
@@ -552,5 +543,60 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteHandl
         vm.startPrank(address(signerAccount));
         signerAccount.execute(signedCalls, signature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
+    }
+
+    /**
+     * Edge case tests
+     */
+    function test_execute_batch_emptyCalls_succeeds() public {
+        Call[] memory calls = CallUtils.initArray();
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, abi.encode(calls));
+    }
+
+    function test_execute_batch_emptyCalls_revertsWhenUnauthorized() public {
+        Call[] memory calls = CallUtils.initArray();
+        vm.expectRevert(IERC7821.Unauthorized.selector);
+        signerAccount.execute(BATCHED_CALL, abi.encode(calls));
+    }
+
+    /**
+     * Self call tests
+     */
+    function test_execute_register_update_asRoot_succeeds() public {
+        TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
+        calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
+
+        vm.prank(address(signerAccount));
+        signerAccount.execute(BATCHED_CALL, abi.encode(calls));
+    }
+
+    function test_execute_register_update_asNonRoot_reverts() public {
+        TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
+        calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
+
+        vm.expectRevert(IERC7821.Unauthorized.selector);
+        signerAccount.execute(BATCHED_CALL, abi.encode(calls));
+    }
+
+    function test_execute_register_update_withRootSignature_succeeds() public {
+        // Generate a test key to register
+        TestKey memory newKey = TestKeyManager.initDefault(KeyType.Secp256k1);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
+        calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
+
+        SignedCalls memory signedCalls =
+            SignedCallBuilder.init().withCalls(calls).withNonce(DEFAULT_NONCE).withKeyHash(KeyLib.ROOT_KEY_HASH);
+
+        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
+        bytes memory signature = signerTestKey.sign(digest);
+
+        signerAccount.execute(signedCalls, signature);
+        assertEq(Settings.unwrap(signerAccount.getKeySettings(newKey.toKeyHash())), 0);
     }
 }
