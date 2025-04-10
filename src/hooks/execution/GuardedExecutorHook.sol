@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import {LibBytes} from "solady/utils/LibBytes.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {IMinimalDelegation} from "../../interfaces/IMinimalDelegation.sol";
 import {Call} from "../../libraries/CallLib.sol";
 import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";

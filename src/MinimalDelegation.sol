@@ -167,8 +167,8 @@ contract MinimalDelegation is
 
         if (!isValid) revert IMinimalDelegation.InvalidSignature();
     }
-    /// @inheritdoc ERC1271
 
+    /// @inheritdoc ERC1271
     function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
         public
         view
