@@ -286,7 +286,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         // Even if the hook would successful verify the signature, it should still revert
         // because we never call hooks unless the signature is valid
-        vm.expectRevert(IERC7821.InvalidSignature.selector);
+        vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
         signerAccount.execute(signedCalls, signature);
     }
 
