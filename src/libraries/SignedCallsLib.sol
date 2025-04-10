@@ -29,7 +29,7 @@ library SignedCallsLib {
                 signedCalls.nonce,
                 signedCalls.keyHash,
                 signedCalls.shouldRevert,
-                signedCalls.hookData
+                keccak256(signedCalls.hookData)
             )
         );
     }
