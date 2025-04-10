@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
@@ -138,7 +138,7 @@ contract MinimalDelegation is
         validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
 
         IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
+        if (hook.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
             // The hook can override the validation data
             validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash);
         }
@@ -158,7 +158,7 @@ contract MinimalDelegation is
         _checkExpiry(settings);
 
         IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
+        if (hook.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
             // Hook must revert to signal that signature verification
             hook.handleAfterVerifySignature(signedCalls.keyHash, digest);
         }
@@ -189,7 +189,7 @@ contract MinimalDelegation is
         _checkExpiry(settings);
 
         IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
+        if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
             result = hook.handleAfterIsValidSignature(keyHash, digest);
         }

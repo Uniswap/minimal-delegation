@@ -7,7 +7,6 @@ import {IEIP712} from "./interfaces/IEIP712.sol";
 /// @title EIP712
 /// @dev This contract does not cache the domain separator and calculates it on the fly since it will change when delegated to.
 /// @notice It is not compatible with use by proxy contracts since the domain name and version are cached on deployment.
-/// @author Uniswap
 contract EIP712 is IEIP712, IERC5267 {
     /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
     bytes32 internal constant _DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.29;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";

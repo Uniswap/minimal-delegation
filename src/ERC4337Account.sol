@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.29;
 
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {Static} from "./libraries/Static.sol";
 import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
 
+/// @title ERC4337Account
+/// @notice A base contract which allows for the entrypoint to have a default value that can be updated
 abstract contract ERC4337Account is IERC4337Account, BaseAuthorization {
     using EntrypointLib for *;
 
+    /// ERC-4337 defined constants
     uint256 internal constant SIG_VALIDATION_SUCCEEDED = 0;
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
+    /// @notice The cached entrypoint address
     uint256 internal _CACHED_ENTRYPOINT;
 
     modifier onlyEntryPoint() {

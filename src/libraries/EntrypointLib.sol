@@ -2,7 +2,8 @@
 pragma solidity ^0.8.23;
 
 /// @title EntrypointLib
-/// @dev This library is used to allow for the entrypoint to be overriden by the user
+/// @dev This library is used to dirty the most significant bit of the cached entrypoint
+/// to indicate that the entrypoint has been overriden by the account
 library EntrypointLib {
     uint256 internal constant ENTRY_POINT_OVERRIDDEN = 1 << 255;
 

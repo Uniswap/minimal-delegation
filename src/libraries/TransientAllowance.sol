@@ -14,6 +14,7 @@ library TransientAllowance {
         }
     }
 
+    /// @notice Returns the transient allowance for a given spender
     function get(address spender) internal view returns (uint256 allowance) {
         bytes32 hashSlot = _computeSlot(spender);
         assembly ("memory-safe") {
@@ -21,6 +22,7 @@ library TransientAllowance {
         }
     }
 
+    /// @notice Sets the transient allowance for a given spender
     function set(address spender, uint256 allowance) internal {
         bytes32 hashSlot = _computeSlot(spender);
         assembly ("memory-safe") {

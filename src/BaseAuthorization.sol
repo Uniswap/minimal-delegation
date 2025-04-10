@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.29;
+pragma solidity ^0.8.23;
 
 /// @title BaseAuthorization
 /// @notice A base contract that provides a modifier to restrict access to the contract itself
