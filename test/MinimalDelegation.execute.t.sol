@@ -24,6 +24,7 @@ import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
 import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, DelegationHandler {
     using TestKeyManager for TestKey;
@@ -83,7 +84,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
     }
 
     function test_execute_auth_reverts() public {
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(CallUtils.initArray(), true);
     }
 
@@ -555,7 +556,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
     function test_execute_batch_emptyCalls_revertsWhenUnauthorized() public {
         Call[] memory calls = CallUtils.initArray();
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
     }
 
@@ -578,7 +579,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         calls = calls.push(CallUtils.encodeRegisterCall(newKey));
         calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
     }
 

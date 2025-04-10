@@ -2,13 +2,13 @@
 pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {IHook} from "./interfaces/IHook.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
+import {BaseAuthorization} from "./BaseAuthorization.sol";
 
 /// @dev A base contract for managing keys
-abstract contract KeyManagement is IKeyManagement {
+abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using KeyLib for bytes32;
@@ -17,13 +17,8 @@ abstract contract KeyManagement is IKeyManagement {
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
     mapping(bytes32 keyHash => Settings settings) keySettings;
 
-    /// @dev Must be overridden by the implementation
-    function _onlyThis() internal view virtual {}
-
     /// @inheritdoc IKeyManagement
-    function register(Key memory key) external {
-        _onlyThis();
-
+    function register(Key memory key) external onlyThis {
         if (key.isRootKey()) revert CannotRegisterRootKey();
 
         bytes32 keyHash = key.hash();
@@ -33,17 +28,14 @@ abstract contract KeyManagement is IKeyManagement {
         emit Registered(keyHash, key);
     }
 
-    function update(bytes32 keyHash, Settings settings) external {
-        _onlyThis();
+    function update(bytes32 keyHash, Settings settings) external onlyThis {
         if (keyHash.isRootKey()) revert CannotUpdateRootKey();
         if (!keyHashes.contains(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
     }
 
     /// @inheritdoc IKeyManagement
-    function revoke(bytes32 keyHash) external {
-        _onlyThis();
-
+    function revoke(bytes32 keyHash) external onlyThis {
         if (!keyHashes.remove(keyHash)) revert KeyDoesNotExist();
         delete keyStorage[keyHash];
         keySettings[keyHash] = SettingsLib.DEFAULT;

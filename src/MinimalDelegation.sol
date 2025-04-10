@@ -9,6 +9,7 @@ import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {ERC1271} from "./ERC1271.sol";
+import {IERC1271} from "./interfaces/IERC1271.sol";
 import {EIP712} from "./EIP712.sol";
 import {ERC7201} from "./ERC7201.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
@@ -27,11 +28,11 @@ import {HooksLib} from "./libraries/HooksLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
-import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 import {ERC7821} from "./ERC7821.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 
 contract MinimalDelegation is
+    IMinimalDelegation,
     ERC7821,
     ERC1271,
     EIP712,
@@ -50,13 +51,9 @@ contract MinimalDelegation is
     using CallLib for Call[];
     using SignedCallsLib for SignedCalls;
     using HooksLib for IHook;
-    using EntrypointLib for *;
     using SettingsLib for Settings;
 
-    uint256 public packedEntrypoint;
-
-    function execute(Call[] memory calls, bool shouldRevert) public payable {
-        _onlyThis();
+    function execute(Call[] memory calls, bool shouldRevert) public payable onlyThis {
         _dispatch(shouldRevert, calls, KeyLib.ROOT_KEY_HASH);
     }
 
@@ -112,18 +109,6 @@ contract MinimalDelegation is
         (success, output) = to.call{value: _call.value}(_call.data);
 
         if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
-    }
-
-    /// @inheritdoc IERC4337Account
-    function updateEntryPoint(address entryPoint) external {
-        _onlyThis();
-        packedEntrypoint = entryPoint.pack();
-        emit EntryPointUpdated(entryPoint);
-    }
-
-    /// @inheritdoc IERC4337Account
-    function ENTRY_POINT() public view override returns (address) {
-        return packedEntrypoint.isOverriden() ? packedEntrypoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     /// @inheritdoc IAccount
@@ -182,16 +167,12 @@ contract MinimalDelegation is
 
         if (!isValid) revert IMinimalDelegation.InvalidSignature();
     }
-
-    function _onlyThis() internal view override(KeyManagement, NonceManager, ERC7914) {
-        if (msg.sender != address(this)) revert IMinimalDelegation.Unauthorized();
-    }
-
     /// @inheritdoc ERC1271
+
     function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
         public
         view
-        override
+        override(ERC1271, IERC1271)
         returns (bytes4 result)
     {
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));

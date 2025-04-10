@@ -10,19 +10,19 @@ contract MinimalDelegationStorageTest is DelegationHandler {
      *
      * MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7914, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200
      *
-     * 0: mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
-     * 1: mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-     * 2: EnumerableSetLib.Bytes32Set keyHashes;
-     * 3: mapping(uint256 key => uint256 seq) nonceSequenceNumber
-     * 4: mapping(address => uint256) allowance;
-     * 5: uint256 entryPoint
+     * 0: uint256 _CACHED_ENTRYPOINT
+     * 1: mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
+     * 2: mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
+     * 3: EnumerableSetLib.Bytes32Set keyHashes;
+     * 4: mapping(uint256 key => uint256 seq) nonceSequenceNumber
+     * 5: mapping(address => uint256) allowance;
      */
-    uint256 private constant KEY_EXTRA_STORAGE_SLOT = 0;
-    uint256 private constant KEY_STORAGE_SLOT = 1;
-    uint256 private constant KEY_HASHES_SLOT = 2;
-    uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 3;
-    uint256 private constant ALLOWANCE_SLOT = 4;
-    uint256 private constant ENTRY_POINT_SLOT = 5;
+    uint256 private constant ENTRY_POINT_SLOT = 0;
+    uint256 private constant KEY_EXTRA_STORAGE_SLOT = 1;
+    uint256 private constant KEY_STORAGE_SLOT = 2;
+    uint256 private constant KEY_HASHES_SLOT = 3;
+    uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 4;
+    uint256 private constant ALLOWANCE_SLOT = 5;
 
     function setUp() public {
         setUpDelegation();

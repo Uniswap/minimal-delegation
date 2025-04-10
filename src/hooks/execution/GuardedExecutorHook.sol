@@ -7,6 +7,7 @@ import {IMinimalDelegation} from "../../interfaces/IMinimalDelegation.sol";
 import {Call} from "../../libraries/CallLib.sol";
 import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
+import {BaseAuthorization} from "../../BaseAuthorization.sol";
 
 interface IGuardedExecutorHook is IExecutionHook {
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external;
@@ -86,7 +87,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         returns (bytes4, bytes memory)
     {
         // TODO: check value
-        if (!_canExecute(keyHash, to, data)) revert IMinimalDelegation.Unauthorized();
+        if (!_canExecute(keyHash, to, data)) revert BaseAuthorization.Unauthorized();
         return (IExecutionHook.beforeExecute.selector, bytes(""));
     }
 
