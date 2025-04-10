@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
-import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract NonceManagerTest is DelegationHandler {
     function setUp() public {
@@ -20,7 +20,7 @@ contract NonceManagerTest is DelegationHandler {
 
     function test_invalidateNonce_revertsWithUnauthorized() public {
         uint256 nonce = 0;
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.invalidateNonce(nonce);
     }
 

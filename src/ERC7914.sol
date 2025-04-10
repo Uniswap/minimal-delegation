@@ -3,30 +3,29 @@ pragma solidity ^0.8.23;
 
 import {IERC7914} from "./interfaces/IERC7914.sol";
 import {TransientAllowance} from "./libraries/TransientAllowance.sol";
+import {BaseAuthorization} from "./BaseAuthorization.sol";
 
 /// @title ERC-7914
 /// @notice Abstract ERC-7914 implementation
-abstract contract ERC7914 is IERC7914 {
+abstract contract ERC7914 is IERC7914, BaseAuthorization {
     mapping(address spender => uint256 allowance) public allowance;
 
     /// @inheritdoc IERC7914
-    function approveNative(address spender, uint256 amount) external override returns (bool) {
-        _onlyThis();
+    function approveNative(address spender, uint256 amount) external onlyThis returns (bool) {
         allowance[spender] = amount;
         emit ApproveNative(address(this), spender, amount);
         return true;
     }
 
     /// @inheritdoc IERC7914
-    function approveNativeTransient(address spender, uint256 amount) external override returns (bool) {
-        _onlyThis();
+    function approveNativeTransient(address spender, uint256 amount) external onlyThis returns (bool) {
         TransientAllowance.set(spender, amount);
         emit ApproveNativeTransient(address(this), spender, amount);
         return true;
     }
 
     /// @inheritdoc IERC7914
-    function transferFromNative(address from, address recipient, uint256 amount) external override returns (bool) {
+    function transferFromNative(address from, address recipient, uint256 amount) external returns (bool) {
         if (amount == 0) return false;
         _transferFrom(from, recipient, amount, false);
         emit TransferFromNative(address(this), recipient, amount);
@@ -34,11 +33,7 @@ abstract contract ERC7914 is IERC7914 {
     }
 
     /// @inheritdoc IERC7914
-    function transferFromNativeTransient(address from, address recipient, uint256 amount)
-        external
-        override
-        returns (bool)
-    {
+    function transferFromNativeTransient(address from, address recipient, uint256 amount) external returns (bool) {
         if (amount == 0) return false;
         _transferFrom(from, recipient, amount, true);
         emit TransferFromNativeTransient(address(this), recipient, amount);
@@ -82,7 +77,4 @@ abstract contract ERC7914 is IERC7914 {
             revert TransferNativeFailed();
         }
     }
-
-    /// @dev Must be overridden by the implementation
-    function _onlyThis() internal view virtual {}
 }
