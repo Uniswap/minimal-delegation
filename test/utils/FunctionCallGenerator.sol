@@ -47,7 +47,7 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     }
 
     function _wrapCallFailedRevertData(bytes4 selector) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IERC7821.CallFailed.selector, abi.encodePacked(selector));
+        return abi.encodeWithSelector(IMinimalDelegation.CallFailed.selector, abi.encodePacked(selector));
     }
 
     /// @return calldata to register a new key along with its callback

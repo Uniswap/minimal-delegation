@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC7914} from "../src/interfaces/IERC7914.sol";
 import {ERC7914} from "../src/ERC7914.sol";
-import {IERC7821} from "../src/interfaces/IERC7821.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract ERC7914Test is DelegationHandler {
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
@@ -20,7 +20,7 @@ contract ERC7914Test is DelegationHandler {
     }
 
     function test_approveNative_revertsWithUnauthorized() public {
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.approveNative(bob, 1 ether);
     }
 
@@ -135,7 +135,7 @@ contract ERC7914Test is DelegationHandler {
     }
 
     function test_approveNativeTransient_revertsWithUnauthorized() public {
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.approveNativeTransient(bob, 1 ether);
     }
 

@@ -2,8 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IKeyManagement} from "./IKeyManagement.sol";
-import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
+import {IERC1271} from "./IERC1271.sol";
 import {IERC7821} from "./IERC7821.sol";
 import {IEIP712} from "./IEIP712.sol";
 import {IERC7201} from "./IERC7201.sol";
@@ -28,11 +27,13 @@ interface IMinimalDelegation is
     IERC7821,
     IERC1271,
     IEIP712,
-    IERC5267,
     IERC7201,
     IERC7914,
     INonceManager
 {
+    error CallFailed(bytes reason);
+    error InvalidSignature();
+
     function execute(Call[] memory calls, bool shouldRevert) external payable;
     function execute(SignedCalls memory signedCalls, bytes memory signature) external payable;
 }

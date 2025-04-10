@@ -23,6 +23,8 @@ import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
+import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, DelegationHandler {
     using TestKeyManager for TestKey;
@@ -82,7 +84,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
     }
 
     function test_execute_auth_reverts() public {
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(CallUtils.initArray(), true);
     }
 
@@ -132,7 +134,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory balanceError = abi.encodeWithSelector(
             IERC20Errors.ERC20InsufficientBalance.selector, address(signerAccount), 100e18, 101e18
         );
-        vm.expectRevert(abi.encodeWithSelector(IERC7821.CallFailed.selector, balanceError));
+        vm.expectRevert(abi.encodeWithSelector(IMinimalDelegation.CallFailed.selector, balanceError));
         signerAccount.execute(BATCHED_CALL, executionData);
     }
 
@@ -273,7 +275,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
             SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(p256Key.toKeyHash());
 
         // Expect the signature to be invalid (because it is)
-        vm.expectRevert(IERC7821.InvalidSignature.selector);
+        vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
         signerAccount.execute(signedCalls, signature);
 
         // Expect the signature to be valid after adding the hook
@@ -554,7 +556,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
     function test_execute_batch_emptyCalls_revertsWhenUnauthorized() public {
         Call[] memory calls = CallUtils.initArray();
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
     }
 
@@ -577,7 +579,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         calls = calls.push(CallUtils.encodeRegisterCall(newKey));
         calls = calls.push(CallUtils.encodeUpdateCall(newKey.toKeyHash(), Settings.wrap(0)));
 
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(BATCHED_CALL, abi.encode(calls));
     }
 
