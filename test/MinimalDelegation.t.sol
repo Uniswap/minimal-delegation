@@ -12,7 +12,7 @@ import {TestKey, TestKeyManager} from "./utils/TestKeyManager.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
-import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract MinimalDelegationTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
@@ -56,7 +56,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     }
 
     function test_register_revertsWithUnauthorized() public {
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.register(mockSecp256k1Key);
     }
 
@@ -90,7 +90,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     function test_update_revertsWithUnauthorized() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.update(keyHash, mockSecp256k1KeySettings);
     }
 
@@ -158,7 +158,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     function test_revoke_revertsWithUnauthorized() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.revoke(keyHash);
     }
 
@@ -247,7 +247,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     }
 
     function test_updateEntryPoint_revertsWithUnauthorized() public {
-        vm.expectRevert(IMinimalDelegation.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.updateEntryPoint(address(entryPoint));
     }
 

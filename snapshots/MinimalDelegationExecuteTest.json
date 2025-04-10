@@ -5,8 +5,8 @@
   "execute_BATCHED_CALL_opData_singleCall": "90981",
   "execute_BATCHED_CALL_opData_singleCall_native": "91907",
   "execute_BATCHED_CALL_opData_twoCalls": "127415",
-  "execute_BATCHED_CALL_singleCall": "59180",
-  "execute_BATCHED_CALL_singleCall_native": "59228",
-  "execute_BATCHED_CALL_twoCalls": "94805",
-  "execute_invalidMode_reverts": "23025"
+  "execute_BATCHED_CALL_singleCall": "59134",
+  "execute_BATCHED_CALL_singleCall_native": "59188",
+  "execute_BATCHED_CALL_twoCalls": "94759",
+  "execute_invalidMode_reverts": "23003"
 }

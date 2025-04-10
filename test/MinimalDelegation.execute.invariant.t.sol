@@ -25,8 +25,9 @@ import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
 import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
 import {InvariantBlock} from "./utils/InvariantFixtures.sol";
 import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
-// To avoid stack to deep
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
+// To avoid stack to deep
 struct SetupParams {
     IMinimalDelegation _signerAccount;
     TestKey[] _signingKeys;
@@ -106,7 +107,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (caller != address(signerAccount)) {
-                assertEq(bytes4(revertData), IMinimalDelegation.Unauthorized.selector);
+                assertEq(bytes4(revertData), BaseAuthorization.Unauthorized.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {
