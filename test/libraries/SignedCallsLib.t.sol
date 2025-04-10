@@ -18,16 +18,22 @@ contract SignedCallsLibTest is Test {
         assertEq(SignedCallsLib.SIGNED_CALLS_TYPEHASH, expectedTypeHash);
     }
 
-    function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce, bytes32 keyHash, bool shouldRevert, bytes memory hookData)
-        public
-        pure
-    {
+    function test_hash_with_nonce_fuzz(
+        Call[] memory calls,
+        uint256 nonce,
+        bytes32 keyHash,
+        bool shouldRevert,
+        bytes memory hookData
+    ) public pure {
         SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(keyHash)
             .withShouldRevert(shouldRevert).withHookData(hookData);
         bytes32 actualHash = SignedCallsLib.hash(signedCalls);
 
-        bytes32 expectedHash =
-            keccak256(abi.encode(SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert, keccak256(hookData)));
+        bytes32 expectedHash = keccak256(
+            abi.encode(
+                SignedCallsLib.SIGNED_CALLS_TYPEHASH, calls.hash(), nonce, keyHash, shouldRevert, keccak256(hookData)
+            )
+        );
         assertEq(actualHash, expectedHash);
     }
 }

@@ -130,10 +130,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
+        // TODO: remove these once we can test for them, right now we rely on reverts for assertions
         bool shouldRevert = false;
         bytes memory hookData = bytes("");
 
-        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withShouldRevert(shouldRevert).withHookData(hookData);
+        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withKeyHash(currentKeyHash).withNonce(
+            nonce
+        ).withShouldRevert(shouldRevert).withHookData(hookData);
+
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = currentSigningKey.sign(digest);
 

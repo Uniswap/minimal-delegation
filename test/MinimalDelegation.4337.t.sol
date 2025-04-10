@@ -31,7 +31,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
         setUpDelegation();
         setUpTokens();
         setUpHooks();
-        
+
         vm.deal(address(signerAccount), 100e18);
         tokenA.mint(address(signerAccount), 100e18);
         tokenB.mint(address(signerAccount), 100e18);

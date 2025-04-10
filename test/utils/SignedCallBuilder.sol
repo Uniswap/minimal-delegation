@@ -9,7 +9,13 @@ library SignedCallBuilder {
     using CallUtils for Call[];
 
     function init() internal pure returns (SignedCalls memory) {
-        return SignedCalls({calls: CallUtils.initArray(), keyHash: bytes32(0), nonce: 0, shouldRevert: true, hookData: bytes("")});
+        return SignedCalls({
+            calls: CallUtils.initArray(),
+            keyHash: bytes32(0),
+            nonce: 0,
+            shouldRevert: true,
+            hookData: bytes("")
+        });
     }
 
     function withCalls(SignedCalls memory signedCalls, Call[] memory calls)
@@ -60,7 +66,11 @@ library SignedCallBuilder {
         });
     }
 
-    function withHookData(SignedCalls memory signedCalls, bytes memory hookData) internal pure returns (SignedCalls memory) {
+    function withHookData(SignedCalls memory signedCalls, bytes memory hookData)
+        internal
+        pure
+        returns (SignedCalls memory)
+    {
         return SignedCalls({
             calls: signedCalls.calls,
             keyHash: signedCalls.keyHash,

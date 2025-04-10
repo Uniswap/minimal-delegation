@@ -130,7 +130,8 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // Set the key to expired
         vm.warp(100);
-        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1)).fromHook(mockValidationHook);
+        Settings keySettings =
+            SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1)).fromHook(mockValidationHook);
 
         vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());

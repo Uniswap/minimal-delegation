@@ -67,7 +67,7 @@ contract FFISignTypedData is JavascriptFfi {
             '",',
             '"shouldRevert":',
             signedCalls.shouldRevert ? "true" : "false",
-            ',',
+            ",",
             '"hookData":"0x',
             bytesToHex(signedCalls.hookData),
             '"',
