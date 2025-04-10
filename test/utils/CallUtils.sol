@@ -100,7 +100,7 @@ library CallUtils {
     // HandlerCall operations
 
     /// @dev Create empty HandlerCall array
-    function initHandler() internal pure returns (HandlerCall[] memory) {
+    function initHandlerArray() internal pure returns (HandlerCall[] memory) {
         return new HandlerCall[](0);
     }
 

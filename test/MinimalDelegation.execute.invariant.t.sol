@@ -53,6 +53,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
+    bytes4 public constant EXECUTE_BATCHED_CALLS_SELECTOR = bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool,bytes),bytes)"));
     bytes4 public constant EXECUTE_SIGNED_CALLS_SELECTOR =
         bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool),bytes)"));
 
@@ -96,20 +97,33 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// TODO: only supports single call arrays for now
     /// - Generates a random call, executes it, then processes any registered callbacks
     /// - Any reverts are expected by the generated handler call
-    function executeBatchedCall(uint256 generatorSeed) public useKey setBlock {
+    function executeBatchedCall() public useKey setBlock {
         address caller = vm.addr(currentSigningKey.privateKey);
         vm.startPrank(caller);
-        HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
-        HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
+        HandlerCall[] memory handlerCalls = _generateHandlerCalls(MAX_CALL_SIZE);
+
+        bytes[] memory expectedReverts = InvariantRevertLib.initArray();
+
+        if (caller != address(signerAccount)) {
+            expectedReverts = expectedReverts.push(abi.encodeWithSelector(IERC7821.Unauthorized.selector));
+        }
+
+        for (uint256 i = 0; i < handlerCalls.length; i++) {
+            if (handlerCalls[i].revertData.length > 0) {
+                expectedReverts = expectedReverts.push(handlerCalls[i].revertData);
+            }
+        }
 
         try signerAccount.execute(handlerCalls.toCalls(), true) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (caller != address(signerAccount)) {
-                assertEq(bytes4(revertData), IERC7821.Unauthorized.selector);
-            } else if (handlerCall.revertData.length > 0) {
-                assertEq(revertData, handlerCall.revertData);
+            if (expectedReverts.length > 0) {
+                assertEq(revertData, expectedReverts[0]);
             } else {
+                bytes memory debugCalldata =
+                    abi.encodeWithSelector(EXECUTE_BATCHED_CALLS_SELECTOR, handlerCalls.toCalls(), true);
+                console2.logBytes(debugCalldata);
+                console2.logBytes(revertData);
                 revert("uncaught revert");
             }
         }
@@ -119,14 +133,12 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
 
     /// @notice Executes a call with operation data (with signature)
     /// @dev Handler function meant to be called during invariant tests
-    /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
+    function executeWithOpData(uint192 nonceKey) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
-        HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
-        HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
+        HandlerCall[] memory handlerCalls = _generateHandlerCalls(MAX_CALL_SIZE);
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
@@ -159,8 +171,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
             }
         }
         // Add any expected execution level reverts
-        if (handlerCall.revertData.length > 0) {
-            expectedReverts = expectedReverts.push(handlerCall.revertData);
+        for (uint256 i = 0; i < handlerCalls.length; i++) {
+            if (handlerCalls[i].revertData.length > 0) {
+                expectedReverts = expectedReverts.push(handlerCalls[i].revertData);
+            }
         }
 
         try signerAccount.execute(signedCalls, signature) {
