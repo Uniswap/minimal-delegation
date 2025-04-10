@@ -70,11 +70,10 @@ contract MinimalDelegation is
 
     /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
     /// UserOperations can be executed through the execute function, but another method of authorization (ie through a passed in signature) is required.
-    /// userOp.callData is abi.encodeCall(IAccountExecute.executeUserOp.selector, (bytes32 mode, bytes executionData)) where executionData is abi.encode(Call[]).
+    /// userOp.callData is abi.encodeCall(IAccountExecute.executeUserOp.selector, (abi.encode(Call[]), bool))
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
-
         (bytes32 keyHash,) = abi.decode(userOp.signature, (bytes32, bytes));
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
@@ -120,52 +119,55 @@ contract MinimalDelegation is
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes memory signature) = abi.decode(userOp.signature, (bytes32, bytes));
 
-        Settings settings = getKeySettings(keyHash);
-        (bool isExpired, uint40 expiry) = settings.isExpired();
-        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-
-        IHook hook = settings.hook();
-        validationData = hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)
-            ? hook.validateUserOp(keyHash, userOp, userOpHash)
-            : _handleValidateUserOp(keyHash, signature, userOp, userOpHash, expiry);
-    }
-
-    function _handleValidateUserOp(
-        bytes32 keyHash,
-        bytes memory signature,
-        PackedUserOperation memory,
-        bytes32 userOpHash,
-        uint40 expiry
-    ) private view returns (uint256 validationData) {
-        Key memory key = getKey(keyHash);
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
         /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
+        Key memory key = getKey(keyHash);
+        bool isValid = key.verify(userOpHash, signature);
+
+        // If signature verification failed, return failure immediately WITHOUT expiry as it cannot be trusted
+        if (!isValid) {
+            return SIG_VALIDATION_FAILED;
+        }
+
+        Settings settings = getKeySettings(keyHash);
+        _checkExpiry(settings);
 
         /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
         /// `validAfter` is always 0.
-        if (key.verify(userOpHash, signature)) return uint256(expiry) << 160 | SIG_VALIDATION_SUCCEEDED;
-        else return uint256(expiry) << 160 | SIG_VALIDATION_FAILED;
+        validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
+
+        IHook hook = settings.hook();
+        if (hook.hasPermission(HooksLib.VALIDATE_USER_OP_FLAG)) {
+            // The hook can override the validation data
+            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash);
+        }
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
     function _handleVerifySignature(SignedCalls memory signedCalls, bytes memory signature) private {
         _useNonce(signedCalls.nonce);
 
-        Key memory key = getKey(signedCalls.keyHash);
-        Settings settings = getKeySettings(signedCalls.keyHash);
-        (bool isExpired, uint40 expiry) = settings.isExpired();
-        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-
-        IHook hook = settings.hook();
-
         bytes32 digest = _hashTypedData(signedCalls.hash());
 
-        bool isValid = hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)
-            ? hook.verifySignature(signedCalls.keyHash, digest, signature)
-            : key.verify(digest, signature);
-
+        Key memory key = getKey(signedCalls.keyHash);
+        bool isValid = key.verify(digest, signature);
         if (!isValid) revert IMinimalDelegation.InvalidSignature();
+
+        Settings settings = getKeySettings(signedCalls.keyHash);
+        _checkExpiry(settings);
+
+        IHook hook = settings.hook();
+        if (hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
+            // Hook must revert to signal that signature verification
+            hook.handleAfterVerifySignature(signedCalls.keyHash, digest);
+        }
+    }
+
+    /// @notice Reverts if the key settings are expired
+    function _checkExpiry(Settings settings) private view {
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
     }
 
     /// @inheritdoc ERC1271
@@ -176,26 +178,20 @@ contract MinimalDelegation is
         returns (bytes4 result)
     {
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+        bytes32 digest = _hashTypedData(data.hashWithWrappedType());
+
+        Key memory key = getKey(keyHash);
+        bool isValid = key.verify(digest, signature);
+        if (!isValid) return _1271_INVALID_VALUE;
+        result = _1271_MAGIC_VALUE;
 
         Settings settings = getKeySettings(keyHash);
-        (bool isExpired, uint40 expiry) = settings.isExpired();
-        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+        _checkExpiry(settings);
 
         IHook hook = settings.hook();
-        result = hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)
-            ? hook.isValidSignature(keyHash, data, signature)
-            : _handleIsValidSignature(keyHash, data, signature);
-    }
-
-    function _handleIsValidSignature(bytes32 keyHash, bytes32 data, bytes memory signature)
-        private
-        view
-        returns (bytes4 result)
-    {
-        Key memory key = getKey(keyHash);
-        if (key.verify(_hashTypedData(data.hashWithWrappedType()), signature)) {
-            return _1271_MAGIC_VALUE;
+        if (hook.hasPermission(HooksLib.IS_VALID_SIGNATURE_FLAG)) {
+            // Hook can override the result
+            result = hook.handleAfterIsValidSignature(keyHash, digest);
         }
-        return _1271_INVALID_VALUE;
     }
 }

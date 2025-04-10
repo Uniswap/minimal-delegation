@@ -204,9 +204,10 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
     function test_execute_batch_opData_rootEOA_withKeyHash_reverts() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         uint256 nonceKey = 0;
-        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         SignedCalls memory signedCalls =
@@ -227,7 +228,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         uint256 nonceKey = 0;
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
-        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
+        SignedCalls memory signedCalls =
+            SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(KeyLib.ROOT_KEY_HASH);
 
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(digest);
@@ -278,14 +280,15 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
         signerAccount.execute(signedCalls, signature);
 
-        // Expect the signature to be valid after adding the hook
         vm.prank(address(signerAccount));
         Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
         signerAccount.update(p256Key.toKeyHash(), keySettings);
         mockHook.setVerifySignatureReturnValue(true);
 
+        // Even if the hook would successful verify the signature, it should still revert
+        // because we never call hooks unless the signature is valid
+        vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
         signerAccount.execute(signedCalls, signature);
-        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
     function test_execute_batch_opData_withHook_beforeExecute() public {

@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
+import {HookHandler} from "./utils/HookHandler.sol";
 import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
@@ -18,7 +19,7 @@ import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 
-contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler {
+contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, HookHandler {
     using CallUtils for Call[];
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;
@@ -29,6 +30,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
     function setUp() public {
         setUpDelegation();
         setUpTokens();
+        setUpHooks();
 
         vm.deal(address(signerAccount), 100e18);
         tokenA.mint(address(signerAccount), 100e18);
