@@ -36,7 +36,7 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @return salt The value of the `EIP712Domain.salt` field.
     /// @return extensions The list of EIP numbers, that extends EIP-712 with new domain fields.
     function eip712Domain()
-        external
+        public
         view
         virtual
         returns (
