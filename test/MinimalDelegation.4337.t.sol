@@ -18,9 +18,10 @@ import {IAccountExecute} from "account-abstraction/interfaces/IAccountExecute.so
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
+import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
 contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, HookHandler {
-    using CallUtils for Call[];
+    using CallUtils for *;
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;
 
@@ -42,9 +43,10 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
     function test_handleOps_single_eoaSigner_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
-        bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, calls, true);
+        bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, batchedCall);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
@@ -74,9 +76,10 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
 
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
-        bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, calls, true);
+        bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, batchedCall);
 
         PackedUserOperation memory userOp =
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
