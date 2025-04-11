@@ -22,7 +22,6 @@ library CallUtils {
     using CallUtils for Call;
     using CallUtils for Call[];
     using CallUtils for BatchedCall;
-    using CallUtils for BatchedCall[];
     using CallUtils for HandlerCall;
     using CallUtils for HandlerCall[];
     using TestKeyManager for TestKey;
