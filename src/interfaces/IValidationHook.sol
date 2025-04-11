@@ -22,7 +22,7 @@ interface IValidationHook {
         view
         returns (bytes4 selector, bytes4 magicValue);
 
-    /// @notice Hook called after verifying a signature over `SignedCalls`. MUST revert if the signature is invalid
+    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. MUST revert if the signature is invalid
     /// @return selector Must be afterVerifySignature.selector
     function afterVerifySignature(bytes32 keyHash, bytes32 digest) external view returns (bytes4 selector);
 }
