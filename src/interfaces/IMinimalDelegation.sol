@@ -12,6 +12,7 @@ import {IERC4337Account} from "./IERC4337Account.sol";
 import {SignedCalls} from "../libraries/SignedCallsLib.sol";
 import {Call} from "../libraries/CallLib.sol";
 import {IERC7914} from "./IERC7914.sol";
+import {IMulticall} from "./IMulticall.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
 /// This implementation supports:
@@ -31,7 +32,8 @@ interface IMinimalDelegation is
     IERC5267,
     IERC7201,
     IERC7914,
-    INonceManager
+    INonceManager,
+    IMulticall
 {
     error CallFailed(bytes reason);
     error InvalidSignature();
