@@ -16,7 +16,7 @@ contract SignedCallsLibTest is Test {
     /// @notice Test to catch accidental changes to the typehash
     function test_constant_execution_data_typehash() public pure {
         bytes32 expectedTypeHash = keccak256(
-            "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash,bool shouldRevert)BatchedCall(Call[] calls,bool shouldRevert)Call(address to,uint256 value,bytes data)"
+            "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash)BatchedCall(Call[] calls,bool shouldRevert)Call(address to,uint256 value,bytes data)"
         );
         assertEq(SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, expectedTypeHash);
     }
