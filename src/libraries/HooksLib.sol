@@ -28,6 +28,8 @@ library HooksLib {
     }
 
     /// @notice Handles the afterValidateUserOp hook
+    /// @notice MAY revert if desired according to ERC-4337 spec
+    /// @dev Expected to validate the userOp and return a validationData which will override the internally computed validationData
     /// @return validationData encoded according to ERC-4337 spec
     function handleAfterValidateUserOp(
         IHook self,
@@ -41,6 +43,8 @@ library HooksLib {
     }
 
     /// @notice Handles the afterIsValidSignature hook
+    /// @notice MAY revert if desired
+    /// @dev Expected to validate the signature and return a value which will override the internally computed ERC-1271 magic value
     /// @return magicValue the ERC-1271 magic value returned by the hook
     function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest)
         internal
@@ -53,7 +57,7 @@ library HooksLib {
     }
 
     /// @notice Handles the afterVerifySignature hook
-    /// @dev Expected to revert if the signature is invalid
+    /// @notice MUST revert if the signature is invalid
     function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest) internal view {
         bytes4 hookSelector = self.afterVerifySignature(keyHash, digest);
         if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
