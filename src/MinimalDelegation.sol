@@ -149,17 +149,12 @@ contract MinimalDelegation is
     function _handleVerifySignature(SignedCalls memory signedCalls, bytes memory wrappedSignature) private {
         _useNonce(signedCalls.nonce);
 
-        bytes32 digest = _hashTypedData(signedCalls.hash());
-
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(wrappedSignature, (bytes32, bytes, bytes));
-
-        // Ensure the keyHash in the signature matches the one in the signedCalls
-        if (keyHash != signedCalls.keyHash) revert IMinimalDelegation.InvalidSignature();
+        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
 
         Key memory key = getKey(signedCalls.keyHash);
-        bool isValid = key.verify(digest, signature);
-        if (!isValid) revert IMinimalDelegation.InvalidSignature();
+        bytes32 digest = _hashTypedData(signedCalls.hash());
+
+        if (!key.verify(digest, signature)) revert IMinimalDelegation.InvalidSignature();
 
         Settings settings = getKeySettings(signedCalls.keyHash);
         _checkExpiry(settings);
