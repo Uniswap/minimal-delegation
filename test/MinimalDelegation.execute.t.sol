@@ -171,7 +171,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
 
@@ -196,7 +197,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         // Sign using the registered P256 key
         bytes memory signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         assertEq(signerAccount.getKey(secp256k1Key.toKeyHash()).hash(), secp256k1Key.toKeyHash());
     }
 
@@ -216,8 +218,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         bytes memory signature = signerTestKey.sign(hashToSign);
 
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
         vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, wrappedSignature);
     }
 
     // Root EOA must use bytes32(0) as their keyHash
@@ -234,7 +237,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(digest);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
@@ -250,7 +254,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
 
         // Verify the transfers succeeded
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
@@ -277,8 +282,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
             SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(p256Key.toKeyHash());
 
         // Expect the signature to be invalid (because it is)
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
         vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, wrappedSignature);
 
         vm.prank(address(signerAccount));
         Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
@@ -288,7 +294,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         // Even if the hook would successful verify the signature, it should still revert
         // because we never call hooks unless the signature is valid
         vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, wrappedSignature);
     }
 
     function test_execute_batch_opData_withHook_beforeExecute() public {
@@ -318,13 +324,14 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         signerAccount.update(p256Key.toKeyHash(), keySettings);
 
         // Expect the call to revert
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
         vm.expectRevert("revert");
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, wrappedSignature);
 
         // Unset the hook revert
         mockExecutionHook.setBeforeExecuteRevertData(bytes(""));
 
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, wrappedSignature);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
@@ -353,7 +360,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         mockExecutionHook.setBeforeExecuteRevertData(bytes(""));
 
         vm.prank(address(signerAccount));
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
@@ -373,14 +380,14 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         // Execute the batch of calls with the signature
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
 
         // Verify the nonce was incremented - sequence should increase by 1
         assertEq(signerAccount.getSeq(nonceKey), seq + 1);
 
         // Try to execute again with same nonce - should revert
         vm.expectRevert(INonceManager.InvalidNonce.selector);
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
     }
 
     /// GAS TESTS
@@ -448,7 +455,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
     }
 
@@ -468,7 +476,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         bytes memory signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_P256_singleCall");
     }
 
@@ -485,7 +494,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_twoCalls");
     }
 
@@ -501,7 +511,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
     }
 
@@ -521,7 +532,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         // Execute the batch of calls with the signature
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall");
     }
 
@@ -543,8 +555,9 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         // Execute the batch of calls with the signature
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
         vm.startPrank(address(signerAccount));
-        signerAccount.execute(signedCalls, signature);
+        signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
     }
 
@@ -599,7 +612,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = signerTestKey.sign(digest);
 
-        signerAccount.execute(signedCalls, signature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        signerAccount.execute(signedCalls, wrappedSignature);
         assertEq(Settings.unwrap(signerAccount.getKeySettings(newKey.toKeyHash())), 0);
     }
 }
