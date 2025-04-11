@@ -21,11 +21,11 @@ import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
-import {SignedBatchedCalls, SignedBatchedCallsLib} from "../src/libraries/SignedBatchedCallsLib.sol";
+import {SignedBatchedCall, SignedBatchedCallLib} from "../src/libraries/SignedBatchedCallLib.sol";
 import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
 import {InvariantBlock} from "./utils/InvariantFixtures.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
-import {BatchedCalls} from "../src/libraries/BatchedCallsLib.sol";
+import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
 // To avoid stack to deep
 struct SetupParams {
@@ -41,7 +41,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     using KeyLib for Key;
     using CallLib for Call[];
     using CallUtils for *;
-    using SignedBatchedCallsLib for SignedBatchedCalls;
+    using SignedBatchedCallLib for SignedBatchedCall;
     using SettingsBuilder for Settings;
     using SettingsLib for Settings;
     using InvariantRevertLib for bytes[];
@@ -102,10 +102,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
-        BatchedCalls memory batchedCalls =
-            CallUtils.initBatchedCalls().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
+        BatchedCall memory batchedCall =
+            CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
 
-        try signerAccount.execute(batchedCalls) {
+        try signerAccount.execute(batchedCall) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (caller != address(signerAccount)) {
@@ -134,11 +134,11 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         Call[] memory calls = handlerCalls.toCalls();
 
         // TODO: remove the hardcoded shouldRevert once we can test for it
-        BatchedCalls memory batchedCalls = CallUtils.initBatchedCalls().withCalls(calls).withShouldRevert(true);
-        SignedBatchedCalls memory signedBatchedCalls = CallUtils.initSignedBatchedCalls().withBatchedCalls(batchedCalls)
-            .withKeyHash(currentKeyHash).withNonce(nonce);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedBatchedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withKeyHash(currentKeyHash).withNonce(nonce);
 
-        bytes32 digest = signerAccount.hashTypedData(signedBatchedCalls.hash());
+        bytes32 digest = signerAccount.hashTypedData(signedBatchedCall.hash());
         bytes memory signature = currentSigningKey.sign(digest);
 
         bytes[] memory expectedReverts = InvariantRevertLib.initArray();
@@ -152,7 +152,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 if (isExpired) {
                     _state.validationFailed_KeyExpired++;
                     expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector));
-                } else if (!settings.isAdmin() && batchedCalls.calls.containsSelfCall()) {
+                } else if (!settings.isAdmin() && batchedCall.calls.containsSelfCall()) {
                     _state.validationFailed_OnlyAdminCanSelfCall++;
                     expectedReverts =
                         expectedReverts.push(abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector));
@@ -168,7 +168,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
             expectedReverts = expectedReverts.push(handlerCall.revertData);
         }
 
-        try signerAccount.execute(signedBatchedCalls, signature) {
+        try signerAccount.execute(signedBatchedCall, signature) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (expectedReverts.length > 0) {
@@ -176,7 +176,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 assertEq(revertData, expectedReverts[0]);
             } else {
                 bytes memory debugCalldata =
-                    abi.encodeWithSelector(EXECUTE_SIGNED_BATCHED_CALLS_SELECTOR, signedBatchedCalls, signature);
+                    abi.encodeWithSelector(EXECUTE_SIGNED_BATCHED_CALLS_SELECTOR, signedBatchedCall, signature);
                 console2.logBytes(debugCalldata);
                 console2.logBytes(revertData);
                 revert("uncaught revert");

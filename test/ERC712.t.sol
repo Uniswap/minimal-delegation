@@ -13,16 +13,16 @@ import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
-import {SignedBatchedCallsLib, SignedBatchedCalls} from "../src/libraries/SignedBatchedCallsLib.sol";
-import {BatchedCallsLib, BatchedCalls} from "../src/libraries/BatchedCallsLib.sol";
+import {SignedBatchedCallLib, SignedBatchedCall} from "../src/libraries/SignedBatchedCallLib.sol";
+import {BatchedCallLib, BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
     using CallUtils for *;
     using TestKeyManager for TestKey;
-    using SignedBatchedCallsLib for SignedBatchedCalls;
-    using BatchedCallsLib for BatchedCalls;
+    using SignedBatchedCallLib for SignedBatchedCall;
+    using BatchedCallLib for BatchedCall;
 
     address receiver = makeAddr("receiver");
 
@@ -61,11 +61,11 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
 
     /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
-        SignedBatchedCalls memory signedBatchedCalls = CallUtils.initSignedBatchedCalls();
-        bytes32 hashTypedData = signerAccount.hashTypedData(signedBatchedCalls.hash());
+        SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall();
+        bytes32 hashTypedData = signerAccount.hashTypedData(signedBatchedCall.hash());
         // re-implement 712 hash
         bytes32 expected =
-            keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), signedBatchedCalls.hash()));
+            keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), signedBatchedCall.hash()));
         assertEq(expected, hashTypedData);
     }
 
@@ -73,14 +73,14 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
     //     Call[] memory calls = CallUtils.initArray();
     //     calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
     //     uint256 nonce = 0;
-    //     BatchedCalls memory batchedCalls = CallUtils.initBatchedCalls().withCalls(calls).withShouldRevert(true);
-    //     SignedBatchedCalls memory signedBatchedCalls = CallUtils.initSignedBatchedCalls().withBatchedCalls(batchedCalls).withNonce(nonce);
+    //     BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+    //     SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withNonce(nonce);
     //     TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
     //     // Make it clear that the verifying contract is set properly.
     //     address verifyingContract = address(signerAccount);
 
-    //     (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCalls, verifyingContract);
+    //     (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCall, verifyingContract);
 
-    //     assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCalls.hash())));
+    //     assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCall.hash())));
     // }
 }

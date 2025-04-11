@@ -10,8 +10,8 @@ import {IERC7201} from "./IERC7201.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {IERC4337Account} from "./IERC4337Account.sol";
 import {IERC7914} from "./IERC7914.sol";
-import {SignedBatchedCalls} from "../libraries/SignedBatchedCallsLib.sol";
-import {BatchedCalls} from "../libraries/BatchedCallsLib.sol";
+import {SignedBatchedCall} from "../libraries/SignedBatchedCallLib.sol";
+import {BatchedCall} from "../libraries/BatchedCallLib.sol";
 import {Call} from "../libraries/CallLib.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
@@ -37,6 +37,6 @@ interface IMinimalDelegation is
     error CallFailed(bytes reason);
     error InvalidSignature();
 
-    function execute(BatchedCalls memory batchedCalls) external payable;
-    function execute(SignedBatchedCalls memory signedBatchedCalls, bytes memory signature) external payable;
+    function execute(BatchedCall memory batchedCall) external payable;
+    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory signature) external payable;
 }

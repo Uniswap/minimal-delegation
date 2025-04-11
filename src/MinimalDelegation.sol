@@ -21,8 +21,8 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ERC7914} from "./ERC7914.sol";
-import {SignedBatchedCallsLib, SignedBatchedCalls} from "./libraries/SignedBatchedCallsLib.sol";
-import {BatchedCallsLib, BatchedCalls} from "./libraries/BatchedCallsLib.sol";
+import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
+import {BatchedCallLib, BatchedCall} from "./libraries/BatchedCallLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
@@ -50,25 +50,25 @@ contract MinimalDelegation is
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
-    using BatchedCallsLib for BatchedCalls;
-    using SignedBatchedCallsLib for SignedBatchedCalls;
+    using BatchedCallLib for BatchedCall;
+    using SignedBatchedCallLib for SignedBatchedCall;
     using HooksLib for IHook;
     using SettingsLib for Settings;
 
-    function execute(BatchedCalls memory batchedCalls) public payable onlyThis {
-        _dispatch(batchedCalls, KeyLib.ROOT_KEY_HASH);
+    function execute(BatchedCall memory batchedCall) public payable onlyThis {
+        _dispatch(batchedCall, KeyLib.ROOT_KEY_HASH);
     }
 
-    function execute(SignedBatchedCalls memory signedBatchedCalls, bytes memory signature) public payable {
-        _handleVerifySignature(signedBatchedCalls, signature);
-        _dispatch(signedBatchedCalls.batchedCalls, signedBatchedCalls.keyHash);
+    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory signature) public payable {
+        _handleVerifySignature(signedBatchedCall, signature);
+        _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
     function execute(bytes32 mode, bytes memory executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
-        BatchedCalls memory batchedCalls = BatchedCalls({calls: calls, shouldRevert: mode.shouldRevert()});
-        execute(batchedCalls);
+        BatchedCall memory batchedCall = BatchedCall({calls: calls, shouldRevert: mode.shouldRevert()});
+        execute(batchedCall);
     }
 
     /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
@@ -81,16 +81,16 @@ contract MinimalDelegation is
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         bytes calldata executionData = userOp.callData.removeSelector();
-        (BatchedCalls memory batchedCalls) = abi.decode(executionData, (BatchedCalls));
+        (BatchedCall memory batchedCall) = abi.decode(executionData, (BatchedCall));
 
-        _dispatch(batchedCalls, keyHash);
+        _dispatch(batchedCall, keyHash);
     }
 
-    function _dispatch(BatchedCalls memory batchedCalls, bytes32 keyHash) private {
-        for (uint256 i = 0; i < batchedCalls.calls.length; i++) {
-            (bool success, bytes memory output) = _execute(batchedCalls.calls[i], keyHash);
+    function _dispatch(BatchedCall memory batchedCall, bytes32 keyHash) private {
+        for (uint256 i = 0; i < batchedCall.calls.length; i++) {
+            (bool success, bytes memory output) = _execute(batchedCall.calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && batchedCalls.shouldRevert) revert IMinimalDelegation.CallFailed(output);
+            if (!success && batchedCall.shouldRevert) revert IMinimalDelegation.CallFailed(output);
         }
     }
 
@@ -148,7 +148,7 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCalls memory signedCalls, bytes memory signature) private {
+    function _handleVerifySignature(SignedBatchedCall memory signedCalls, bytes memory signature) private {
         _useNonce(signedCalls.nonce);
 
         bytes32 digest = _hashTypedData(signedCalls.hash());
