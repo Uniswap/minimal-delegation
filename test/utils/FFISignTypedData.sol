@@ -9,10 +9,11 @@ import {console2} from "forge-std/console2.sol";
 contract FFISignTypedData is JavascriptFfi {
     using stdJson for string;
 
-    function ffi_signTypedData(uint256 privateKey, SignedBatchedCall memory signedBatchedCall, address verifyingContract)
-        public
-        returns (bytes memory)
-    {
+    function ffi_signTypedData(
+        uint256 privateKey,
+        SignedBatchedCall memory signedBatchedCall,
+        address verifyingContract
+    ) public returns (bytes memory) {
         // Create JSON object
         string memory jsonObj = _createJsonInput(privateKey, signedBatchedCall, verifyingContract);
 

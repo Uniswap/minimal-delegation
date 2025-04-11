@@ -35,9 +35,26 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @return salt The value of the `EIP712Domain.salt` field.
     /// @return extensions The list of EIP numbers, that extends EIP-712 with new domain fields.
     function eip712Domain()
-        public
+        external
         view
         virtual
+        returns (
+            bytes1 fields,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        )
+    {
+        (fields, name, version, chainId, verifyingContract, salt, extensions) = _eip712Domain();
+    }
+
+    /// @notice Internal eip712Domain implementation for use in ERC7739
+    function _eip712Domain()
+        internal
+        view
         returns (
             bytes1 fields,
             string memory name,
@@ -59,6 +76,11 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @notice Returns the `domainSeparator` used to create EIP-712 compliant hashes.
     /// @return The 32 bytes domain separator result.
     function domainSeparator() public view returns (bytes32) {
+        return _domainSeparator();
+    }
+
+    /// @notice Internal domainSeparator implementation for use in ERC7739
+    function _domainSeparator() internal view returns (bytes32) {
         return
             keccak256(abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this)));
     }

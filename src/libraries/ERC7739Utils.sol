@@ -24,28 +24,9 @@ import {Calldata} from "@openzeppelin/contracts/utils/Calldata.sol";
  * of an https://docs.openzeppelin.com/contracts/api/utils#ECDSA[ECDSA] signature, as is for
  * example specified for https://docs.openzeppelin.com/contracts/api/utils#EIP712[EIP-712].
  */
+
+// Modified from source to only include encode / decode methods
 library ERC7739Utils {
-    /**
-     * @dev An EIP-712 type to represent "personal" signatures
-     * (i.e. mimic of `personal_sign` for smart contracts).
-     */
-    bytes32 private constant PERSONAL_SIGN_TYPEHASH = keccak256("PersonalSign(bytes prefixed)");
-
-    /**
-     * @dev Nest a signature for a given EIP-712 type into a nested signature for the domain of the app.
-     *
-     * Counterpart of {decodeTypedDataSig} to extract the original signature and the nested components.
-     */
-    function encodeTypedDataSig(
-        bytes memory signature,
-        bytes32 appSeparator,
-        bytes32 contentsHash,
-        string memory contentsDescr
-    ) internal pure returns (bytes memory) {
-        return
-            abi.encodePacked(signature, appSeparator, contentsHash, contentsDescr, uint16(bytes(contentsDescr).length));
-    }
-
     /**
      * @dev Parses a nested signature into its components.
      *
@@ -63,9 +44,7 @@ library ERC7739Utils {
      * NOTE: This function returns empty if the input format is invalid instead of reverting.
      * data instead.
      */
-    function decodeTypedDataSig(
-        bytes calldata encodedSignature
-    )
+    function decodeTypedDataSig(bytes calldata encodedSignature)
         internal
         pure
         returns (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr)
@@ -94,68 +73,6 @@ library ERC7739Utils {
     }
 
     /**
-     * @dev Nests an `ERC-191` digest into a `PersonalSign` EIP-712 struct, and returns the corresponding struct hash.
-     * This struct hash must be combined with a domain separator, using {MessageHashUtils-toTypedDataHash} before
-     * being verified/recovered.
-     *
-     * This is used to simulates the `personal_sign` RPC method in the context of smart contracts.
-     */
-    function personalSignStructHash(bytes32 contents) internal pure returns (bytes32) {
-        return keccak256(abi.encode(PERSONAL_SIGN_TYPEHASH, contents));
-    }
-
-    /**
-     * @dev Nests an `EIP-712` hash (`contents`) into a `TypedDataSign` EIP-712 struct, and returns the corresponding
-     * struct hash. This struct hash must be combined with a domain separator, using {MessageHashUtils-toTypedDataHash}
-     * before being verified/recovered.
-     */
-    function typedDataSignStructHash(
-        string calldata contentsName,
-        string calldata contentsType,
-        bytes32 contentsHash,
-        bytes memory domainBytes
-    ) internal pure returns (bytes32 result) {
-        return
-            bytes(contentsName).length == 0
-                ? bytes32(0)
-                : keccak256(
-                    abi.encodePacked(typedDataSignTypehash(contentsName, contentsType), contentsHash, domainBytes)
-                );
-    }
-
-    /**
-     * @dev Variant of {typedDataSignStructHash-string-string-bytes32-bytes} that takes a content descriptor
-     * and decodes the `contentsName` and `contentsType` out of it.
-     */
-    function typedDataSignStructHash(
-        string calldata contentsDescr,
-        bytes32 contentsHash,
-        bytes memory domainBytes
-    ) internal pure returns (bytes32 result) {
-        (string calldata contentsName, string calldata contentsType) = decodeContentsDescr(contentsDescr);
-
-        return typedDataSignStructHash(contentsName, contentsType, contentsHash, domainBytes);
-    }
-
-    /**
-     * @dev Compute the EIP-712 typehash of the `TypedDataSign` structure for a given type (and typename).
-     */
-    function typedDataSignTypehash(
-        string calldata contentsName,
-        string calldata contentsType
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    "TypedDataSign(",
-                    contentsName,
-                    " contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)",
-                    contentsType
-                )
-            );
-    }
-
-    /**
      * @dev Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit
      * modes.
      *
@@ -165,9 +82,11 @@ library ERC7739Utils {
      * If the `contentsType` is invalid, this returns an empty string. Otherwise, the return string has non-zero
      * length.
      */
-    function decodeContentsDescr(
-        string calldata contentsDescr
-    ) internal pure returns (string calldata contentsName, string calldata contentsType) {
+    function decodeContentsDescr(string calldata contentsDescr)
+        internal
+        pure
+        returns (string calldata contentsName, string calldata contentsType)
+    {
         bytes calldata buffer = bytes(contentsDescr);
         if (buffer.length == 0) {
             // pass through (fail)
