@@ -3,27 +3,26 @@ pragma solidity ^0.8.0;
 
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
+/// @title IValidationHook
+/// @notice Hook interface for optional signature validation logic
 interface IValidationHook {
-    /**
-     * VALIDATION HOOKS
-     */
-
-    /// @notice Validates a user operation
-    /// Does not require passing in missingAccountFunds like the IAccount interface
-    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata, bytes32)
+    /// @notice Hook called after `validateUserOp` is called on the account by the entrypoint
+    /// @return selector Must be afterValidateUserOp.selector
+    /// @return validationData The validation data to be returned, overriding the validation done within the account
+    function afterValidateUserOp(bytes32 keyHash, PackedUserOperation calldata userOp, bytes32 userOpHash)
         external
         view
-        returns (bytes4, uint256);
+        returns (bytes4 selector, uint256 validationData);
 
-    /// @notice Validates a signature over a digest and returns the ERC1271 return value
-    function overrideIsValidSignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
+    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback
+    /// @return selector Must be afterIsValidSignature.selector
+    /// @return magicValue The EIP-1271 magic value (or invalid value) to return, overriding the validation done within the account
+    function afterIsValidSignature(bytes32 keyHash, bytes32 digest)
         external
         view
-        returns (bytes4, bytes4);
+        returns (bytes4 selector, bytes4 magicValue);
 
-    /// @notice Validates a signature over a digest and returns a boolean
-    function overrideVerifySignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
-        external
-        view
-        returns (bytes4, bool);
+    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. MUST revert if the signature is invalid
+    /// @return selector Must be afterVerifySignature.selector
+    function afterVerifySignature(bytes32 keyHash, bytes32 digest) external view returns (bytes4 selector);
 }

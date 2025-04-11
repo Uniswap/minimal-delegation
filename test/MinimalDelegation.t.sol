@@ -288,7 +288,8 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(validationData, uint256(block.timestamp + 3600) << 160 | 0);
     }
 
-    function test_validateUserOp_invalidSignature_withExpiration() public {
+    /// @dev Because the signature is invalid, we do not pack the validUntil value
+    function test_validateUserOp_invalidSignature_doesNotPackValidUntil() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.startPrank(address(signerAccount));
@@ -307,8 +308,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
         vm.prank(address(entryPoint));
         uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
-        // 1 is invalid
-        assertEq(validationData, uint256(block.timestamp + 3600) << 160 | 1);
+        assertEq(validationData, 1);
     }
 
     function test_validateUserOp_withHook_validSignature() public {

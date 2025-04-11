@@ -276,7 +276,7 @@ var init_md = __esm({
         const { view, buffer: buffer2, blockLen } = this;
         data = toBytes(data);
         const len = data.length;
-        for (let pos = 0; pos < len;) {
+        for (let pos = 0; pos < len; ) {
           const take = Math.min(blockLen - this.pos, len - pos);
           if (take === blockLen) {
             const dataView = createView(data);
@@ -1947,14 +1947,14 @@ function weierstrass(curveDef) {
     const b = Point2.fromHex(publicB);
     return b.multiply(normPrivateKeyToScalar(privateA)).toRawBytes(isCompressed);
   }
-  const bits2int = CURVE.bits2int || function (bytes) {
+  const bits2int = CURVE.bits2int || function(bytes) {
     if (bytes.length > 8192)
       throw new Error("input is too large");
     const num2 = bytesToNumberBE(bytes);
     const delta = bytes.length * 8 - CURVE.nBitLength;
     return delta > 0 ? num2 >> BigInt(delta) : num2;
   };
-  const bits2int_modN = CURVE.bits2int_modN || function (bytes) {
+  const bits2int_modN = CURVE.bits2int_modN || function(bytes) {
     return modN2(bits2int(bytes));
   };
   const ORDER_MASK = bitMask(CURVE.nBitLength);
@@ -3279,7 +3279,7 @@ var init_sha3 = __esm({
         const { blockLen, state } = this;
         data = toBytes(data);
         const len = data.length;
-        for (let pos = 0; pos < len;) {
+        for (let pos = 0; pos < len; ) {
           const take = Math.min(blockLen - this.pos, len - pos);
           for (let i = 0; i < take; i++)
             state[this.pos++] ^= data[pos++];
@@ -3305,7 +3305,7 @@ var init_sha3 = __esm({
         this.finish();
         const bufferOut = this.state;
         const { blockLen } = this;
-        for (let pos = 0, len = out.length; pos < len;) {
+        for (let pos = 0, len = out.length; pos < len; ) {
           if (this.posOut >= blockLen)
             this.keccak();
           const take = Math.min(blockLen - this.posOut, len - pos);
@@ -6649,8 +6649,8 @@ var bytesPerFieldElement = 32;
 var fieldElementsPerBlob = 4096;
 var bytesPerBlob = bytesPerFieldElement * fieldElementsPerBlob;
 var maxBytesPerTransaction = bytesPerBlob * blobsPerTransaction - // terminator byte (0x80).
-  1 - // zero byte (0x00) appended to each field element.
-  1 * fieldElementsPerBlob * blobsPerTransaction;
+1 - // zero byte (0x00) appended to each field element.
+1 * fieldElementsPerBlob * blobsPerTransaction;
 
 // node_modules/viem/_esm/constants/kzg.js
 var versionedHashVersionKzg = 1;
@@ -7970,7 +7970,7 @@ async function estimateGas(client, args2) {
   const { account: account_ = client.account } = args2;
   const account2 = account_ ? parseAccount(account_) : void 0;
   try {
-    let estimateGas_rpc = function (parameters) {
+    let estimateGas_rpc = function(parameters) {
       const { block: block2, request: request2, rpcStateOverride: rpcStateOverride2 } = parameters;
       return client.request({
         method: "eth_estimateGas",
@@ -8944,10 +8944,13 @@ init_pad();
 var DOMAIN_NAME = "Uniswap Minimal Delegation";
 var DOMAIN_VERSION = "1";
 var types = {
-  SignedCalls: [
-    { name: "calls", type: "Call[]" },
+  SignedBatchedCall: [
+    { name: "batchedCall", type: "BatchedCall" },
     { name: "nonce", type: "uint256" },
-    { name: "keyHash", type: "bytes32" },
+    { name: "keyHash", type: "bytes32" }
+  ],
+  BatchedCall: [
+    { name: "calls", type: "Call[]" },
     { name: "shouldRevert", type: "bool" }
   ],
   Call: [
@@ -8964,7 +8967,7 @@ if (args.length < 1) {
   process.exit(1);
 }
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, signedCalls } = jsonInput;
+var { privateKey, verifyingContract, signedBatchedCall } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var domain = {
   name: DOMAIN_NAME,
@@ -8984,8 +8987,8 @@ async function signTypedData3() {
       account,
       domain,
       types,
-      primaryType: "SignedCalls",
-      message: signedCalls
+      primaryType: "SignedBatchedCall",
+      message: signedBatchedCall
     });
     process.stdout.write(signature);
     process.exit(0);
