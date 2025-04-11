@@ -121,8 +121,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     /// - we do not call the hook
     function test_isValidSignature_P256_invalidSigner_isExpired_returns_InvalidMagicValue() public {
         bytes32 data = keccak256("test");
-        bytes32 hashTypedData = signerAccount.hashTypedData(data.hashWithWrappedType());
-
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         bytes memory signature = p256Key.sign(bytes32(0));

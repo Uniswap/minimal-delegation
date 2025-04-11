@@ -7,10 +7,13 @@ export const DOMAIN_VERSION = "1";
 
 // Define the struct types
 export const types = {
-  SignedCalls: [
-    { name: 'calls', type: 'Call[]' },
+  SignedBatchedCall: [
+    { name: 'batchedCall', type: 'BatchedCall' },
     { name: 'nonce', type: 'uint256' },
-    { name: 'keyHash', type: 'bytes32' },
+    { name: 'keyHash', type: 'bytes32' }
+  ],
+  BatchedCall: [
+    { name: 'calls', type: 'Call[]' },
     { name: 'shouldRevert', type: 'bool' }
   ],
   Call: [
@@ -27,9 +30,13 @@ export type Call = {
     data: string;
   }
 
-export type SignedCalls = {
+export type BatchedCall = {
     calls: Call[];
+    shouldRevert: boolean;
+  }
+
+export type SignedBatchedCall = {
+    batchedCall: BatchedCall;
     nonce: number;
     keyHash: string;
-    shouldRevert: boolean;
   }

@@ -8944,10 +8944,13 @@ init_pad();
 var DOMAIN_NAME = "Uniswap Minimal Delegation";
 var DOMAIN_VERSION = "1";
 var types = {
-  SignedCalls: [
-    { name: "calls", type: "Call[]" },
+  SignedBatchedCall: [
+    { name: "batchedCall", type: "BatchedCall" },
     { name: "nonce", type: "uint256" },
-    { name: "keyHash", type: "bytes32" },
+    { name: "keyHash", type: "bytes32" }
+  ],
+  BatchedCall: [
+    { name: "calls", type: "Call[]" },
     { name: "shouldRevert", type: "bool" }
   ],
   Call: [
@@ -8964,7 +8967,7 @@ if (args.length < 1) {
   process.exit(1);
 }
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, signedCalls } = jsonInput;
+var { privateKey, verifyingContract, signedBatchedCall } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var domain = {
   name: DOMAIN_NAME,
@@ -8984,8 +8987,8 @@ async function signTypedData3() {
       account,
       domain,
       types,
-      primaryType: "SignedCalls",
-      message: signedCalls
+      primaryType: "SignedBatchedCall",
+      message: signedBatchedCall
     });
     process.stdout.write(signature);
     process.exit(0);

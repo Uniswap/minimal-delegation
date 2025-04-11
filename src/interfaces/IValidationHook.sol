@@ -33,7 +33,7 @@ interface IValidationHook {
         view
         returns (bytes4 selector, bytes4 magicValue);
 
-    /// @notice Hook called after verifying a signature over `SignedCalls`. MUST revert if the signature is invalid
+    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. MUST revert if the signature is invalid
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
     /// @param hookData any data to be passed to the hook

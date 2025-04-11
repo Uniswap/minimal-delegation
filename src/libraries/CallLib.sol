@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SignedCalls} from "./SignedCallsLib.sol";
-
 struct Call {
     address to;
     uint256 value;

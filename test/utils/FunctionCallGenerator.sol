@@ -17,6 +17,8 @@ import {ExecuteFixtures} from "./ExecuteFixtures.sol";
 import {IInvariantCallbacks, InvariantFixtures} from "./InvariantFixtures.sol";
 import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
 import {SettingsBuilder} from "./SettingsBuilder.sol";
+import {SignedBatchedCall} from "../../src/libraries/SignedBatchedCallLib.sol";
+import {BatchedCall} from "../../src/libraries/BatchedCallLib.sol";
 
 /**
  * @title FunctionCallGenerator
