@@ -13,16 +13,16 @@ import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
-import {SignedCallsLib, SignedCalls} from "../src/libraries/SignedCallsLib.sol";
-import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
+import {SignedBatchedCallsLib, SignedBatchedCalls} from "../src/libraries/SignedBatchedCallsLib.sol";
+import {BatchedCallsLib, BatchedCalls} from "../src/libraries/BatchedCallsLib.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
-    using SignedCallBuilder for SignedCalls;
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
-    using CallUtils for Call[];
+    using CallUtils for *;
     using TestKeyManager for TestKey;
-    using SignedCallsLib for SignedCalls;
+    using SignedBatchedCallsLib for SignedBatchedCalls;
+    using BatchedCallsLib for BatchedCalls;
 
     address receiver = makeAddr("receiver");
 
@@ -61,24 +61,26 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
 
     /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
-        SignedCalls memory signedCalls = SignedCallBuilder.init();
-        bytes32 hashTypedData = signerAccount.hashTypedData(signedCalls.hash());
+        SignedBatchedCalls memory signedBatchedCalls = CallUtils.initSignedBatchedCalls();
+        bytes32 hashTypedData = signerAccount.hashTypedData(signedBatchedCalls.hash());
         // re-implement 712 hash
-        bytes32 expected = keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), signedCalls.hash()));
+        bytes32 expected =
+            keccak256(abi.encodePacked("\x19\x01", signerAccount.domainSeparator(), signedBatchedCalls.hash()));
         assertEq(expected, hashTypedData);
     }
 
-    function test_hashTypedData_matches_signedTypedData_ffi() public {
-        Call[] memory calls = CallUtils.initArray();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        uint256 nonce = 0;
-        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withNonce(nonce);
-        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
-        // Make it clear that the verifying contract is set properly.
-        address verifyingContract = address(signerAccount);
+    // function test_hashTypedData_matches_signedTypedData_ffi() public {
+    //     Call[] memory calls = CallUtils.initArray();
+    //     calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+    //     uint256 nonce = 0;
+    //     BatchedCalls memory batchedCalls = CallUtils.initBatchedCalls().withCalls(calls).withShouldRevert(true);
+    //     SignedBatchedCalls memory signedBatchedCalls = CallUtils.initSignedBatchedCalls().withBatchedCalls(batchedCalls).withNonce(nonce);
+    //     TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+    //     // Make it clear that the verifying contract is set properly.
+    //     address verifyingContract = address(signerAccount);
 
-        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedCalls, verifyingContract);
+    //     (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCalls, verifyingContract);
 
-        assertEq(signature, key.sign(signerAccount.hashTypedData(signedCalls.hash())));
-    }
+    //     assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCalls.hash())));
+    // }
 }

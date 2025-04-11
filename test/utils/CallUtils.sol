@@ -6,7 +6,8 @@ import {IKeyManagement} from "../../src/interfaces/IKeyManagement.sol";
 import {IERC7821} from "../../src/interfaces/IERC7821.sol";
 import {Settings} from "../../src/libraries/SettingsLib.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
-import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
+import {BatchedCalls} from "../../src/libraries/BatchedCallsLib.sol";
+import {SignedBatchedCalls} from "../../src/libraries/SignedBatchedCallsLib.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @dev A wrapper around Call that includes callback data for processing after execution
@@ -20,6 +21,8 @@ struct HandlerCall {
 library CallUtils {
     using CallUtils for Call;
     using CallUtils for Call[];
+    using CallUtils for BatchedCalls;
+    using CallUtils for BatchedCalls[];
     using CallUtils for HandlerCall;
     using CallUtils for HandlerCall[];
     using TestKeyManager for TestKey;
@@ -97,6 +100,63 @@ library CallUtils {
         );
     }
 
+    // BatchedCalls operations
+
+    function initBatchedCalls() internal pure returns (BatchedCalls memory) {
+        return BatchedCalls({calls: new Call[](0), shouldRevert: false});
+    }
+
+    function withCalls(BatchedCalls memory batchedCalls, Call[] memory calls)
+        internal
+        pure
+        returns (BatchedCalls memory)
+    {
+        batchedCalls.calls = calls;
+        return batchedCalls;
+    }
+
+    function withShouldRevert(BatchedCalls memory batchedCalls, bool shouldRevert)
+        internal
+        pure
+        returns (BatchedCalls memory)
+    {
+        batchedCalls.shouldRevert = shouldRevert;
+        return batchedCalls;
+    }
+
+    // SignedBatchedCalls operations
+
+    function initSignedBatchedCalls() internal pure returns (SignedBatchedCalls memory) {
+        return SignedBatchedCalls({batchedCalls: initBatchedCalls(), keyHash: bytes32(0), nonce: 0});
+    }
+
+    function withBatchedCalls(SignedBatchedCalls memory signedBatchedCalls, BatchedCalls memory batchedCalls)
+        internal
+        pure
+        returns (SignedBatchedCalls memory)
+    {
+        signedBatchedCalls.batchedCalls = batchedCalls;
+        return signedBatchedCalls;
+    }
+
+    function withKeyHash(SignedBatchedCalls memory signedBatchedCalls, bytes32 keyHash)
+        internal
+        pure
+        returns (SignedBatchedCalls memory)
+    {
+        signedBatchedCalls.keyHash = keyHash;
+        return signedBatchedCalls;
+    }
+
+    function withNonce(SignedBatchedCalls memory signedBatchedCalls, uint256 nonce)
+        internal
+        pure
+        returns (SignedBatchedCalls memory)
+    {
+        signedBatchedCalls.nonce = nonce;
+        return signedBatchedCalls;
+    }
+
     // HandlerCall operations
 
     /// @dev Create empty HandlerCall array
@@ -129,7 +189,7 @@ library CallUtils {
 
     /// @dev Create default empty HandlerCall
     function initHandlerDefault() internal pure returns (HandlerCall memory) {
-        return HandlerCall({call: Call({to: address(0), value: 0, data: ""}), callback: "", revertData: ""});
+        return HandlerCall({call: initDefault(), callback: "", revertData: ""});
     }
 
     function withCall(HandlerCall memory handlerCall, Call memory call) internal pure returns (HandlerCall memory) {

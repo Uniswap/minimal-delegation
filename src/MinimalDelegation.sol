@@ -51,10 +51,10 @@ contract MinimalDelegation is
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
     using BatchedCallsLib for BatchedCalls;
-    using SignedCallsLib for SignedBatchedCalls;
+    using SignedBatchedCallsLib for SignedBatchedCalls;
     using HooksLib for IHook;
     using SettingsLib for Settings;
-    
+
     function execute(BatchedCalls memory batchedCalls) public payable onlyThis {
         _dispatch(batchedCalls, KeyLib.ROOT_KEY_HASH);
     }
@@ -67,7 +67,8 @@ contract MinimalDelegation is
     function execute(bytes32 mode, bytes memory executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
-        execute(calls, mode.shouldRevert());
+        BatchedCalls memory batchedCalls = BatchedCalls({calls: calls, shouldRevert: mode.shouldRevert()});
+        execute(batchedCalls);
     }
 
     /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
@@ -147,7 +148,7 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedCalls memory signedCalls, bytes memory signature) private {
+    function _handleVerifySignature(SignedBatchedCalls memory signedCalls, bytes memory signature) private {
         _useNonce(signedCalls.nonce);
 
         bytes32 digest = _hashTypedData(signedCalls.hash());

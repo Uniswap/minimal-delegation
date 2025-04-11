@@ -21,11 +21,11 @@ import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
-import {SignedCalls, SignedCallsLib} from "../src/libraries/SignedCallsLib.sol";
+import {SignedBatchedCalls, SignedBatchedCallsLib} from "../src/libraries/SignedBatchedCallsLib.sol";
 import {InvariantRevertLib} from "./utils/InvariantRevertLib.sol";
 import {InvariantBlock} from "./utils/InvariantFixtures.sol";
-import {SignedCallBuilder} from "./utils/SignedCallBuilder.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
+import {BatchedCalls} from "../src/libraries/BatchedCallsLib.sol";
 
 // To avoid stack to deep
 struct SetupParams {
@@ -41,11 +41,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     using KeyLib for Key;
     using CallLib for Call[];
     using CallUtils for *;
-    using SignedCallsLib for SignedCalls;
+    using SignedBatchedCallsLib for SignedBatchedCalls;
     using SettingsBuilder for Settings;
     using SettingsLib for Settings;
     using InvariantRevertLib for bytes[];
-    using SignedCallBuilder for SignedCalls;
 
     /// @notice The keys which will be used to sign calls to execute
     TestKey[] public signingKeys;
@@ -54,8 +53,8 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    bytes4 public constant EXECUTE_SIGNED_CALLS_SELECTOR =
-        bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool),bytes)"));
+    bytes4 public constant EXECUTE_SIGNED_BATCHED_CALLS_SELECTOR =
+        bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)"));
 
     constructor(SetupParams memory _params)
         FunctionCallGenerator(_params._signerAccount, _params._tokenA, _params._tokenB)
@@ -103,7 +102,10 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
-        try signerAccount.execute(handlerCalls.toCalls(), true) {
+        BatchedCalls memory batchedCalls =
+            CallUtils.initBatchedCalls().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
+
+        try signerAccount.execute(batchedCalls) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (caller != address(signerAccount)) {
@@ -131,13 +133,12 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
-        // TODO: remove these once we can test for them, right now we rely on reverts for assertions
-        bool shouldRevert = true;
-        SignedCalls memory signedCalls = SignedCallBuilder.init().withCalls(calls).withKeyHash(currentKeyHash).withNonce(
-            nonce
-        ).withShouldRevert(shouldRevert);
+        // TODO: remove the hardcoded shouldRevert once we can test for it
+        BatchedCalls memory batchedCalls = CallUtils.initBatchedCalls().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCalls memory signedBatchedCalls = CallUtils.initSignedBatchedCalls().withBatchedCalls(batchedCalls)
+            .withKeyHash(currentKeyHash).withNonce(nonce);
 
-        bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
+        bytes32 digest = signerAccount.hashTypedData(signedBatchedCalls.hash());
         bytes memory signature = currentSigningKey.sign(digest);
 
         bytes[] memory expectedReverts = InvariantRevertLib.initArray();
@@ -151,7 +152,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 if (isExpired) {
                     _state.validationFailed_KeyExpired++;
                     expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector));
-                } else if (!settings.isAdmin() && calls.containsSelfCall()) {
+                } else if (!settings.isAdmin() && batchedCalls.calls.containsSelfCall()) {
                     _state.validationFailed_OnlyAdminCanSelfCall++;
                     expectedReverts =
                         expectedReverts.push(abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector));
@@ -167,7 +168,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
             expectedReverts = expectedReverts.push(handlerCall.revertData);
         }
 
-        try signerAccount.execute(signedCalls, signature) {
+        try signerAccount.execute(signedBatchedCalls, signature) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
             if (expectedReverts.length > 0) {
@@ -175,7 +176,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 assertEq(revertData, expectedReverts[0]);
             } else {
                 bytes memory debugCalldata =
-                    abi.encodeWithSelector(EXECUTE_SIGNED_CALLS_SELECTOR, signedCalls, signature);
+                    abi.encodeWithSelector(EXECUTE_SIGNED_BATCHED_CALLS_SELECTOR, signedBatchedCalls, signature);
                 console2.logBytes(debugCalldata);
                 console2.logBytes(revertData);
                 revert("uncaught revert");

@@ -8,13 +8,14 @@ struct BatchedCalls {
     bool shouldRevert;
 }
 
-/// @title BatchedCallLib
+/// @title BatchedCallsLib
 /// @notice Library for EIP-712 hashing of BatchedCalls
-library BatchedCallLib {
+library BatchedCallsLib {
     using CallLib for Call[];
 
-    /// @dev The type string for the BatchedCall struct 
-    bytes internal constant BATCHED_CALLS_TYPE = "BatchedCalls(Call[] calls,bool shouldRevert)Call(address to,uint256 value,bytes data)";
+    /// @dev The type string for the BatchedCall struct
+    bytes internal constant BATCHED_CALLS_TYPE =
+        "BatchedCalls(Call[] calls,bool shouldRevert)Call(address to,uint256 value,bytes data)";
     /// @dev The typehash for the BatchedCall struct
     bytes32 internal constant BATCHED_CALLS_TYPEHASH = keccak256(BATCHED_CALLS_TYPE);
 
