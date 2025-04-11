@@ -41,8 +41,8 @@ classDiagram
     ERC4337Account --|> IAccount
     
     class MinimalDelegation {
-        +execute(BatchedCall batchedCall)
-        +execute(SignedBatchedCall signedBatchedCall, bytes signature)
+        +execute(Call[] calls, bool shouldRevert)
+        +execute(SignedCalls signedCalls, bytes signature)
         +execute(bytes32 mode, bytes executionData)
         +executeUserOp(PackedUserOperation userOp, bytes32)
         +updateEntryPoint(address entryPoint)
@@ -61,16 +61,16 @@ sequenceDiagram
     participant Target
     
     Note over SignerAccount, Account: EOA is delegated to MinimalDelegation via EIP-7702
-    SignerAccount->>Account: execute(BatchedCall batchedCall)
+    SignerAccount->>Account: execute(Call[] calls, bool shouldRevert)
     Account->>Account: _onlyThis()
-    Account->>Account: _dispatch(batchedCall, ROOT_KEY_HASH)
-    loop For each call in batchedCall.calls
+    Account->>Account: _dispatch(shouldRevert, calls, ROOT_KEY_HASH)
+    loop For each call in calls
         Account->>Account: _execute(call, ROOT_KEY_HASH)
         Account->>Account: getKeySettings(ROOT_KEY_HASH)
         Account->>Account: Check if admin for self-calls
         Account->>+Target: to.call{value}(data)
         Target-->>-Account: (success, output)
-        opt If !success && batchedCall.shouldRevert
+        opt If !success && shouldRevert
             Account->>Account: revert CallFailed(output)
         end
     end
@@ -86,16 +86,16 @@ sequenceDiagram
     participant Hook
     participant Target
     
-    Signer->>Signer: Create SignedBatchedCall structure
+    Signer->>Signer: Create SignedCalls structure
     Signer->>Signer: Sign the hash with private key
     Signer->>Relayer: Send signed transaction data
-    Relayer->>+Account: execute(SignedBatchedCall, signature)
-    Account->>Account: _handleVerifySignature(signedBatchedCall, signature)
-    Account->>Account: _useNonce(signedBatchedCall.nonce)
-    Account->>Account: getKey(signedBatchedCall.keyHash)
-    Account->>Account: getKeySettings(signedBatchedCall.keyHash)
+    Relayer->>+Account: execute(SignedCalls, signature)
+    Account->>Account: _handleVerifySignature(signedCalls, signature)
+    Account->>Account: _useNonce(signedCalls.nonce)
+    Account->>Account: getKey(signedCalls.keyHash)
+    Account->>Account: getKeySettings(signedCalls.keyHash)
     Account->>Account: Check if key expired
-    Account->>Account: _hashTypedData(signedBatchedCall.hash())
+    Account->>Account: _hashTypedData(signedCalls.hash())
     
     alt Hook has VERIFY_SIGNATURE permission
         Account->>Hook: verifySignature(keyHash, digest, signature)
@@ -108,9 +108,9 @@ sequenceDiagram
         Account-->>Relayer: revert InvalidSignature()
     end
     
-    Account->>Account: _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash)
+    Account->>Account: _dispatch(signedCalls.shouldRevert, signedCalls.calls, signedCalls.keyHash)
     
-    loop For each call in signedBatchedCall.batchedCall.calls
+    loop For each call in calls
         Account->>Account: _execute(call, keyHash)
         Account->>Account: getKeySettings(keyHash)
         Account->>Account: Check if admin for self-calls
@@ -127,7 +127,7 @@ sequenceDiagram
             Account->>Hook: handleAfterExecute(keyHash, beforeExecuteData)
         end
         
-        opt If !success && signedBatchedCall.batchedCall.shouldRevert
+        opt If !success && shouldRevert
             Account-->>Relayer: revert CallFailed(output)
         end
     end
@@ -151,16 +151,15 @@ sequenceDiagram
     end
     
     Account->>Account: abi.decode(executionData) to Call[]
-    Account->>Account: Create BatchedCall with calls and mode.shouldRevert()
-    Account->>Account: execute(batchedCall)
+    Account->>Account: execute(calls, mode.shouldRevert())
     Account->>Account: _onlyThis()
-    Account->>Account: _dispatch(batchedCall, ROOT_KEY_HASH)
+    Account->>Account: _dispatch(shouldRevert, calls, ROOT_KEY_HASH)
     
-    loop For each call in batchedCall.calls
+    loop For each call in calls
         Account->>Account: _execute(call, ROOT_KEY_HASH)
         Account->>+Target: to.call{value}(data)
         Target-->>-Account: (success, output)
-        opt If !success && batchedCall.shouldRevert
+        opt If !success && shouldRevert
             Account-->>SignerAccount: revert CallFailed(output)
         end
     end
@@ -205,10 +204,10 @@ sequenceDiagram
     
     EntryPoint->>+Account: executeUserOp(userOp, userOpHash)
     Account->>Account: Decode signature to extract keyHash
-    Account->>Account: Decode callData to BatchedCall
-    Account->>Account: _dispatch(batchedCall, keyHash)
+    Account->>Account: Decode callData to (calls, shouldRevert)
+    Account->>Account: _dispatch(shouldRevert, calls, keyHash)
     
-    loop For each call in batchedCall.calls
+    loop For each call in calls
         Account->>Account: _execute(call, keyHash)
         Account->>Account: getKeySettings(keyHash)
         Account->>Account: Check if admin for self-calls
@@ -225,7 +224,7 @@ sequenceDiagram
             Account->>Hook: handleAfterExecute(keyHash, beforeExecuteData)
         end
         
-        opt If !success && batchedCall.shouldRevert
+        opt If !success && shouldRevert
             Account-->>EntryPoint: revert CallFailed(output)
         end
     end
@@ -252,6 +251,7 @@ sequenceDiagram
         Account->>Hook: isValidSignature(keyHash, data, signature)
         Hook-->>Account: result
     else No hook or no permission
+        Account->>Account: _handleIsValidSignature(keyHash, data, signature)
         Account->>Account: getKey(keyHash)
         Account->>Account: key.verify(_hashTypedData(data.hashWithWrappedType()), signature)
         Account->>Account: Return _1271_MAGIC_VALUE or _1271_INVALID_VALUE
@@ -259,31 +259,3 @@ sequenceDiagram
     
     Account-->>-VerifyingContract: result (0x1626ba7e if valid, otherwise 0xffffffff)
 ```
-
-## Migration Notes
-
-### Breaking Changes in v1.x.x
-
-The contract has undergone a structural refactoring to improve modularization and separation of concerns:
-
-1. **Structure Changes**:
-   - `SignedCalls` has been replaced with two separate structures:
-     - `BatchedCall`: Contains the call array and shouldRevert flag
-     - `SignedBatchedCall`: Contains a BatchedCall, nonce, and keyHash
-
-2. **Field Access Changes**:
-   - Old: `signedCalls.calls` → New: `signedBatchedCall.batchedCall.calls`
-   - Old: `signedCalls.shouldRevert` → New: `signedBatchedCall.batchedCall.shouldRevert`
-   - Old: `signedCalls.nonce` → New: `signedBatchedCall.nonce` (unchanged)
-   - Old: `signedCalls.keyHash` → New: `signedBatchedCall.keyHash` (unchanged)
-
-3. **Type Hash Changes**:
-   - EIP-712 type strings have been updated for the new structure
-   - **IMPORTANT**: This changes the digest for signing, which affects offline signature generation
-
-4. **Interface Updates**:
-   - Function signatures updated to use the new structures
-   - Old: `execute(Call[] calls, bool shouldRevert)` → New: `execute(BatchedCall batchedCall)`
-   - Old: `execute(SignedCalls signedCalls, bytes signature)` → New: `execute(SignedBatchedCall signedBatchedCall, bytes signature)`
-
-Integrators should update their code to accommodate these changes, particularly for signature generation and verification.
