@@ -60,7 +60,7 @@ contract MinimalDelegation is
     }
 
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
-        _handleVerifySignature(signedBatchedCall, signature);
+        _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
