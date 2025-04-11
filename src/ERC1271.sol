@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.23;
 
 import {IERC1271} from "./interfaces/IERC1271.sol";
