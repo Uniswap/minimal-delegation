@@ -21,12 +21,16 @@ struct Key {
 }
 
 library KeyLib {
+    /// @notice The sentinel hash value used to represent the root key
     bytes32 public constant ROOT_KEY_HASH = bytes32(0);
 
+    /// @notice Hashes a key
+    /// @dev uses the key type and the public key to produce a hash
     function hash(Key memory key) internal pure returns (bytes32) {
         return keccak256(abi.encode(key.keyType, keccak256(key.publicKey)));
     }
 
+    /// @notice Returns whether the keyHash is the root key hash
     function isRootKey(bytes32 keyHash) internal pure returns (bool) {
         return keyHash == ROOT_KEY_HASH;
     }
@@ -36,10 +40,12 @@ library KeyLib {
         return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
     }
 
+    /// @notice Returns whether the key is the root key
     function isRootKey(Key memory key) internal view returns (bool) {
         return key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == address(this);
     }
 
+    /// @notice Verifies a signature from `key` over a `_hash`
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
             isValid = ECDSA.recover(_hash, signature) == abi.decode(key.publicKey, (address));
@@ -51,7 +57,6 @@ library KeyLib {
             isValid = P256.verify(_hash, r, s, x, y);
         } else if (key.keyType == KeyType.WebAuthnP256) {
             (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));
-            // Expect signature to be a wrapper of the WebAuthn signature.
             WebAuthn.WebAuthnAuth memory auth = abi.decode(signature, (WebAuthn.WebAuthnAuth));
             isValid = WebAuthn.verify({challenge: abi.encode(_hash), requireUV: false, webAuthnAuth: auth, x: x, y: y});
         } else {
