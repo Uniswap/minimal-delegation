@@ -10,7 +10,7 @@ abstract contract BaseAuthorization {
     function isAuthorizedAdmin(address toAuthorize) public view virtual returns (bool);
 
     /// @notice A modifier that restricts access to the contract itself
-    modifier onlyThis() {
+    modifier onlyAdmin() {
         address caller = msg.sender;
         /// If the caller is not the root admin key, check if the caller has been authorized as another admin key.
         if (caller != address(this)) {

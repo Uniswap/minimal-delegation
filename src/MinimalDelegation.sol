@@ -55,7 +55,7 @@ contract MinimalDelegation is
     using HooksLib for IHook;
     using SettingsLib for Settings;
 
-    function execute(BatchedCall memory batchedCall) public payable onlyThis {
+    function execute(BatchedCall memory batchedCall) public payable onlyAdmin {
         _dispatch(batchedCall, KeyLib.ROOT_KEY_HASH);
     }
 

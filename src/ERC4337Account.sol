@@ -24,7 +24,7 @@ abstract contract ERC4337Account is IERC4337Account, BaseAuthorization {
     }
 
     /// @inheritdoc IERC4337Account
-    function updateEntryPoint(address entryPoint) external onlyThis {
+    function updateEntryPoint(address entryPoint) external onlyAdmin {
         _CACHED_ENTRYPOINT = entryPoint.pack();
         emit EntryPointUpdated(entryPoint);
     }

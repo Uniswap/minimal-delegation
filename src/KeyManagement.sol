@@ -20,7 +20,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     mapping(bytes32 keyHash => Settings settings) keySettings;
 
     /// @inheritdoc IKeyManagement
-    function register(Key memory key) external onlyThis {
+    function register(Key memory key) external onlyAdmin {
         if (key.isRootKey()) revert CannotRegisterRootKey();
 
         bytes32 keyHash = key.hash();
@@ -30,14 +30,14 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         emit Registered(keyHash, key);
     }
 
-    function update(bytes32 keyHash, Settings settings) external onlyThis {
+    function update(bytes32 keyHash, Settings settings) external onlyAdmin {
         if (keyHash.isRootKey()) revert CannotUpdateRootKey();
         if (!isRegistered(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
     }
 
     /// @inheritdoc IKeyManagement
-    function revoke(bytes32 keyHash) external onlyThis {
+    function revoke(bytes32 keyHash) external onlyAdmin {
         if (!keyHashes.remove(keyHash)) revert KeyDoesNotExist();
         delete keyStorage[keyHash];
         keySettings[keyHash] = SettingsLib.DEFAULT;

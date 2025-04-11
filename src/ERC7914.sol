@@ -11,14 +11,14 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
     mapping(address spender => uint256 allowance) public allowance;
 
     /// @inheritdoc IERC7914
-    function approveNative(address spender, uint256 amount) external onlyThis returns (bool) {
+    function approveNative(address spender, uint256 amount) external onlyAdmin returns (bool) {
         allowance[spender] = amount;
         emit ApproveNative(address(this), spender, amount);
         return true;
     }
 
     /// @inheritdoc IERC7914
-    function approveNativeTransient(address spender, uint256 amount) external onlyThis returns (bool) {
+    function approveNativeTransient(address spender, uint256 amount) external onlyAdmin returns (bool) {
         TransientAllowance.set(spender, amount);
         emit ApproveNativeTransient(address(this), spender, amount);
         return true;
