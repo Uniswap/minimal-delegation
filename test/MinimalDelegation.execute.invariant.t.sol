@@ -138,7 +138,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         ).withShouldRevert(shouldRevert);
 
         bytes32 digest = signerAccount.hashTypedData(signedCalls.hash());
-        bytes memory signature = currentSigningKey.sign(digest);
+        bytes memory signature = abi.encode(currentKeyHash, currentSigningKey.sign(digest), bytes(""));
 
         bytes[] memory expectedReverts = InvariantRevertLib.initArray();
 
