@@ -211,10 +211,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         uint256 nonceKey = 0;
         (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
 
+        bytes32 wrongKeyHashForRootSigner = signerTestKey.toKeyHash();
         // Create hash of the calls + nonce and sign it
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
         SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
-            .withNonce(nonce).withKeyHash(KeyLib.ROOT_KEY_HASH);
+            .withNonce(nonce).withKeyHash(wrongKeyHashForRootSigner);
         bytes32 hashToSign = signerAccount.hashTypedData(signedBatchedCall.hash());
 
         bytes memory signature = signerTestKey.sign(hashToSign);
