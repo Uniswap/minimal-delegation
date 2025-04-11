@@ -21,7 +21,8 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ERC7914} from "./ERC7914.sol";
-import {SignedCallsLib, SignedCalls} from "./libraries/SignedCallsLib.sol";
+import {SignedBatchedCallsLib, SignedBatchedCalls} from "./libraries/SignedBatchedCallsLib.sol";
+import {BatchedCallsLib, BatchedCalls} from "./libraries/BatchedCallsLib.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
@@ -49,17 +50,18 @@ contract MinimalDelegation is
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
     using CallLib for Call[];
-    using SignedCallsLib for SignedCalls;
+    using BatchedCallsLib for BatchedCalls;
+    using SignedCallsLib for SignedBatchedCalls;
     using HooksLib for IHook;
     using SettingsLib for Settings;
-
-    function execute(Call[] memory calls, bool shouldRevert) public payable onlyThis {
-        _dispatch(shouldRevert, calls, KeyLib.ROOT_KEY_HASH);
+    
+    function execute(BatchedCalls memory batchedCalls) public payable onlyThis {
+        _dispatch(batchedCalls, KeyLib.ROOT_KEY_HASH);
     }
 
-    function execute(SignedCalls memory signedCalls, bytes memory signature) public payable {
-        _handleVerifySignature(signedCalls, signature);
-        _dispatch(signedCalls.shouldRevert, signedCalls.calls, signedCalls.keyHash);
+    function execute(SignedBatchedCalls memory signedBatchedCalls, bytes memory signature) public payable {
+        _handleVerifySignature(signedBatchedCalls, signature);
+        _dispatch(signedBatchedCalls.batchedCalls, signedBatchedCalls.keyHash);
     }
 
     function execute(bytes32 mode, bytes memory executionData) external payable override {
@@ -78,16 +80,16 @@ contract MinimalDelegation is
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         bytes calldata executionData = userOp.callData.removeSelector();
-        (Call[] memory calls, bool shouldRevert) = abi.decode(executionData, (Call[], bool));
+        (BatchedCalls memory batchedCalls) = abi.decode(executionData, (BatchedCalls));
 
-        _dispatch(shouldRevert, calls, keyHash);
+        _dispatch(batchedCalls, keyHash);
     }
 
-    function _dispatch(bool shouldRevert, Call[] memory calls, bytes32 keyHash) private {
-        for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory output) = _execute(calls[i], keyHash);
+    function _dispatch(BatchedCalls memory batchedCalls, bytes32 keyHash) private {
+        for (uint256 i = 0; i < batchedCalls.calls.length; i++) {
+            (bool success, bytes memory output) = _execute(batchedCalls.calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && shouldRevert) revert IMinimalDelegation.CallFailed(output);
+            if (!success && batchedCalls.shouldRevert) revert IMinimalDelegation.CallFailed(output);
         }
     }
 
