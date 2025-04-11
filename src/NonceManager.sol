@@ -7,7 +7,6 @@ import {BaseAuthorization} from "./BaseAuthorization.sol";
 /// @title NonceManager
 /// @notice A contract that manages nonces to prevent replay attacks
 abstract contract NonceManager is INonceManager, BaseAuthorization {
-    /// @notice A mapping of keys to their corresponding sequence numbers
     mapping(uint256 key => uint256 seq) nonceSequenceNumber;
 
     /// @inheritdoc INonceManager
