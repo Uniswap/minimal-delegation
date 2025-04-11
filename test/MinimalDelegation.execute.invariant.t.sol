@@ -53,7 +53,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    bytes4 public constant EXECUTE_SIGNED_BATCHED_CALLS_SELECTOR =
+    bytes4 public constant EXECUTE_SIGNED_BATCHED_CALL_SELECTOR =
         bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)"));
 
     constructor(SetupParams memory _params)
@@ -176,7 +176,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
                 assertEq(revertData, expectedReverts[0]);
             } else {
                 bytes memory debugCalldata =
-                    abi.encodeWithSelector(EXECUTE_SIGNED_BATCHED_CALLS_SELECTOR, signedBatchedCall, signature);
+                    abi.encodeWithSelector(EXECUTE_SIGNED_BATCHED_CALL_SELECTOR, signedBatchedCall, signature);
                 console2.logBytes(debugCalldata);
                 console2.logBytes(revertData);
                 revert("uncaught revert");

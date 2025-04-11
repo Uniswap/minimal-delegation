@@ -18,7 +18,7 @@ contract SignedCallsLibTest is Test {
         bytes32 expectedTypeHash = keccak256(
             "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash,bool shouldRevert)BatchedCall(Call[] calls,bool shouldRevert)Call(address to,uint256 value,bytes data)"
         );
-        assertEq(SignedBatchedCallLib.SIGNED_BATCHED_CALLS_TYPEHASH, expectedTypeHash);
+        assertEq(SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, expectedTypeHash);
     }
 
     function test_hash_with_nonce_fuzz(Call[] memory calls, uint256 nonce, bytes32 keyHash, bool shouldRevert)
@@ -31,7 +31,7 @@ contract SignedCallsLibTest is Test {
         bytes32 actualHash = signedBatchedCall.hash();
 
         bytes32 expectedHash = keccak256(
-            abi.encode(SignedBatchedCallLib.SIGNED_BATCHED_CALLS_TYPEHASH, batchedCall.hash(), nonce, keyHash)
+            abi.encode(SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, batchedCall.hash(), nonce, keyHash)
         );
         assertEq(actualHash, expectedHash);
     }
