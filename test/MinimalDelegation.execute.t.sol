@@ -197,7 +197,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         // Sign using the registered P256 key
         bytes memory signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
 
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedCalls, wrappedSignature);
         assertEq(signerAccount.getKey(secp256k1Key.toKeyHash()).hash(), secp256k1Key.toKeyHash());
     }
@@ -218,7 +218,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         bytes memory signature = signerTestKey.sign(hashToSign);
 
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        bytes memory wrappedSignature = abi.encode(signerTestKey.toKeyHash(), signature, EMPTY_HOOK_DATA);
         vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
         signerAccount.execute(signedCalls, wrappedSignature);
     }
@@ -324,7 +324,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         signerAccount.update(p256Key.toKeyHash(), keySettings);
 
         // Expect the call to revert
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         vm.expectRevert("revert");
         signerAccount.execute(signedCalls, wrappedSignature);
 
@@ -343,8 +343,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         signerAccount.update(p256Key.toKeyHash(), SettingsBuilder.init().fromIsAdmin(false).fromHook(mockExecutionHook));
         vm.stopPrank();
 
+        TestKey memory newKey = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
+
         Call[] memory calls = CallUtils.initArray();
-        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+        // Permissioned call, requires admin privilges
+        calls = calls.push(CallUtils.encodeRegisterCall(newKey));
 
         uint192 key = 0;
         uint64 seq = uint64(signerAccount.getSeq(key));
@@ -355,13 +358,13 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
             SignedCallBuilder.init().withCalls(calls).withNonce(nonce).withKeyHash(p256Key.toKeyHash());
         bytes32 hashToSign = signerAccount.hashTypedData(signedCalls.hash());
         bytes memory signature = p256Key.sign(hashToSign);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
 
-        // The hook has no revertData, so it should not revert
+        // The hook has no revertData, so it should not revert, and allow the call to succeed
         mockExecutionHook.setBeforeExecuteRevertData(bytes(""));
 
-        vm.prank(address(signerAccount));
-        signerAccount.execute(signedCalls, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
-        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+        vm.expectRevert(IKeyManagement.OnlyAdminCanSelfCall.selector);
+        signerAccount.execute(signedCalls, wrappedSignature);
     }
 
     function test_execute_batch_opData_revertsWithInvalidNonce() public {
@@ -476,7 +479,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         bytes memory signature = p256Key.sign(signerAccount.hashTypedData(signedCalls.hash()));
 
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedCalls, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_P256_singleCall");
     }

@@ -1,6 +1,7 @@
 {
   "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "91928",
   "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "128362",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "117619",
   "execute_BATCHED_CALL_opData_singleCall": "91928",
   "execute_BATCHED_CALL_opData_singleCall_native": "92878",
   "execute_BATCHED_CALL_opData_twoCalls": "128362",
