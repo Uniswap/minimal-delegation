@@ -148,22 +148,22 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedCalls, bytes memory signature) private {
-        _useNonce(signedCalls.nonce);
+    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory signature) private {
+        _useNonce(signedBatchedCall.nonce);
 
-        bytes32 digest = _hashTypedData(signedCalls.hash());
+        bytes32 digest = _hashTypedData(signedBatchedCall.hash());
 
-        Key memory key = getKey(signedCalls.keyHash);
+        Key memory key = getKey(signedBatchedCall.keyHash);
         bool isValid = key.verify(digest, signature);
         if (!isValid) revert IMinimalDelegation.InvalidSignature();
 
-        Settings settings = getKeySettings(signedCalls.keyHash);
+        Settings settings = getKeySettings(signedBatchedCall.keyHash);
         _checkExpiry(settings);
 
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.VERIFY_SIGNATURE_FLAG)) {
             // Hook must revert to signal that signature verification
-            hook.handleAfterVerifySignature(signedCalls.keyHash, digest);
+            hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest);
         }
     }
 

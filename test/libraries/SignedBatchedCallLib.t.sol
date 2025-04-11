@@ -7,7 +7,7 @@ import {CallUtils} from "../utils/CallUtils.sol";
 import {SignedBatchedCall, SignedBatchedCallLib} from "../../src/libraries/SignedBatchedCallLib.sol";
 import {BatchedCall, BatchedCallLib} from "../../src/libraries/BatchedCallLib.sol";
 
-contract SignedCallsLibTest is Test {
+contract SignedBatchedCallLibTest is Test {
     using CallLib for Call[];
     using CallUtils for *;
     using BatchedCallLib for BatchedCall;
