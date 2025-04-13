@@ -187,11 +187,16 @@ contract MinimalDelegation is
 
         Key memory key = getKey(keyHash);
 
-        // TODO: decode in calldata to avoid throwing on memory / different encoding between typed data and personal
-        if (!_isValidTypedDataSig(key, data, signature)) {
-            // Early return if the signature is invalid
-            return _1271_INVALID_VALUE;
+        // Must be branched because we do abi decoding in memory which will throw since the ecnoding schemes are different
+        // Early check for personal signature which must be length 64 or 65 (k1 or r1 curve)
+        bool isValid;
+        if (signature.length == 64 || signature.length == 65) {
+            isValid = _isValidNestedPersonalSignature(key, data, signature);
+        } else {
+            isValid = _isValidTypedDataSig(key, data, signature);
         }
+        // Early return if the signature is invalid
+        if (!isValid) return _1271_INVALID_VALUE;
         result = _1271_MAGIC_VALUE;
 
         Settings settings = getKeySettings(keyHash);
