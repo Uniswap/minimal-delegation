@@ -6,7 +6,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 struct Mail {
     Letter letter;
 }
-    
+
 struct Letter {
     address recipient;
 }
@@ -23,23 +23,17 @@ contract MockERC1271VerifyingContract is EIP712 {
 
     /// return the full contents descriptor string
     function contentsDescr() external pure returns (string memory) {
-        return "Mail(Letter letter)";
+        return "Mail(Letter letter)Letter(address recipient)";
     }
-    
+
     /// returns hashStruct(Mail)
     function hash(Mail memory mail) public view returns (bytes32) {
-        return keccak256(abi.encode(
-            keccak256("Mail(Letter letter)"),
-            hash(mail.letter)
-        ));
+        return keccak256(abi.encode(keccak256("Mail(Letter letter)"), hash(mail.letter)));
     }
 
     /// returns hashStruct(Letter)
     function hash(Letter memory letter) public view returns (bytes32) {
-        return keccak256(abi.encode(
-            keccak256("Letter(address recipient)"),
-            letter.recipient
-        ));
+        return keccak256(abi.encode(keccak256("Letter(address recipient)"), letter.recipient));
     }
 
     /// returns the EIP-712 digest using the domain separator

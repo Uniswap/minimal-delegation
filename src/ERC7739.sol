@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {EIP712} from "./EIP712.sol";
@@ -73,18 +72,7 @@ abstract contract ERC7739 is EIP712 {
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, hash, contentsHash)) return false;
 
-        console2.log("_isValidTypedDataSig appSeparator");
-        console2.logBytes32(appSeparator);
-        console2.log("_isValidTypedDataSig contentsName");
-        console2.log(contentsName);
-        console2.log("_isValidTypedDataSig contentsType");
-        console2.log(contentsType);
-        console2.log("_isValidTypedDataSig contentsHash");
-        console2.logBytes32(contentsHash);
-
         bytes32 digest = _getNestedTypedDataSignHash(appSeparator, contentsName, contentsType, contentsHash);
-        console2.log("_isValidTypedDataSig verifying digest");
-        console2.logBytes32(digest);
         return key.verify(digest, signature);
     }
 

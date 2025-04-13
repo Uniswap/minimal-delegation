@@ -186,11 +186,13 @@ contract MinimalDelegation is
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
 
         Key memory key = getKey(keyHash);
-        if (_isValidTypedDataSig(key, data, signature) || _isValidNestedPersonalSignature(key, data, signature)) {
-            result = _1271_MAGIC_VALUE;
-        } else {
-            result = _1271_INVALID_VALUE;
+
+        // TODO: decode in calldata to avoid throwing on memory / different encoding between typed data and personal
+        if (!_isValidTypedDataSig(key, data, signature)) {
+            // Early return if the signature is invalid
+            return _1271_INVALID_VALUE;
         }
+        result = _1271_MAGIC_VALUE;
 
         Settings settings = getKeySettings(keyHash);
         _checkExpiry(settings);
