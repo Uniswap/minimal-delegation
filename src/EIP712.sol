@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IEIP712} from "./interfaces/IEIP712.sol";
 
 /// @title EIP712
@@ -85,9 +86,10 @@ contract EIP712 is IEIP712, IERC5267 {
             keccak256(abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this)));
     }
 
-    /// @notice Public getter for `_hashTypedData()` to produce a replay-safe hash from the given `hash`.
-    /// @param hash The nested typed data hash as defined by EIP-712. Assumes the hash is the result of applying EIP-712 hashStruct.
-    /// @return The corresponding replay-safe hash.
+    /// @notice Public getter for `_hashTypedData()` to produce a EIP-712 hash using this account's domain separator
+    /// @dev This is meant to be used for internal verification of SignedBatchedCalls and thus does not produce signatures that are replay-safe.
+    ///      See ERC7739 for a version that is replay-safe and can be used for external verification through ERC-1271.
+    /// @param hash The nested typed data. Assumes the hash is the result of applying EIP-712 hashStruct.
     function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
         return _hashTypedData(hash);
     }
@@ -96,7 +98,7 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @param hash The nested typed data hash as defined by EIP-712.  Assumes the hash is already compliant with EIP-712.
     /// @return The resulting EIP-712 hash.
     function _hashTypedData(bytes32 hash) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), hash));
+        return MessageHashUtils.toTypedDataHash(_domainSeparator(), hash);
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.

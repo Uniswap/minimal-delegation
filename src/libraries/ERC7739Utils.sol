@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import {Calldata} from "@openzeppelin/contracts/utils/Calldata.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
 /**
  * @dev Utilities to process https://ercs.ethereum.org/ERCS/erc-7739[ERC-7739] typed data signatures
@@ -25,54 +25,13 @@ import {Calldata} from "@openzeppelin/contracts/utils/Calldata.sol";
  * example specified for https://docs.openzeppelin.com/contracts/api/utils#EIP712[EIP-712].
  */
 
-// Modified from source to only include encode / decode methods
+// Modified from source
 library ERC7739Utils {
     /**
-     * @dev Parses a nested signature into its components.
+     * @notice Modified from the original implementation:
+     * - Use in memory strings
+     * - Use LibString.slice
      *
-     * Constructed as follows:
-     *
-     * `signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`
-     *
-     * - `signature` is the signature for the (ERC-7739) nested struct hash. This signature indirectly signs over the
-     *   original "contents" hash (from the app) and the account's domain separator.
-     * - `APP_DOMAIN_SEPARATOR` is the EIP-712 {EIP712-_domainSeparatorV4} of the application smart contract that is
-     *   requesting the signature verification (though ERC-1271).
-     * - `contentsHash` is the hash of the underlying data structure or message.
-     * - `contentsDescr` is a descriptor of the "contents" part of the the EIP-712 type of the nested signature.
-     *
-     * NOTE: This function returns empty if the input format is invalid instead of reverting.
-     * data instead.
-     */
-    function decodeTypedDataSig(bytes calldata encodedSignature)
-        internal
-        pure
-        returns (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr)
-    {
-        unchecked {
-            uint256 sigLength = encodedSignature.length;
-
-            // 66 bytes = contentsDescrLength (2 bytes) + contentsHash (32 bytes) + APP_DOMAIN_SEPARATOR (32 bytes).
-            if (sigLength < 66) return (Calldata.emptyBytes(), 0, 0, Calldata.emptyString());
-
-            uint256 contentsDescrEnd = sigLength - 2; // Last 2 bytes
-            uint256 contentsDescrLength = uint16(bytes2(encodedSignature[contentsDescrEnd:]));
-
-            // Check for space for `contentsDescr` in addition to the 66 bytes documented above
-            if (sigLength < 66 + contentsDescrLength) return (Calldata.emptyBytes(), 0, 0, Calldata.emptyString());
-
-            uint256 contentsHashEnd = contentsDescrEnd - contentsDescrLength;
-            uint256 separatorEnd = contentsHashEnd - 32;
-            uint256 signatureEnd = separatorEnd - 32;
-
-            signature = encodedSignature[:signatureEnd];
-            appSeparator = bytes32(encodedSignature[signatureEnd:separatorEnd]);
-            contentsHash = bytes32(encodedSignature[separatorEnd:contentsHashEnd]);
-            contentsDescr = string(encodedSignature[contentsHashEnd:contentsDescrEnd]);
-        }
-    }
-
-    /**
      * @dev Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit
      * modes.
      *
@@ -82,12 +41,12 @@ library ERC7739Utils {
      * If the `contentsType` is invalid, this returns an empty string. Otherwise, the return string has non-zero
      * length.
      */
-    function decodeContentsDescr(string calldata contentsDescr)
+    function decodeContentsDescription(string memory contentsDescription)
         internal
         pure
-        returns (string calldata contentsName, string calldata contentsType)
+        returns (string memory contentsName, string memory contentsType)
     {
-        bytes calldata buffer = bytes(contentsDescr);
+        bytes memory buffer = bytes(contentsDescription);
         if (buffer.length == 0) {
             // pass through (fail)
         } else if (buffer[buffer.length - 1] == bytes1(")")) {
@@ -98,7 +57,9 @@ library ERC7739Utils {
                     // if name is empty - passthrough (fail)
                     if (i == 0) break;
                     // we found the end of the contentsName
-                    return (string(buffer[:i]), contentsDescr);
+                    contentsName = LibString.slice(contentsDescription, 0, i);
+                    contentsType = contentsDescription;
+                    return (contentsName, contentsType);
                 } else if (_isForbiddenChar(current)) {
                     // we found an invalid character (forbidden) - passthrough (fail)
                     break;
@@ -110,16 +71,19 @@ library ERC7739Utils {
                 bytes1 current = buffer[i - 1];
                 if (current == bytes1(")")) {
                     // we found the end of the contentsName
-                    return (string(buffer[i:]), string(buffer[:i]));
+                    contentsName = LibString.slice(contentsDescription, i, buffer.length);
+                    contentsType = LibString.slice(contentsDescription, 0, i);
+                    return (contentsName, contentsType);
                 } else if (_isForbiddenChar(current)) {
                     // we found an invalid character (forbidden) - passthrough (fail)
                     break;
                 }
             }
         }
-        return (Calldata.emptyString(), Calldata.emptyString());
+        return ("", "");
     }
 
+    /// @dev Perform some onchain sanitization of contentsName as defined by the ERC-7739 spec
     function _isForbiddenChar(bytes1 char) private pure returns (bool) {
         return char == 0x00 || char == bytes1(" ") || char == bytes1(",") || char == bytes1("(") || char == bytes1(")");
     }

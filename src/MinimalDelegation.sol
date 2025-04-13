@@ -31,18 +31,20 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {ERC7821} from "./ERC7821.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
+import {ERC7739} from "./ERC7739.sol";
+import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 
 contract MinimalDelegation is
     IMinimalDelegation,
     ERC7821,
     ERC1271,
-    EIP712,
     ERC4337Account,
     Receiver,
     KeyManagement,
     NonceManager,
     ERC7914,
-    ERC7201
+    ERC7201,
+    ERC7739
 {
     using ModeDecoder for bytes32;
     using KeyLib for Key;
@@ -54,6 +56,7 @@ contract MinimalDelegation is
     using SignedBatchedCallLib for SignedBatchedCall;
     using HooksLib for IHook;
     using SettingsLib for Settings;
+    using ERC7739Utils for bytes;
 
     function execute(BatchedCall memory batchedCall) public payable onlyThis {
         _dispatch(batchedCall, KeyLib.ROOT_KEY_HASH);
@@ -174,6 +177,8 @@ contract MinimalDelegation is
     }
 
     /// @inheritdoc ERC1271
+    /// @dev WrappedSignature is used for both NestedTypedDataSign and NestedPersonalSign signatures.
+    /// TypedDataSign signatures are of the form: `signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr)`
     function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
         public
         view
@@ -181,12 +186,13 @@ contract MinimalDelegation is
         returns (bytes4 result)
     {
         (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
-        bytes32 digest = _hashTypedData(data.hashWithWrappedType());
 
         Key memory key = getKey(keyHash);
-        bool isValid = key.verify(digest, signature);
-        if (!isValid) return _1271_INVALID_VALUE;
-        result = _1271_MAGIC_VALUE;
+        if (_isValidTypedDataSig(key, data, signature) || _isValidNestedPersonalSignature(key, data, signature)) {
+            result = _1271_MAGIC_VALUE;
+        } else {
+            result = _1271_INVALID_VALUE;
+        }
 
         Settings settings = getKeySettings(keyHash);
         _checkExpiry(settings);
@@ -194,7 +200,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, digest);
+            result = hook.handleAfterIsValidSignature(keyHash, data);
         }
     }
 }
