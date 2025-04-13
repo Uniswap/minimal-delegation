@@ -64,7 +64,7 @@ abstract contract ERC7739 is EIP712 {
 
         if (bytes(contentsDescr).length == 0) return false;
 
-        (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescription(contentsDescr);
+        (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
 
         if (bytes(contentsName).length == 0) return false;
 

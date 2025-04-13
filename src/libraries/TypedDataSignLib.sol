@@ -5,7 +5,7 @@ pragma solidity ^0.8.23;
 /// @notice Library supporting nesting of EIP-712 typed data signatures
 /// Follows ERC-7739 spec
 library TypedDataSignLib {
-    /// @dev Generate the type string for the TypedDataSign struct
+    /// @dev Generate the dynamic type string for the TypedDataSign struct
     function _toTypedDataSignTypeString(string memory contentsName, string memory contentsType)
         internal
         pure
@@ -21,6 +21,7 @@ library TypedDataSignLib {
         );
     }
 
+    /// @dev Create the type hash for a TypedDataSign struct
     function _toTypedDataSignTypeHash(string memory contentsName, string memory contentsType)
         internal
         pure
@@ -29,7 +30,7 @@ library TypedDataSignLib {
         return keccak256(abi.encodePacked(_toTypedDataSignTypeString(contentsName, contentsType)));
     }
 
-    /// TODO: bytes(contentsName).length = 0 return bytes32(0)?
+    /// @notice contentsName and contentsType MUST be checked for length before hashing
     /// @dev domainBytes is abi.encodePacked(name, version, chainId, verifyingContract, salt)
     function hash(
         string memory contentsName,
