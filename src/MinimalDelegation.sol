@@ -19,7 +19,6 @@ import {NonceManager} from "./NonceManager.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
-import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 import {ERC7914} from "./ERC7914.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
 import {BatchedCallLib, BatchedCall} from "./libraries/BatchedCallLib.sol";
@@ -50,7 +49,6 @@ contract MinimalDelegation is
     using KeyLib for Key;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CalldataDecoder for bytes;
-    using WrappedDataHash for bytes32;
     using CallLib for Call[];
     using BatchedCallLib for BatchedCall;
     using SignedBatchedCallLib for SignedBatchedCall;

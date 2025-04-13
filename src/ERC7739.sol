@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {EIP712} from "./EIP712.sol";
@@ -10,6 +11,8 @@ import {PersonalSignLib} from "./libraries/PersonalSignLib.sol";
 
 /// @title ERC7739
 /// @notice An abstract contract that implements the ERC-7739 standard
+/// @notice This contract assumes that all data verified through ERC-1271 `isValidSignature` implements the defensive nested hashing scheme defined in EIP-7739
+/// @dev See https://eips.ethereum.org/EIPS/eip-7739
 abstract contract ERC7739 is EIP712 {
     using ERC7739Utils for *;
     using KeyLib for Key;
@@ -40,7 +43,7 @@ abstract contract ERC7739 is EIP712 {
         );
     }
 
-    /// @dev the contentHash hashed with the app's separator MUST match the caller provided hash
+    /// @dev the contentHash hashed with the app's separtor MUST match the caller provided hash
     function _callerHashMatchesReconstructedHash(bytes32 appSeparator, bytes32 hash, bytes32 contentsHash)
         private
         pure
@@ -70,7 +73,18 @@ abstract contract ERC7739 is EIP712 {
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, hash, contentsHash)) return false;
 
+        console2.log("_isValidTypedDataSig appSeparator");
+        console2.logBytes32(appSeparator);
+        console2.log("_isValidTypedDataSig contentsName");
+        console2.log(contentsName);
+        console2.log("_isValidTypedDataSig contentsType");
+        console2.log(contentsType);
+        console2.log("_isValidTypedDataSig contentsHash");
+        console2.logBytes32(contentsHash);
+
         bytes32 digest = _getNestedTypedDataSignHash(appSeparator, contentsName, contentsType, contentsHash);
+        console2.log("_isValidTypedDataSig verifying digest");
+        console2.logBytes32(digest);
         return key.verify(digest, signature);
     }
 
