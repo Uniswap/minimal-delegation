@@ -11,16 +11,10 @@ import {LibString} from "solady/utils/LibString.sol";
 /// - Use in memory strings
 /// - Use Solady's LibString for memory string operations
 library ERC7739Utils {
-    /**
-     * @dev Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit
-     * modes.
-     *
-     * Following ERC-7739 specifications, a `contentsName` is considered invalid if it's empty or it contains
-     * any of the following bytes , )\x00
-     *
-     * If the `contentsType` is invalid, this returns an empty string. Otherwise, the return string has non-zero
-     * length.
-     */
+    /// @notice Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit modes
+    /// @dev Returns empty strings if the contentsDescr is invalid, which must be handled by the calling function
+    /// @return contentsName The type name of the contents
+    /// @return contentsType The type description of the contents
     function decodeContentsDescr(string memory contentsDescr)
         internal
         pure
@@ -63,7 +57,9 @@ library ERC7739Utils {
         return ("", "");
     }
 
-    /// @dev Perform some onchain sanitization of contentsName as defined by the ERC-7739 spec
+    /// @notice Perform onchain sanitization of contentsName as defined by the ERC-7739 spec
+    /// @dev Following ERC-7739 specifications, a `contentsName` is considered invalid if it's empty or it contains
+    /// any of the following bytes: ", )\x00"
     function _isForbiddenChar(bytes1 char) private pure returns (bool) {
         return char == 0x00 || char == bytes1(" ") || char == bytes1(",") || char == bytes1("(") || char == bytes1(")");
     }

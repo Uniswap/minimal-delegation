@@ -16,16 +16,19 @@ abstract contract ERC7739 is EIP712 {
     using ERC7739Utils for *;
     using KeyLib for Key;
 
-    // TODO: natspec for all
-
-    /**
-     * @dev Uses this contract's domain separator which is calculated at runtime
-     */
+    /// @notice Hash a PersonalSign struct with the app's domain separator to produce an EIP-712 compatible hash
+    /// @dev Uses this account's domain separator in the EIP-712 hash for replay protection
+    /// @param hash The hashed message, done offchain
+    /// @return The PersonalSign nested EIP-712 hash of the message
     function _getPersonalSignTypedDataHash(bytes32 hash) private view returns (bytes32) {
         return MessageHashUtils.toTypedDataHash(_domainSeparator(), PersonalSignLib.hash(hash));
     }
 
-    /// @dev the output MUST be hashed with the app's domain separator
+    /// @notice Hash TypedDataSign with the app's domain separator to produce an EIP-712 compatible hash
+    /// @dev Includes this account's domain in the hash for replay protection
+    /// @param contentsName The top level type, per EIP-712
+    /// @param contentsType The full type string of the contents, per EIP-712
+    /// @param contentsHash The hash of the contents, per EIP-712
     function _getNestedTypedDataSignHash(
         bytes32 appSeparator,
         string memory contentsName,
@@ -42,7 +45,11 @@ abstract contract ERC7739 is EIP712 {
         );
     }
 
-    /// @dev the contentHash hashed with the app's separtor MUST match the caller provided hash
+    /// @notice Verifies that the claimed contentsHash hashed with the app's separator matches the isValidSignature provided data
+    /// @dev This is a necessary check to ensure that the caller provided contentsHash is correct
+    /// @param appSeparator The app's domain separator
+    /// @param hash The data provided in `isValidSignature`
+    /// @param contentsHash The hash of the contents, i.e. hashStruct(contents)
     function _callerHashMatchesReconstructedHash(bytes32 appSeparator, bytes32 hash, bytes32 contentsHash)
         private
         pure
