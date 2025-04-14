@@ -149,7 +149,9 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) private {
+    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
+        private
+    {
         _useNonce(signedBatchedCall.nonce);
 
         (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));

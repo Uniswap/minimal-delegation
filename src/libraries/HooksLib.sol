@@ -60,8 +60,11 @@ library HooksLib {
 
     /// @notice Handles the afterVerifySignature hook
     /// @notice MUST revert if the signature is deemed invalid by the hook
-    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData) internal view {
-        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest);
+    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
+        internal
+        view
+    {
+        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
         if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
     }
 

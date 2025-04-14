@@ -30,9 +30,8 @@ contract SignedBatchedCallLibTest is Test {
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withNonce(nonce).withKeyHash(keyHash);
         bytes32 actualHash = signedBatchedCall.hash();
 
-        bytes32 expectedHash = keccak256(
-            abi.encode(SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, batchedCall.hash(), nonce, keyHash)
-        );
+        bytes32 expectedHash =
+            keccak256(abi.encode(SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, batchedCall.hash(), nonce, keyHash));
         assertEq(actualHash, expectedHash);
     }
 }
