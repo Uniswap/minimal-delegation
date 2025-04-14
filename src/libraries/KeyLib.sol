@@ -45,6 +45,13 @@ library KeyLib {
         return key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == address(this);
     }
 
+    /// @notice Turns a calling address into a key hash.
+    /// @dev This key must be a SECP256K1 key since it is calling the contract.
+    function toKeyHash(address caller) internal view returns (bytes32) {
+        if (caller == address(this)) return ROOT_KEY_HASH;
+        return hash(Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(caller)}));
+    }
+
     /// @notice Verifies a signature from `key` over a `_hash`
     function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {

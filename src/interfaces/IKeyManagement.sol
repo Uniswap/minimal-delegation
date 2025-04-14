@@ -50,7 +50,4 @@ interface IKeyManagement {
 
     /// @dev Returns whether the key is actively registered on the contract.
     function isRegistered(bytes32 keyHash) external view returns (bool);
-
-    /// @dev Returns whether the `keyHash` is an authorized admin key.
-    function isAuthorizedAdmin(bytes32 keyHash) external view returns (bool);
 }

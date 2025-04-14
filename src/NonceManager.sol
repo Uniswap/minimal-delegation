@@ -10,7 +10,7 @@ abstract contract NonceManager is INonceManager, BaseAuthorization {
     mapping(uint256 key => uint256 seq) nonceSequenceNumber;
 
     /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 newNonce) external onlyAdmin {
+    function invalidateNonce(uint256 newNonce) external onlyThis {
         uint192 key = uint192(newNonce >> 64);
         uint64 currentSeq = uint64(nonceSequenceNumber[key]);
         uint64 targetSeq = uint64(newNonce);
