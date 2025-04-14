@@ -27,11 +27,12 @@ contract FFISignTypedData is JavascriptFfi {
         address verifyingContract,
         string memory appDomainName,
         string memory appDomainVersion,
+        address appVerifyingContract,
         PermitSingle memory contents
     ) public returns (bytes memory) {
         // Create JSON object
         string memory jsonObj =
-            _createWrappedTypedDataJsonInput(privateKey, verifyingContract, appDomainName, appDomainVersion, contents);
+            _createWrappedTypedDataJsonInput(privateKey, verifyingContract, appDomainName, appDomainVersion, appVerifyingContract, contents);
 
         // Run the JavaScript script
         return runScript("sign-wrapped-typed-data", jsonObj);
@@ -118,6 +119,7 @@ contract FFISignTypedData is JavascriptFfi {
         address verifyingContract,
         string memory appDomainName,
         string memory appDomainVersion,
+        address appVerifyingContract,
         PermitSingle memory permitSingle
     ) internal pure returns (string memory) {
         string memory permitDetailsJson = string.concat(
@@ -164,6 +166,9 @@ contract FFISignTypedData is JavascriptFfi {
             '",',
             '"appDomainVersion":"',
             appDomainVersion,
+            '",',
+            '"appVerifyingContract":"',
+            vm.toString(appVerifyingContract),
             '",',
             '"contents":',
             permitSingleJson,

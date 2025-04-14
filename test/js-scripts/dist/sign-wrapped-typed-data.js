@@ -10798,7 +10798,7 @@ var PermitSingleTypes = {
   ]
 };
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, appDomainName, appDomainVersion, contents } = jsonInput;
+var { privateKey, verifyingContract, appDomainName, appDomainVersion, appVerifyingContract, contents } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var walletClient = createWalletClient({
   account,
@@ -10810,8 +10810,10 @@ async function signWrappedTypedData() {
     const appDomain = {
       name: appDomainName,
       version: appDomainVersion,
-      chainId: 31337
+      verifyingContract: appVerifyingContract,
+      chainId: 31337,
       // Default Anvil chain ID
+      salt: "0x0000000000000000000000000000000000000000000000000000000000000000"
     };
     const verifierDomain = {
       name: DOMAIN_NAME,
@@ -10819,22 +10821,18 @@ async function signWrappedTypedData() {
       verifyingContract,
       chainId: 31337,
       // Default Anvil chain ID
-      salt: "0x"
+      salt: "0x0000000000000000000000000000000000000000000000000000000000000000"
     };
     const typedDataSignDigest = hashTypedData2({
-      // Account used for signing.
       domain: appDomain,
       types: PermitSingleTypes,
       primaryType: "PermitSingle",
-      message: {
-        details: contents.details,
-        spender: contents.spender,
-        sigDeadline: contents.sigDeadline
-      },
+      message: contents,
       // Verifying contract address (e.g. ERC-4337 Smart Account).
       verifierDomain
     });
-    console.log("typedDataSignDigest", typedDataSignDigest);
+    process.stdout.write(typedDataSignDigest);
+    process.exit(0);
     const signature = await walletClient.signTypedData({
       account,
       domain: appDomain,

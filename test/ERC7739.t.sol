@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {Test} from "forge-std/Test.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
@@ -35,11 +36,15 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         // Locally generate the full TypedSignData hash
         bytes32 contentsHash = mockERC1271VerifyingContract.hash(permitSingle);
         bytes32 appSeparator = mockERC1271VerifyingContract.domainSeparator();
-        string memory contentsDescr = mockERC1271VerifyingContract.contentsDescr();
+        string memory contentsDescrExplicit = mockERC1271VerifyingContract.contentsDescrExplicit();
+        console2.log(contentsDescrExplicit);
 
         bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
         bytes32 typedDataSignDigest =
-            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsDescr);
+            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsDescrExplicit);
+
+        console2.log("test typedDataSignDigest");
+        console2.logBytes32(typedDataSignDigest);
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
@@ -49,6 +54,7 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
             verifyingContract, 
             mockERC1271VerifyingContract.EIP712Name(), 
             mockERC1271VerifyingContract.EIP712Version(), 
+            address(mockERC1271VerifyingContract),
             permitSingle
         );
         // Assert that the signature is valid when compared against the ffi generated signature

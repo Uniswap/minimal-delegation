@@ -47,6 +47,10 @@ contract MockERC1271VerifyingContract is EIP712 {
         return PERMIT_SINGLE_TYPE;
     }
 
+    function contentsDescrExplicit() external pure returns (string memory) {
+        return string.concat(PERMIT_SINGLE_TYPE, "PermitSingle");
+    }
+
     /// returns hashStruct(PermitSingle)
     function hash(PermitSingle memory permitSingle) public view returns (bytes32) {
         return keccak256(

@@ -55,12 +55,13 @@ type PermitDetails = {
 interface SignWrappedTypedDataInputData extends InputData {
     appDomainName: string;
     appDomainVersion: string;
+    appVerifyingContract: Address;
     contents: PermitSingle;
 }
 
 // Parse the JSON input
 const jsonInput = JSON.parse(args[0]) as SignWrappedTypedDataInputData;
-const { privateKey, verifyingContract, appDomainName, appDomainVersion, contents } = jsonInput;
+const { privateKey, verifyingContract, appDomainName, appDomainVersion, appVerifyingContract, contents } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
  
@@ -74,31 +75,30 @@ async function signWrappedTypedData(): Promise<void> {
         const appDomain = {
             name: appDomainName,
             version: appDomainVersion,
+            verifyingContract: appVerifyingContract,
             chainId: 31337, // Default Anvil chain ID
+            salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
         }
         const verifierDomain = {
             name: VERIFIER_DOMAIN_NAME,
             version: VERIFIER_DOMAIN_VERSION,
             verifyingContract: verifyingContract,
             chainId: 31337, // Default Anvil chain ID
-            salt: '0x' as `0x${string}`,
+            salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
         }
+
         // hash domain
         const typedDataSignDigest = hashTypedData({ 
-            // Account used for signing.
             domain: appDomain,
             types: PermitSingleTypes,
             primaryType: 'PermitSingle',
-            message: {
-                details: contents.details,
-                spender: contents.spender,
-                sigDeadline: contents.sigDeadline,
-            },
+            message: contents,
             // Verifying contract address (e.g. ERC-4337 Smart Account).
             verifierDomain: verifierDomain,
         })
 
-        console.log('typedDataSignDigest', typedDataSignDigest);
+        process.stdout.write(typedDataSignDigest);
+        process.exit(0);
 
         const signature = await walletClient.signTypedData({
             account,
