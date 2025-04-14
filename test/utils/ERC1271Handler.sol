@@ -17,8 +17,8 @@ contract ERC1271Handler {
     function setUpERC1271() public {
         // Constant at deploy time
         TEST_APP_DOMAIN_SEPARATOR = mockERC1271VerifyingContract.domainSeparator();
-        // PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)
-        TEST_CONTENTS_DESCR = mockERC1271VerifyingContract.contentsDescr();
+        // PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitSingle
+        TEST_CONTENTS_DESCR = mockERC1271VerifyingContract.contentsDescrExplicit();
         // keccak256(PermitSingle({details: PermitDetails({token: address(0), amount: 0, expiration: 0, nonce: 0}), spender: address(0), sigDeadline: 0}))
         TEST_CONTENTS_HASH = mockERC1271VerifyingContract.defaultContentsHash();
     }

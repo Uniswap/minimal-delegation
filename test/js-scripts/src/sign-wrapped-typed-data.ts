@@ -97,8 +97,27 @@ async function signWrappedTypedData(): Promise<void> {
             verifierDomain: verifierDomain,
         })
 
-        process.stdout.write(typedDataSignDigest);
-        process.exit(0);
+        console.log(JSON.stringify({
+          domain: appDomain as any,
+          types: {
+            ...PermitSingleTypes,
+            TypedDataSign: [
+              { name: 'contents', type: 'PermitSingle' },
+              { name: 'name', type: 'string' },
+              { name: 'version', type: 'string' },
+              { name: 'chainId', type: 'uint256' },
+              { name: 'verifyingContract', type: 'address' },
+              { name: 'salt', type: 'bytes32' },
+            ],
+          },
+          primaryType: 'TypedDataSign',
+          message: {
+            contents: contents as any,
+            ...(verifierDomain as any),
+          },
+        }, null, 2));
+
+        console.log("script typedDataSignDigest", typedDataSignDigest);
 
         const signature = await walletClient.signTypedData({
             account,

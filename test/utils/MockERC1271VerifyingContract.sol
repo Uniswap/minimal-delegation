@@ -47,8 +47,9 @@ contract MockERC1271VerifyingContract is EIP712 {
         return PERMIT_SINGLE_TYPE;
     }
 
+    /// return the full contents descriptor string with explicit types
     function contentsDescrExplicit() external pure returns (string memory) {
-        return string.concat(PERMIT_SINGLE_TYPE, "PermitSingle");
+        return "PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitSingle";
     }
 
     /// returns hashStruct(PermitSingle)

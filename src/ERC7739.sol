@@ -40,8 +40,10 @@ abstract contract ERC7739 is EIP712 {
             eip712Domain();
         bytes memory domainBytes =
             abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
+        bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
         return MessageHashUtils.toTypedDataHash(
-            appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
+            appSeparator, 
+            typedDataSignHash
         );
     }
 

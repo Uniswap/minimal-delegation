@@ -35,11 +35,17 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         });
         // Locally generate the full TypedSignData hash
         bytes32 contentsHash = mockERC1271VerifyingContract.hash(permitSingle);
+        console2.log("test contentsHash");
+        console2.logBytes32(contentsHash);
         bytes32 appSeparator = mockERC1271VerifyingContract.domainSeparator();
+        console2.log("test appSeparator");
+        console2.logBytes32(appSeparator);
         string memory contentsDescrExplicit = mockERC1271VerifyingContract.contentsDescrExplicit();
-        console2.log(contentsDescrExplicit);
+        console2.log("test contentsDescrExplicit %s", contentsDescrExplicit);
 
         bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
+        console2.log("test signerAccountDomainBytes");
+        console2.logBytes(signerAccountDomainBytes);
         bytes32 typedDataSignDigest =
             contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsDescrExplicit);
 
@@ -48,7 +54,8 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
-
+        console2.log("test verifyingContract");
+        
         (bytes memory signature) = ffi_signWrappedTypedData(
             signerPrivateKey, 
             verifyingContract, 
