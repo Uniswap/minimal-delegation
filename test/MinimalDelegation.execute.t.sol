@@ -658,17 +658,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         // Create multicall data
         bytes[] memory multicallData = new bytes[](2);
-        multicallData[0] = abi.encodeWithSelector(
-            bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)")),
-            signedBatchedCall1, // the SignedBatchedCall struct
-            signature1
-        );
-
-        multicallData[1] = abi.encodeWithSelector(
-            bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)")),
-            signedBatchedCall2, // the SignedBatchedCall struct
-            signature2
-        );
+        multicallData[0] = CallUtils.encodeSignedExecuteCall(signedBatchedCall1, signature1);
+        multicallData[1] = CallUtils.encodeSignedExecuteCall(signedBatchedCall2, signature2);
 
         // Execute the multicall
         vm.prank(address(signerAccount));
@@ -677,6 +668,70 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         // Verify the results
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
         assertEq(tokenB.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_multicall_rootKey_succeeds() public {
+        // Create two separate batches of calls
+        Call[] memory calls1 = CallUtils.initArray();
+        Call[] memory calls2 = CallUtils.initArray();
+
+        calls1 = calls1.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+        calls2 = calls2.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
+
+        BatchedCall memory batchedCall1 = CallUtils.initBatchedCall().withCalls(calls1).withShouldRevert(true);
+        SignedBatchedCall memory signedBatchedCall1 = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall1)
+            .withNonce(DEFAULT_NONCE).withKeyHash(KeyLib.ROOT_KEY_HASH);
+        bytes32 digest1 = signerAccount.hashTypedData(signedBatchedCall1.hash());
+        bytes memory signature1 = signerTestKey.sign(digest1);
+
+        BatchedCall memory batchedCall2 = CallUtils.initBatchedCall().withCalls(calls2).withShouldRevert(true);
+        SignedBatchedCall memory signedBatchedCall2 = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall2)
+            .withNonce(DEFAULT_NONCE + 1).withKeyHash(KeyLib.ROOT_KEY_HASH);
+        bytes32 digest2 = signerAccount.hashTypedData(signedBatchedCall2.hash());
+        bytes memory signature2 = signerTestKey.sign(digest2);
+
+        // Build the mixed multicall data array with two different types of execute calls
+        bytes[] memory multicallData = new bytes[](2);
+        multicallData[0] = CallUtils.encodeSignedExecuteCall(signedBatchedCall1, signature1);
+        multicallData[1] = CallUtils.encodeSignedExecuteCall(signedBatchedCall2, signature2);
+
+        signerAccount.multicall(multicallData);
+
+        // Verify the results
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+        assertEq(tokenB.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_multicall_revertsWhenUnauthorized() public {
+        // Create two separate batches of calls
+        Call[] memory calls1 = CallUtils.initArray();
+        Call[] memory calls2 = CallUtils.initArray();
+
+        calls1 = calls1.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
+        calls2 = calls2.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
+
+        TestKey memory p256Key1 = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signer));
+        signerAccount.register(p256Key1.toKey());
+        vm.stopPrank();
+
+        BatchedCall memory batchedCall1 = CallUtils.initBatchedCall().withCalls(calls1).withShouldRevert(true);
+        SignedBatchedCall memory signedBatchedCall1 = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall1)
+            .withNonce(DEFAULT_NONCE).withKeyHash(p256Key1.toKeyHash());
+        bytes memory signature1 = p256Key1.sign(signerAccount.hashTypedData(signedBatchedCall1.hash()));
+
+        BatchedCall memory batchedCall2 = CallUtils.initBatchedCall().withCalls(calls2).withShouldRevert(true);
+
+        // Build the mixed multicall data array with two different types of execute calls
+        bytes[] memory multicallData = new bytes[](2);
+        multicallData[0] = CallUtils.encodeSignedExecuteCall(signedBatchedCall1, signature1);
+        // this call is not signed and caller is not authorized
+        multicallData[1] = CallUtils.encodeBatchedExecuteCall(batchedCall2);
+
+        // The call should revert since we're not authorized to make the second call
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
+        signerAccount.multicall(multicallData);
     }
 
     /// forge-config: default.isolate = true
@@ -708,19 +763,19 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
             .withNonce(DEFAULT_NONCE + 1).withKeyHash(p256Key2.toKeyHash());
         bytes memory signature2 = p256Key2.sign(signerAccount.hashTypedData(signedBatchedCall2.hash()));
 
+        // Create multicall data using the new utility function
+        SignedBatchedCall[] memory signedBatchedCalls = new SignedBatchedCall[](2);
+        signedBatchedCalls[0] = signedBatchedCall1;
+        signedBatchedCalls[1] = signedBatchedCall2;
+
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = signature1;
+        signatures[1] = signature2;
+
         // Create multicall data
         bytes[] memory multicallData = new bytes[](2);
-        multicallData[0] = abi.encodeWithSelector(
-            bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)")),
-            signedBatchedCall1, // the SignedBatchedCall struct
-            signature1
-        );
-
-        multicallData[1] = abi.encodeWithSelector(
-            bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)")),
-            signedBatchedCall2, // the SignedBatchedCall struct
-            signature2
-        );
+        multicallData[0] = CallUtils.encodeSignedExecuteCall(signedBatchedCall1, signature1);
+        multicallData[1] = CallUtils.encodeSignedExecuteCall(signedBatchedCall2, signature2);
 
         // Execute the multicall
         vm.prank(address(signerAccount));
