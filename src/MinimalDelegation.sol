@@ -47,7 +47,7 @@ contract MinimalDelegation is
     Multicall
 {
     using ModeDecoder for bytes32;
-    using KeyLib for Key;
+    using KeyLib for *;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CalldataDecoder for bytes;
     using WrappedDataHash for bytes32;
@@ -57,8 +57,10 @@ contract MinimalDelegation is
     using HooksLib for IHook;
     using SettingsLib for Settings;
 
-    function execute(BatchedCall memory batchedCall) public payable onlyThis {
-        _dispatch(batchedCall, KeyLib.ROOT_KEY_HASH);
+    function execute(BatchedCall memory batchedCall) public payable {
+        bytes32 keyHash = msg.sender.toKeyHash();
+        if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
+        _dispatch(batchedCall, keyHash);
     }
 
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
