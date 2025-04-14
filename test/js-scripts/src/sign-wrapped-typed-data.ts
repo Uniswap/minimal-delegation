@@ -11,10 +11,14 @@ import {
     type Address,
     toHex,
     pad,
+    hashTypedData as hashTypedDataV4,
+    hashDomain,
+    getTypesForEIP712Domain,
+    hashStruct
   } from 'viem'
   
 import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData} from './utils/constants';
-import { hashTypedData } from 'viem/experimental/erc7739'
+import { hashTypedData as wrappedHashTypedData } from 'viem/experimental/erc7739'
 import { erc7739Actions } from 'viem/experimental'
 
 // Read command line arguments
@@ -33,9 +37,9 @@ const PermitSingleTypes = {
     ],
     PermitDetails: [
       { name: 'token', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-      { name: 'expiration', type: 'uint256' },
-      { name: 'nonce', type: 'uint256' }
+      { name: 'amount', type: 'uint160' },
+      { name: 'expiration', type: 'uint48' },
+      { name: 'nonce', type: 'uint48' }
     ]
   } as const;
   
@@ -48,8 +52,8 @@ type PermitSingle = {
 type PermitDetails = {
     token: Address;
     amount: bigint;
-    expiration: bigint;
-    nonce: bigint;
+    expiration: number;
+    nonce: number;
 }
 
 interface SignWrappedTypedDataInputData extends InputData {
@@ -77,7 +81,7 @@ async function signWrappedTypedData(): Promise<void> {
             version: appDomainVersion,
             verifyingContract: appVerifyingContract,
             chainId: 31337, // Default Anvil chain ID
-            salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+            // salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
         }
         const verifierDomain = {
             name: VERIFIER_DOMAIN_NAME,
@@ -87,48 +91,19 @@ async function signWrappedTypedData(): Promise<void> {
             salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
         }
 
-        // hash domain
-        const typedDataSignDigest = hashTypedData({ 
-            domain: appDomain,
-            types: PermitSingleTypes,
-            primaryType: 'PermitSingle',
-            message: contents,
-            verifierDomain: verifierDomain,
-        })
-
-        console.log(JSON.stringify({
-          domain: appDomain as any,
-          types: {
-            ...PermitSingleTypes,
-            TypedDataSign: [
-              { name: 'contents', type: 'PermitSingle' },
-              { name: 'name', type: 'string' },
-              { name: 'version', type: 'string' },
-              { name: 'chainId', type: 'uint256' },
-              { name: 'verifyingContract', type: 'address' },
-              { name: 'salt', type: 'bytes32' },
-            ],
-          },
-          primaryType: 'TypedDataSign',
-          message: {
-            contents: contents as any,
-            ...(verifierDomain as any),
-          },
-        }, null, 2));
-
-        // console.log("script typedDataSignDigest", typedDataSignDigest);
-
-        process.stdout.write(typedDataSignDigest);
-        process.exit(0);
-
-        const signature = await walletClient.signTypedData({
+        const wrappedSignature = await walletClient.signTypedData({
             account,
             domain: appDomain,
             types: PermitSingleTypes,
             primaryType: 'PermitSingle',
             message: contents,
             verifierDomain: verifierDomain,
-        })
+        })  
+
+        // signature is first 65 bytes of wrappedSignature + 0x
+        const signatureLength = 130 // 65 * 2
+        const start = 2; // skip the first 0x
+        const signature = '0x' + wrappedSignature.slice(start, start + signatureLength);
     
         // Return the signature
         process.stdout.write(signature);

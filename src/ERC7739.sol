@@ -41,10 +41,7 @@ abstract contract ERC7739 is EIP712 {
         bytes memory domainBytes =
             abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
         bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
-        return MessageHashUtils.toTypedDataHash(
-            appSeparator, 
-            typedDataSignHash
-        );
+        return MessageHashUtils.toTypedDataHash(appSeparator, typedDataSignHash);
     }
 
     /// @notice Verifies that the claimed contentsHash hashed with the app's separator matches the isValidSignature provided data

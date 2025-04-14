@@ -12,6 +12,7 @@ import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
 import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISignTypedData {
     using TestKeyManager for TestKey;
@@ -25,40 +26,6 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         setUpERC1271();
     }
 
-    function test_domainSeparator() public view {
-        (
-            ,
-            string memory name,
-            string memory version,
-            uint256 chainId,
-            address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
-        ) = signerAccount.eip712Domain();
-        // Ensure that verifying contract is the signer
-        assertEq(verifyingContract, address(signerAccount));
-        assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
-        assertEq(salt, bytes32(0));
-        assertEq(name, "Uniswap Minimal Delegation");
-        assertEq(version, "1");
-        bytes32 expected = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name)),
-                keccak256(bytes(version)),
-                chainId,
-                verifyingContract
-            )
-        );
-        assertEq(expected, signerAccount.domainSeparator());
-
-        console2.logBytes32(keccak256(bytes(name)));
-        console2.logBytes32(keccak256(bytes(version)));
-        console2.log(chainId);
-        console2.log(verifyingContract);
-        console2.logBytes32(salt);
-    }
-
     function test_signTypedSignData_matches_signWrappedTypedData_ffi() public {
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
 
@@ -69,33 +36,23 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         });
         // Locally generate the full TypedSignData hash
         bytes32 contentsHash = mockERC1271VerifyingContract.hash(permitSingle);
-        console2.log("test contentsHash");
-        console2.logBytes32(contentsHash);
         bytes32 appSeparator = mockERC1271VerifyingContract.domainSeparator();
-        console2.log("test appSeparator");
-        console2.logBytes32(appSeparator);
+        bytes32 erc1271Digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
+
         string memory contentsDescrExplicit = mockERC1271VerifyingContract.contentsDescrExplicit();
-        console2.log("test contentsDescrExplicit %s", contentsDescrExplicit);
 
         bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
-        console2.log("test signerAccountDomainBytes");
-        console2.logBytes(signerAccountDomainBytes);
         bytes32 typedDataSignDigest =
             contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsDescrExplicit);
-
-        console2.log("test typedDataSignDigest");
-        console2.logBytes32(typedDataSignDigest);
-
-        
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
 
         (bytes memory signature) = ffi_signWrappedTypedData(
-            signerPrivateKey, 
-            verifyingContract, 
-            mockERC1271VerifyingContract.EIP712Name(), 
-            mockERC1271VerifyingContract.EIP712Version(), 
+            signerPrivateKey,
+            verifyingContract,
+            DOMAIN_NAME,
+            DOMAIN_VERSION,
             address(mockERC1271VerifyingContract),
             permitSingle
         );

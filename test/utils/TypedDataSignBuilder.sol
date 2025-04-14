@@ -14,13 +14,7 @@ library TypedDataSignBuilder {
     function toDomainBytes(IERC5267 account) internal view returns (bytes memory) {
         (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
             account.eip712Domain();
-        return abi.encode(
-            keccak256(bytes(name)), 
-            keccak256(bytes(version)), 
-            chainId, 
-            verifyingContract, 
-            salt
-        );
+        return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
     }
 
     /// @notice Builds a nested typed data signature for the given contents hash, domain bytes, and contents descriptor
@@ -31,8 +25,6 @@ library TypedDataSignBuilder {
         string memory contentsDescr
     ) internal pure returns (bytes32) {
         (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
-        console2.log("test.TypedDataSignBuilder contentsName %s", contentsName);
-        console2.log("test.TypedDataSignBuilder contentsType %s", contentsType);
         return MessageHashUtils.toTypedDataHash(
             appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
         );

@@ -10754,30 +10754,6 @@ function erc7739Actions(parameters = {}) {
   };
 }
 
-// node_modules/viem/_esm/experimental/erc7739/utils/hashTypedData.js
-function hashTypedData2(parameters) {
-  const { domain, message, primaryType, types, verifierDomain } = parameters;
-  return hashTypedData({
-    domain,
-    types: {
-      ...types,
-      TypedDataSign: [
-        { name: "contents", type: primaryType },
-        { name: "name", type: "string" },
-        { name: "version", type: "string" },
-        { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" },
-        { name: "salt", type: "bytes32" }
-      ]
-    },
-    primaryType: "TypedDataSign",
-    message: {
-      contents: message,
-      ...verifierDomain
-    }
-  });
-}
-
 // src/sign-wrapped-typed-data.ts
 var args = process.argv.slice(2);
 if (args.length < 1) {
@@ -10792,9 +10768,9 @@ var PermitSingleTypes = {
   ],
   PermitDetails: [
     { name: "token", type: "address" },
-    { name: "amount", type: "uint256" },
-    { name: "expiration", type: "uint256" },
-    { name: "nonce", type: "uint256" }
+    { name: "amount", type: "uint160" },
+    { name: "expiration", type: "uint48" },
+    { name: "nonce", type: "uint48" }
   ]
 };
 var jsonInput = JSON.parse(args[0]);
@@ -10811,9 +10787,9 @@ async function signWrappedTypedData() {
       name: appDomainName,
       version: appDomainVersion,
       verifyingContract: appVerifyingContract,
-      chainId: 31337,
+      chainId: 31337
       // Default Anvil chain ID
-      salt: "0x0000000000000000000000000000000000000000000000000000000000000000"
+      // salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
     };
     const verifierDomain = {
       name: DOMAIN_NAME,
@@ -10823,35 +10799,7 @@ async function signWrappedTypedData() {
       // Default Anvil chain ID
       salt: "0x0000000000000000000000000000000000000000000000000000000000000000"
     };
-    const typedDataSignDigest = hashTypedData2({
-      domain: appDomain,
-      types: PermitSingleTypes,
-      primaryType: "PermitSingle",
-      message: contents,
-      verifierDomain
-    });
-    console.log(JSON.stringify({
-      domain: appDomain,
-      types: {
-        ...PermitSingleTypes,
-        TypedDataSign: [
-          { name: "contents", type: "PermitSingle" },
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "chainId", type: "uint256" },
-          { name: "verifyingContract", type: "address" },
-          { name: "salt", type: "bytes32" }
-        ]
-      },
-      primaryType: "TypedDataSign",
-      message: {
-        contents,
-        ...verifierDomain
-      }
-    }, null, 2));
-    process.stdout.write(typedDataSignDigest);
-    process.exit(0);
-    const signature = await walletClient.signTypedData({
+    const wrappedSignature = await walletClient.signTypedData({
       account,
       domain: appDomain,
       types: PermitSingleTypes,
@@ -10859,6 +10807,9 @@ async function signWrappedTypedData() {
       message: contents,
       verifierDomain
     });
+    const signatureLength = 130;
+    const start = 2;
+    const signature = "0x" + wrappedSignature.slice(start, start + signatureLength);
     process.stdout.write(signature);
     process.exit(0);
   } catch (error) {
