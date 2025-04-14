@@ -211,7 +211,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
 
         uint256 nonceKey = 0;
-        (uint256 nonce, uint64 seq) = _buildNextValidNonce(nonceKey);
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         bytes32 wrongKeyHashForRootSigner = signerTestKey.toKeyHash();
         // Create hash of the calls + nonce and sign it
