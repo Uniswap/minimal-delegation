@@ -21,7 +21,7 @@ abstract contract ERC7739 is EIP712 {
     /// @param hash The hashed message, done offchain
     /// @return The PersonalSign nested EIP-712 hash of the message
     function _getPersonalSignTypedDataHash(bytes32 hash) private view returns (bytes32) {
-        return MessageHashUtils.toTypedDataHash(_domainSeparator(), PersonalSignLib.hash(hash));
+        return MessageHashUtils.toTypedDataHash(domainSeparator(), PersonalSignLib.hash(hash));
     }
 
     /// @notice Hash TypedDataSign with the app's domain separator to produce an EIP-712 compatible hash
@@ -37,7 +37,7 @@ abstract contract ERC7739 is EIP712 {
     ) private view returns (bytes32) {
         // _eip712Domain().fields and _eip712Domain().extensions are not used
         (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
-            _eip712Domain();
+            eip712Domain();
         bytes memory domainBytes =
             abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
         return MessageHashUtils.toTypedDataHash(

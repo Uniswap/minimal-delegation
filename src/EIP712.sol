@@ -36,25 +36,8 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @return salt The value of the `EIP712Domain.salt` field.
     /// @return extensions The list of EIP numbers, that extends EIP-712 with new domain fields.
     function eip712Domain()
-        external
-        view
+        public
         virtual
-        returns (
-            bytes1 fields,
-            string memory name,
-            string memory version,
-            uint256 chainId,
-            address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
-        )
-    {
-        (fields, name, version, chainId, verifyingContract, salt, extensions) = _eip712Domain();
-    }
-
-    /// @notice Internal eip712Domain implementation for use in ERC7739
-    function _eip712Domain()
-        internal
         view
         returns (
             bytes1 fields,
@@ -70,35 +53,21 @@ contract EIP712 is IEIP712, IERC5267 {
         (name, version) = _domainNameAndVersion();
         chainId = block.chainid;
         verifyingContract = address(this);
-        salt = salt; // `bytes32(0)`.
-        extensions = extensions; // `new uint256[](0)`.
+        salt = bytes32(0);
+        extensions = new uint256[](0);
     }
 
     /// @notice Returns the `domainSeparator` used to create EIP-712 compliant hashes.
     /// @return The 32 bytes domain separator result.
     function domainSeparator() public view returns (bytes32) {
-        return _domainSeparator();
-    }
-
-    /// @notice Internal domainSeparator implementation for use in ERC7739
-    function _domainSeparator() internal view returns (bytes32) {
         return
             keccak256(abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this)));
     }
 
     /// @notice Public getter for `_hashTypedData()` to produce a EIP-712 hash using this account's domain separator
-    /// @dev This is meant to be used for internal verification of SignedBatchedCalls and thus does not produce signatures that are replay-safe.
-    ///      See ERC7739 for a version that is replay-safe and can be used for external verification through ERC-1271.
-    /// @param hash The nested typed data. Assumes the hash is the result of applying EIP-712 hashStruct.
+    /// @param hash The nested typed data. Assumes the hash is the result of applying EIP-712 `hashStruct`.
     function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
-        return _hashTypedData(hash);
-    }
-
-    /// @notice Returns the EIP-712 typed data hash
-    /// @param hash The nested typed data hash as defined by EIP-712.  Assumes the hash is already compliant with EIP-712.
-    /// @return The resulting EIP-712 hash.
-    function _hashTypedData(bytes32 hash) internal view returns (bytes32) {
-        return MessageHashUtils.toTypedDataHash(_domainSeparator(), hash);
+        return MessageHashUtils.toTypedDataHash(domainSeparator(), hash);
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.

@@ -152,7 +152,7 @@ contract MinimalDelegation is
     function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory signature) private {
         _useNonce(signedBatchedCall.nonce);
 
-        bytes32 digest = _hashTypedData(signedBatchedCall.hash());
+        bytes32 digest = hashTypedData(signedBatchedCall.hash());
 
         Key memory key = getKey(signedBatchedCall.keyHash);
         bool isValid = key.verify(digest, signature);
