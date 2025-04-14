@@ -145,8 +145,9 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         SignedBatchedCall memory signedBatchedCall =
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withKeyHash(currentKeyHash).withNonce(nonce);
 
+        bytes memory emptyHookData = abi.encode("");
         bytes32 digest = signerAccount.hashTypedData(signedBatchedCall.hash());
-        bytes memory signature = currentSigningKey.sign(digest);
+        bytes memory signature = abi.encode(currentSigningKey.sign(digest), emptyHookData);
 
         bytes[] memory expectedReverts = InvariantRevertLib.initArray();
 

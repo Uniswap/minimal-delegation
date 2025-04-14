@@ -35,9 +35,11 @@ library HooksLib {
         IHook self,
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
-        bytes32 userOpHash
+        bytes32 userOpHash,
+        bytes memory hookData
     ) internal view returns (uint256 validationData) {
-        (bytes4 hookSelector, uint256 hookValidationData) = self.afterValidateUserOp(keyHash, userOp, userOpHash);
+        (bytes4 hookSelector, uint256 hookValidationData) =
+            self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
         if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
         return hookValidationData;
     }
@@ -46,20 +48,23 @@ library HooksLib {
     /// @notice MAY revert if desired
     /// @dev Expected to validate the signature and return a value which will override the internally computed ERC-1271 magic value
     /// @return magicValue the ERC-1271 magic value returned by the hook
-    function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest)
+    function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
         returns (bytes4 magicValue)
     {
-        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest);
+        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, hookData);
         if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
         return hookMagicValue;
     }
 
     /// @notice Handles the afterVerifySignature hook
     /// @notice MUST revert if the signature is deemed invalid by the hook
-    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest) internal view {
-        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest);
+    function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
+        internal
+        view
+    {
+        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
         if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
     }
 

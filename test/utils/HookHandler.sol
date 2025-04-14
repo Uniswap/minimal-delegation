@@ -17,6 +17,8 @@ abstract contract HookHandler is Test {
     /// 0x1111 ...11000
     address payable constant ALL_EXECUTION_HOOKS = payable(0xF000000000000000000000000000000000000018);
 
+    bytes constant EMPTY_HOOK_DATA = "";
+
     function setUpHooks() public {
         MockHook impl = new MockHook();
         vm.etch(ALL_HOOKS, address(impl).code);
