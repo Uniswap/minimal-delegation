@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 /// @title BaseAuthorization
 /// @notice A base contract that provides a modifier to restrict access to the contract itself
-abstract contract BaseAuthorization {
+contract BaseAuthorization {
     /// @notice An error that is thrown when an unauthorized address attempts to call a function
     error Unauthorized();
 
