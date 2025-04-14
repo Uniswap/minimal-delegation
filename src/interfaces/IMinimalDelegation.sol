@@ -10,6 +10,7 @@ import {IERC7201} from "./IERC7201.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {IERC4337Account} from "./IERC4337Account.sol";
 import {IERC7914} from "./IERC7914.sol";
+import {IMulticall} from "./IMulticall.sol";
 import {SignedBatchedCall} from "../libraries/SignedBatchedCallLib.sol";
 import {BatchedCall} from "../libraries/BatchedCallLib.sol";
 import {Call} from "../libraries/CallLib.sol";
@@ -32,7 +33,8 @@ interface IMinimalDelegation is
     IERC5267,
     IERC7201,
     IERC7914,
-    INonceManager
+    INonceManager,
+    IMulticall
 {
     error CallFailed(bytes reason);
     error InvalidSignature();
