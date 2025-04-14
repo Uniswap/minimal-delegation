@@ -225,7 +225,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
             signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR
         );
         // trying to spoof the root key hash causes the signature verification to fail
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
 
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
