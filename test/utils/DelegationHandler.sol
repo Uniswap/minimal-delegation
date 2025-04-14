@@ -35,15 +35,11 @@ contract DelegationHandler is Test {
     EntryPoint public entryPoint;
     IMinimalDelegation public signerAccount;
 
-    MockERC1271VerifyingContract public mockERC1271VerifyingContract;
-
     function setUpDelegation() public {
         minimalDelegation =
             IMinimalDelegation(create2(vm.getCode("MinimalDelegationEntry.sol:MinimalDelegationEntry"), bytes32(0)));
         _delegate(signer, address(minimalDelegation));
         signerAccount = IMinimalDelegation(signer);
-
-        mockERC1271VerifyingContract = new MockERC1271VerifyingContract("MockERC1271VerifyingContract", "1");
 
         vm.etch(Constants.ENTRY_POINT_V_0_8, Constants.ENTRY_POINT_V_0_8_CODE);
         vm.label(Constants.ENTRY_POINT_V_0_8, "EntryPoint");

@@ -37,8 +37,8 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @return extensions The list of EIP numbers, that extends EIP-712 with new domain fields.
     function eip712Domain()
         public
-        virtual
         view
+        virtual
         returns (
             bytes1 fields,
             string memory name,

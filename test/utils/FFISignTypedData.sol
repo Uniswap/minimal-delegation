@@ -5,6 +5,7 @@ import {JavascriptFfi} from "./JavascriptFfi.sol";
 import {SignedBatchedCall} from "../../src/libraries/SignedBatchedCallLib.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console2} from "forge-std/console2.sol";
+import {PermitSingle} from "./MockERC1271VerifyingContract.sol";
 
 contract FFISignTypedData is JavascriptFfi {
     using stdJson for string;
@@ -19,6 +20,21 @@ contract FFISignTypedData is JavascriptFfi {
 
         // Run the JavaScript script
         return runScript("sign-typed-data", jsonObj);
+    }
+
+    function ffi_signWrappedTypedData(
+        uint256 privateKey,
+        address verifyingContract,
+        string memory appDomainName,
+        string memory appDomainVersion,
+        PermitSingle memory contents
+    ) public returns (bytes memory) {
+        // Create JSON object
+        string memory jsonObj =
+            _createWrappedTypedDataJsonInput(privateKey, verifyingContract, appDomainName, appDomainVersion, contents);
+
+        // Run the JavaScript script
+        return runScript("sign-wrapped-typed-data", jsonObj);
     }
 
     /**
@@ -93,6 +109,67 @@ contract FFISignTypedData is JavascriptFfi {
         );
 
         console2.log(jsonObj);
+
+        return jsonObj;
+    }
+
+    function _createWrappedTypedDataJsonInput(
+        uint256 privateKey,
+        address verifyingContract,
+        string memory appDomainName,
+        string memory appDomainVersion,
+        PermitSingle memory permitSingle
+    ) internal pure returns (string memory) {
+        string memory permitDetailsJson = string.concat(
+            "{",
+            '"token":"',
+            vm.toString(permitSingle.details.token),
+            '",',
+            '"amount":"',
+            vm.toString(permitSingle.details.amount),
+            '",',
+            '"expiration":"',
+            vm.toString(permitSingle.details.expiration),
+            '",',
+            '"nonce":"',
+            vm.toString(permitSingle.details.nonce),
+            '"',
+            "}"
+        );
+
+        string memory permitSingleJson = string.concat(
+            "{",
+            '"details":',
+            permitDetailsJson,
+            ',',
+            '"spender":"',
+            vm.toString(permitSingle.spender),
+            '",',
+            '"sigDeadline":"',
+            vm.toString(permitSingle.sigDeadline),
+            '"',
+            "}"
+        );
+        
+        string memory jsonObj = string.concat(
+            "{",
+            '"privateKey":"',
+            vm.toString(privateKey),
+            '",',
+            '"verifyingContract":"',
+            vm.toString(verifyingContract),
+            '",',
+            '"appDomainName":"',
+            appDomainName,
+            '",',
+            '"appDomainVersion":"',
+            appDomainVersion,
+            '",',
+            '"contents":',
+            permitSingleJson,
+            "",
+            "}"
+        );
 
         return jsonObj;
     }

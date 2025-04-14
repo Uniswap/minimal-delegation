@@ -5,6 +5,7 @@ import {console2} from "forge-std/console2.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {HookHandler} from "./utils/HookHandler.sol";
+import {ERC1271Handler} from "./utils/ERC1271Handler.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {TestKeyManager} from "./utils/TestKeyManager.sol";
@@ -15,7 +16,7 @@ import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
 
-contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler {
+contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271Handler {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
     using TypedDataSignBuilder for bytes32;
@@ -24,27 +25,17 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
 
-    // Default test values for ERC1271 isValidSignature tests
-    bytes SIGNER_ACCOUNT_DOMAIN_BYTES;
-    bytes32 TEST_APP_DOMAIN_SEPARATOR;
-    string TEST_CONTENTS_DESCR;
-    bytes32 TEST_CONTENTS_HASH;
+    // Test hashed TypedDataSign digest
     bytes32 TEST_TYPED_DATA_SIGN_DIGEST;
 
     function setUp() public {
         setUpDelegation();
         setUpHooks();
+        setUpERC1271();
         // Set after delegation
-        SIGNER_ACCOUNT_DOMAIN_BYTES = IERC5267(address(signerAccount)).toDomainBytes();
-        // Constant at deploy time
-        TEST_APP_DOMAIN_SEPARATOR = mockERC1271VerifyingContract.domainSeparator();
-        // Mail(Letter letter)Letter(address recipient)
-        TEST_CONTENTS_DESCR = mockERC1271VerifyingContract.contentsDescr();
-        // keccak256(Mail({letter: Letter({recipient: address(0)})}))
-        TEST_CONTENTS_HASH = mockERC1271VerifyingContract.defaultContentsHash();
-
+        bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
         TEST_TYPED_DATA_SIGN_DIGEST = TEST_CONTENTS_HASH.hashTypedDataSign(
-            SIGNER_ACCOUNT_DOMAIN_BYTES, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_DESCR
+            signerAccountDomainBytes, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_DESCR
         );
     }
 
