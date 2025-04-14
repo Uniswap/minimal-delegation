@@ -48,7 +48,9 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         );
     }
 
-    function test_isValidSignature_P256_isValid() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_P256_isValid_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         vm.prank(address(signer));
         signerAccount.register(p256Key.toKey());
@@ -62,10 +64,13 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         // Digest is what is calculated by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        vm.snapshotGasLastCall("isValidSignature_P256");
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_WebAuthnP256_isValid() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_WebAuthnP256_isValid_gas() public {
         TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
 
         bytes memory signature = webAuthnP256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
@@ -79,10 +84,13 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        vm.snapshotGasLastCall("isValidSignature_WebAuthnP256");
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_rootKey_isValid() public view {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_rootKey_isValid_gas() public {
         bytes memory signature = signerTestKey.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
             signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR
@@ -90,7 +98,9 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature);
         // ensure the call returns the ERC1271 magic value
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
-        assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_MAGIC_VALUE);
+        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        vm.snapshotGasLastCall("isValidSignature_rootKey");
+        assertEq(result, _1271_MAGIC_VALUE);
     }
 
     function test_isValidSignature_sep256k1_expiredKey() public {
@@ -258,7 +268,9 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    function test_isValidSignature_withHook_succeeds() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_withHook_succeeds_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         bytes32 keyHash = p256Key.toKeyHash();
 
@@ -276,9 +288,12 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
 
         mockHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
-        assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_MAGIC_VALUE);
+        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        vm.snapshotGasLastCall("isValidSignature_P256_withHook");
+        assertEq(result, _1271_MAGIC_VALUE);
 
         mockHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
-        assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
+        result = signerAccount.isValidSignature(digest, wrappedSignature);
+        assertEq(result, _1271_INVALID_VALUE);
     }
 }

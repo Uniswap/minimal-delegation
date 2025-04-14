@@ -1,0 +1,6 @@
+{
+  "isValidSignature_P256": "35751",
+  "isValidSignature_P256_withHook": "41364",
+  "isValidSignature_WebAuthnP256": "42431",
+  "isValidSignature_rootKey": "11286"
+}
