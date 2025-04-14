@@ -2,5 +2,7 @@
   "isValidSignature_P256": "41813",
   "isValidSignature_P256_withHook": "47971",
   "isValidSignature_WebAuthnP256": "48500",
+  "isValidSignature_personalSign_P256Key": "13429",
+  "isValidSignature_personalSign_rootKey": "6992",
   "isValidSignature_rootKey": "17355"
 }

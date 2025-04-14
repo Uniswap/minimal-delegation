@@ -18,7 +18,7 @@ library TypedDataSignBuilder {
         return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
     }
 
-    /// @notice Produces an EIP-712 compatible digest by hashing a TypedDataSign struct against the app's domain separator 
+    /// @notice Produces an EIP-712 compatible digest by hashing a TypedDataSign struct against the app's domain separator
     function hashTypedDataSign(
         bytes32 contentsHash,
         bytes memory domainBytes,
@@ -32,14 +32,8 @@ library TypedDataSignBuilder {
     }
 
     /// @notice Produces an EIP-712 compatible digest by hashing an ERC-191 signed personal message against the provided domain separator
-    function hashWrappedPersonalSign(
-        bytes32 messageHash,
-        bytes32 domainSeparator
-    ) internal pure returns (bytes32) {
-        return MessageHashUtils.toTypedDataHash(
-            domainSeparator, 
-            PersonalSignLib.hash(messageHash)
-        );
+    function hashWrappedPersonalSign(bytes32 messageHash, bytes32 domainSeparator) internal pure returns (bytes32) {
+        return MessageHashUtils.toTypedDataHash(domainSeparator, PersonalSignLib.hash(messageHash));
     }
 
     /// @notice Builds a nested typed data sign signature

@@ -29,9 +29,7 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
 
         string memory message = "test";
-        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(
-            bytes(message)
-        );
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
         bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
         bytes32 wrappedPersonalSignDigest = messageHash.hashWrappedPersonalSign(signerAccountDomainSeparator);
         console2.log("wrappedPersonalSignDigest");
@@ -39,11 +37,7 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
 
         address verifyingContract = address(signerAccount);
 
-        (bytes memory signature) = ffi_signWrappedPersonalSign(
-            signerPrivateKey,
-            verifyingContract,
-            message
-        );
+        (bytes memory signature) = ffi_signWrappedPersonalSign(signerPrivateKey, verifyingContract, message);
         assertEq(signature, key.sign(wrappedPersonalSignDigest));
     }
 

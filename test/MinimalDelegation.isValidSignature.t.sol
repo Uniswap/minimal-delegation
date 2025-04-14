@@ -15,12 +15,12 @@ import {IValidationHook} from "../src/interfaces/IValidationHook.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271Handler {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
-    using TypedDataSignBuilder for bytes32;
-    using TypedDataSignBuilder for IERC5267;
+    using TypedDataSignBuilder for *;
 
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
@@ -286,5 +286,48 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         mockHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
         result = signerAccount.isValidSignature(digest, wrappedSignature);
         assertEq(result, _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_personalSign_rootKey_isValid() public {
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
+        bytes32 wrappedPersonalSignDigest =
+            TypedDataSignBuilder.hashWrappedPersonalSign(messageHash, signerAccountDomainSeparator);
+
+        bytes memory signature = signerTestKey.sign(wrappedPersonalSignDigest);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
+        vm.snapshotGasLastCall("isValidSignature_personalSign_rootKey");
+        assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_personalSign_p256Key_isValid() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
+        bytes32 wrappedPersonalSignDigest =
+            TypedDataSignBuilder.hashWrappedPersonalSign(messageHash, signerAccountDomainSeparator);
+
+        bytes memory signature = p256Key.sign(wrappedPersonalSignDigest);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
+        vm.snapshotGasLastCall("isValidSignature_personalSign_P256Key");
+        assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_personalSign_withoutWrappedPersonalSign_isInvalid() public {
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        // Incorrectly do personal_sign instead of over the typed PersonalSign digest
+        bytes memory signature = signerTestKey.sign(messageHash);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        // Should return the invalid value
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
     }
 }
