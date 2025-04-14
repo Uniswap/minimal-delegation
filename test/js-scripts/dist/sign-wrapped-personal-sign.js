@@ -15266,21 +15266,6 @@ function erc7739Actions(parameters = {}) {
   };
 }
 
-// node_modules/viem/_esm/experimental/erc7739/utils/hashMessage.js
-function hashMessage2(parameters) {
-  const { message: message2, verifierDomain: { salt, ...domain } } = parameters;
-  return hashTypedData({
-    domain,
-    types: {
-      PersonalSign: [{ name: "prefixed", type: "bytes" }]
-    },
-    primaryType: "PersonalSign",
-    message: {
-      prefixed: toPrefixedMessage(message2)
-    }
-  });
-}
-
 // src/sign-wrapped-personal-sign.ts
 var args = process.argv.slice(2);
 if (args.length < 1) {
@@ -15305,23 +15290,16 @@ async function signWrappedPersonalSign() {
       name: DOMAIN_NAME,
       version: DOMAIN_VERSION,
       verifyingContract,
-      chainId: 31337,
+      chainId: 31337
       // Default Anvil chain ID
-      salt: "0x0000000000000000000000000000000000000000000000000000000000000000"
+      // Salt is omitted from personal_sign
     };
     const signature = await walletClient.signMessage({
       account,
       message,
       verifierDomain
     });
-    const digest = hashMessage2({
-      message,
-      verifierDomain
-    });
-    const personalSignature = await account.sign({
-      hash: digest
-    });
-    process.stdout.write(personalSignature);
+    process.stdout.write(signature);
     process.exit(0);
   } catch (error) {
     console.error("Error signing wrapped typed data:", error);

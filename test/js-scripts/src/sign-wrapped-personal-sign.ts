@@ -49,7 +49,7 @@ async function signWrappedPersonalSign(): Promise<void> {
             version: VERIFIER_DOMAIN_VERSION,
             verifyingContract: verifyingContract,
             chainId: 31337, // Default Anvil chain ID
-            salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+            // Salt is omitted from personal_sign
         }
 
         // For some reason this is not working 
@@ -58,16 +58,8 @@ async function signWrappedPersonalSign(): Promise<void> {
             message: message,
             verifierDomain: verifierDomain,
         })
-        // But this works
-        const digest = hashMessage({
-            message: message,
-            verifierDomain: verifierDomain,
-        })
-        const personalSignature = await account.sign({
-            hash: digest
-        })
         // Return the signature
-        process.stdout.write(personalSignature);
+        process.stdout.write(signature);
         process.exit(0);
     } catch (error) {
         console.error('Error signing wrapped typed data:', error);
