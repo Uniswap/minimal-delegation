@@ -1,24 +1,16 @@
 #!/usr/bin/env node
 import {
-    privateKeyToAccount,
-    type PrivateKeyAccount,
-  
+    privateKeyToAccount,  
   } from 'viem/accounts'
   import {
     createWalletClient,
     http,
-    type WalletClient,
     type Address,
     toHex,
     pad,
-    hashTypedData as hashTypedDataV4,
-    hashDomain,
-    getTypesForEIP712Domain,
-    hashStruct
   } from 'viem'
   
 import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData} from './utils/constants';
-import { hashTypedData as wrappedHashTypedData } from 'viem/experimental/erc7739'
 import { erc7739Actions } from 'viem/experimental'
 
 // Read command line arguments
