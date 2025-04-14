@@ -59,8 +59,8 @@ contract MinimalDelegation is
         _dispatch(batchedCall, KeyLib.ROOT_KEY_HASH);
     }
 
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory signature) public payable {
-        _handleVerifySignature(signedBatchedCall, signature);
+    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
+        _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
@@ -77,7 +77,7 @@ contract MinimalDelegation is
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
-        (bytes32 keyHash,) = abi.decode(userOp.signature, (bytes32, bytes));
+        (bytes32 keyHash,,) = abi.decode(userOp.signature, (bytes32, bytes, bytes));
 
         // The mode is only passed in to signify the EXEC_TYPE of the calls.
         bytes calldata executionData = userOp.callData.removeSelector();
@@ -120,7 +120,8 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature) = abi.decode(userOp.signature, (bytes32, bytes));
+        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
+            abi.decode(userOp.signature, (bytes32, bytes, bytes));
 
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
@@ -143,13 +144,17 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
             // The hook can override the validation data
-            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash);
+            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
         }
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory signature) private {
+    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
+        private
+    {
         _useNonce(signedBatchedCall.nonce);
+
+        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
 
         bytes32 digest = _hashTypedData(signedBatchedCall.hash());
 
@@ -163,7 +168,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
             // Hook must revert to signal that signature verification
-            hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest);
+            hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
         }
     }
 
@@ -180,7 +185,8 @@ contract MinimalDelegation is
         override(ERC1271, IERC1271)
         returns (bytes4 result)
     {
-        (bytes32 keyHash, bytes memory signature) = abi.decode(wrappedSignature, (bytes32, bytes));
+        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
+            abi.decode(wrappedSignature, (bytes32, bytes, bytes));
         bytes32 digest = _hashTypedData(data.hashWithWrappedType());
 
         Key memory key = getKey(keyHash);
@@ -194,7 +200,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, digest);
+            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
         }
     }
 }
