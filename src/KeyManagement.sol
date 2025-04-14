@@ -2,16 +2,18 @@
 pragma solidity ^0.8.29;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
+import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
 /// @dev A base contract for managing keys
 abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
     using KeyLib for bytes32;
+    using SettingsLib for Settings;
 
     EnumerableSetLib.Bytes32Set keyHashes;
     mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
@@ -30,7 +32,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
 
     function update(bytes32 keyHash, Settings settings) external onlyThis {
         if (keyHash.isRootKey()) revert CannotUpdateRootKey();
-        if (!keyHashes.contains(keyHash)) revert KeyDoesNotExist();
+        if (!isRegistered(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
     }
 
@@ -56,14 +58,27 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     /// @inheritdoc IKeyManagement
     function getKey(bytes32 keyHash) public view returns (Key memory) {
         if (keyHash.isRootKey()) return KeyLib.toRootKey();
-        if (keyHashes.contains(keyHash)) return abi.decode(keyStorage[keyHash], (Key));
+        if (isRegistered(keyHash)) return abi.decode(keyStorage[keyHash], (Key));
         revert KeyDoesNotExist();
     }
 
     /// @inheritdoc IKeyManagement
     function getKeySettings(bytes32 keyHash) public view returns (Settings) {
         if (keyHash.isRootKey()) return SettingsLib.ROOT_KEY_SETTINGS;
-        if (keyHashes.contains(keyHash)) return keySettings[keyHash];
+        if (isRegistered(keyHash)) return keySettings[keyHash];
         revert KeyDoesNotExist();
+    }
+
+    /// @inheritdoc IKeyManagement
+    function isRegistered(bytes32 keyHash) public view returns (bool) {
+        return keyHashes.contains(keyHash);
+    }
+
+    function _isOwnerOrAdmin(bytes32 keyHash) internal view returns (bool) {
+        if (keyHash.isRootKey()) return true;
+        if (!isRegistered(keyHash)) return false;
+        Settings settings = keySettings[keyHash];
+        if (settings.isAdmin()) return true;
+        return false;
     }
 }

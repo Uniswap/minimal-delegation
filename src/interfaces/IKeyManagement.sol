@@ -47,4 +47,7 @@ interface IKeyManagement {
 
     /// @dev Returns the settings for the `keyHash`.
     function getKeySettings(bytes32 keyHash) external view returns (Settings);
+
+    /// @dev Returns whether the key is actively registered on the contract.
+    function isRegistered(bytes32 keyHash) external view returns (bool);
 }
