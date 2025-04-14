@@ -405,6 +405,39 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         signerAccount.execute(signedBatchedCall, wrappedSignature);
     }
 
+    function test_execute_reverts_Unauthorized_KeyDoesNotExist() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        Call[] memory calls = CallUtils.initArray();
+        Call memory call =
+            Call(address(signerAccount), 0, abi.encodeWithSelector(IKeyManagement.register.selector, p256Key.toKey()));
+        calls = calls.push(call);
+
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
+        signerAccount.execute(batchedCall);
+    }
+
+    function test_execute_reverts_Unauthorized_KeyIsNotAdmin() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        TestKey memory keyToRegister = TestKeyManager.withSeed(KeyType.Secp256k1, vm.randomUint());
+
+        // Add a key, but the key is not an admin.
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        Call memory call = Call(
+            address(signerAccount), 0, abi.encodeWithSelector(IKeyManagement.register.selector, keyToRegister.toKey())
+        );
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
+        signerAccount.execute(batchedCall);
+    }
+
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
