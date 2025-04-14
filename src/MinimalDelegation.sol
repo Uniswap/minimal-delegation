@@ -32,8 +32,6 @@ import {Static} from "./libraries/Static.sol";
 import {ERC7821} from "./ERC7821.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 
-import "forge-std/console2.sol";
-
 contract MinimalDelegation is
     IMinimalDelegation,
     ERC7821,
@@ -59,7 +57,6 @@ contract MinimalDelegation is
 
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
-        console2.logBytes32(keyHash);
         if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
         _dispatch(batchedCall, keyHash);
     }
