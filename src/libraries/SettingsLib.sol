@@ -17,12 +17,14 @@ library SettingsLib {
     // RootKey has the settings: (isAdmin = true, 0 expiration, no hook)
     Settings constant ROOT_KEY_SETTINGS = Settings.wrap(uint256(1) << 200);
 
+    /// @notice Returns whether the key is an admin key
     function isAdmin(Settings settings) internal pure returns (bool _isAdmin) {
         assembly {
             _isAdmin := shr(200, settings)
         }
     }
 
+    /// @notice Returns the expiration timestamp in unix time
     function expiration(Settings settings) internal pure returns (uint40 _expiration) {
         uint40 mask = MASK_5_BYTES;
         assembly {
@@ -30,6 +32,7 @@ library SettingsLib {
         }
     }
 
+    /// @notice Returns the hook address of the key
     function hook(Settings settings) internal pure returns (IHook _hook) {
         uint256 mask = MASK_20_BYTES;
         assembly {

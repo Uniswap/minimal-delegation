@@ -52,7 +52,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest)));
+        userOp.withSignature(abi.encode(KeyLib.ROOT_KEY_HASH, signerTestKey.sign(digest), EMPTY_HOOK_DATA));
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;
