@@ -105,10 +105,17 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         BatchedCall memory batchedCall =
             CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
 
+        Settings callerSettings;
+        try signerAccount.getKey(currentSigningKey.toKeyHash()) {
+            callerSettings = signerAccount.getKeySettings(currentSigningKey.toKeyHash());
+        } catch (bytes memory revertData) {
+            assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
+        }
+
         try signerAccount.execute(batchedCall) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (caller != address(signerAccount)) {
+            if (caller != address(signerAccount) && !callerSettings.isAdmin()) {
                 assertEq(bytes4(revertData), BaseAuthorization.Unauthorized.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
