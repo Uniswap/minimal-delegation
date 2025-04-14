@@ -31,6 +31,7 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {Static} from "./libraries/Static.sol";
 import {ERC7821} from "./ERC7821.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
+import {Multicall} from "./Multicall.sol";
 
 contract MinimalDelegation is
     IMinimalDelegation,
@@ -42,7 +43,8 @@ contract MinimalDelegation is
     KeyManagement,
     NonceManager,
     ERC7914,
-    ERC7201
+    ERC7201,
+    Multicall
 {
     using ModeDecoder for bytes32;
     using KeyLib for *;
