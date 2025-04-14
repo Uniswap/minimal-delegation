@@ -40,6 +40,7 @@ library TypedDataSignLib {
         bytes memory domainBytes
     ) internal pure returns (bytes32) {
         return keccak256(
+            // because domainBytes is bytes
             abi.encodePacked(
                 _toTypedDataSignTypeHash(contentsName, contentsType), 
                 contentsHash, 

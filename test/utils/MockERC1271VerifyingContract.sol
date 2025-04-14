@@ -20,13 +20,13 @@ struct PermitDetails {
 /// @notice A mock contract that implements the ERC-1271 interface
 /// @dev This contract is used to test against our ERC-7739 implementation
 contract MockERC1271VerifyingContract is EIP712 {
-    string internal constant PERMIT_SINGLE_TYPE =
+    bytes internal constant PERMIT_SINGLE_TYPE =
         "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)";
-    bytes32 internal constant PERMIT_SINGLE_TYPEHASH = keccak256(bytes(PERMIT_SINGLE_TYPE));
+    bytes32 internal constant PERMIT_SINGLE_TYPEHASH = keccak256(PERMIT_SINGLE_TYPE);
 
-    string internal constant PERMIT_DETAILS_TYPE =
+    bytes internal constant PERMIT_DETAILS_TYPE =
         "PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)";
-    bytes32 internal constant PERMIT_DETAILS_TYPEHASH = keccak256(bytes(PERMIT_DETAILS_TYPE));
+    bytes32 internal constant PERMIT_DETAILS_TYPEHASH = keccak256(PERMIT_DETAILS_TYPE);
 
     constructor(string memory name, string memory version) EIP712(name, version) {}
 
@@ -42,11 +42,6 @@ contract MockERC1271VerifyingContract is EIP712 {
         return _domainSeparatorV4();
     }
 
-    /// return the full contents descriptor string
-    function contentsDescr() external pure returns (string memory) {
-        return PERMIT_SINGLE_TYPE;
-    }
-
     /// return the full contents descriptor string with explicit types
     function contentsDescrExplicit() external pure returns (string memory) {
         return "PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitSingle";
@@ -56,7 +51,10 @@ contract MockERC1271VerifyingContract is EIP712 {
     function hash(PermitSingle memory permitSingle) public view returns (bytes32) {
         return keccak256(
             abi.encode(
-                PERMIT_SINGLE_TYPEHASH, hash(permitSingle.details), permitSingle.spender, permitSingle.sigDeadline
+                PERMIT_SINGLE_TYPEHASH, 
+                hash(permitSingle.details), 
+                permitSingle.spender, 
+                permitSingle.sigDeadline
             )
         );
     }

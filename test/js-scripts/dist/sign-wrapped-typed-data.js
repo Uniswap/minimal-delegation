@@ -10828,7 +10828,6 @@ async function signWrappedTypedData() {
       types: PermitSingleTypes,
       primaryType: "PermitSingle",
       message: contents,
-      // Verifying contract address (e.g. ERC-4337 Smart Account).
       verifierDomain
     });
     console.log(JSON.stringify({
@@ -10850,7 +10849,8 @@ async function signWrappedTypedData() {
         ...verifierDomain
       }
     }, null, 2));
-    console.log("script typedDataSignDigest", typedDataSignDigest);
+    process.stdout.write(typedDataSignDigest);
+    process.exit(0);
     const signature = await walletClient.signTypedData({
       account,
       domain: appDomain,

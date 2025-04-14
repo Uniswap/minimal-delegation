@@ -93,7 +93,6 @@ async function signWrappedTypedData(): Promise<void> {
             types: PermitSingleTypes,
             primaryType: 'PermitSingle',
             message: contents,
-            // Verifying contract address (e.g. ERC-4337 Smart Account).
             verifierDomain: verifierDomain,
         })
 
@@ -117,7 +116,10 @@ async function signWrappedTypedData(): Promise<void> {
           },
         }, null, 2));
 
-        console.log("script typedDataSignDigest", typedDataSignDigest);
+        // console.log("script typedDataSignDigest", typedDataSignDigest);
+
+        process.stdout.write(typedDataSignDigest);
+        process.exit(0);
 
         const signature = await walletClient.signTypedData({
             account,
