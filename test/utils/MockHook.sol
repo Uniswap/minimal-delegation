@@ -34,12 +34,11 @@ contract MockHook is IHook {
         _beforeExecuteRevertData = revertData;
     }
 
-    function afterValidateUserOp(
-        bytes32,
-        PackedUserOperation calldata,
-        bytes32,
-        bytes calldata
-    ) external view returns (bytes4 selector, uint256 validationData) {
+    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, bytes calldata)
+        external
+        view
+        returns (bytes4 selector, uint256 validationData)
+    {
         return (IValidationHook.afterValidateUserOp.selector, _validateUserOpReturnValue);
     }
 
@@ -51,11 +50,7 @@ contract MockHook is IHook {
         return (IValidationHook.afterIsValidSignature.selector, _isValidSignatureReturnValue);
     }
 
-    function afterVerifySignature(bytes32, bytes32, bytes calldata)
-        external
-        pure
-        returns (bytes4 selector)
-    {
+    function afterVerifySignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4 selector) {
         return IValidationHook.afterVerifySignature.selector;
     }
 
