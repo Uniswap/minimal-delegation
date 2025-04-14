@@ -29,29 +29,6 @@ The contract uses a nested structure approach for managing batched calls:
 
 This nested structure provides better separation of concerns and more flexible signature verification.
 
-## Migration Guide
-
-If you're upgrading from a previous version of MinimalDelegation, note these breaking changes:
-
-1. **Function Signatures**: 
-   - `execute(Call[] calls, bool shouldRevert)` → `execute(BatchedCall memory batchedCall)`
-   - `execute(SignedCalls signedCalls, bytes signature)` → `execute(SignedBatchedCall memory signedBatchedCall, bytes wrappedSignature)`
-
-2. **Typed Data Hashing**:
-   - Typehashes for EIP-712 signatures have changed due to the nested structure
-   - Signatures created for the old structures will not work with the new implementation
-
-3. **Hook Data**:
-   - Hook processing has changed from `verifySignature` to `handleAfterVerifySignature`
-   - Hook permissions now follow an AFTER_* pattern for most operations
-
-4. **Data Organization**:
-   - Access to calls is now through nested fields: `signedBatchedCall.batchedCall.calls`
-   - The `shouldRevert` flag has moved to the `BatchedCall` structure
-
-Client applications will need to update their transaction construction and signature generation to align with these changes.
-
-
 ## Architecture
 - **Non-Upgradeability**: Upgradability is only allowed through re-delegation rather than a proxy.
 - **Singleton:** One canonical contract is delegated to.
