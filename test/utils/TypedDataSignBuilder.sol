@@ -5,6 +5,7 @@ import {console2} from "forge-std/console2.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {TypedDataSignLib} from "../../src/libraries/TypedDataSignLib.sol";
+import {PersonalSignLib} from "../../src/libraries/PersonalSignLib.sol";
 import {ERC7739Utils} from "../../src/libraries/ERC7739Utils.sol";
 
 /// @title TypedDataSignBuilder
@@ -17,7 +18,7 @@ library TypedDataSignBuilder {
         return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
     }
 
-    /// @notice Builds a nested typed data signature for the given contents hash, domain bytes, and contents descriptor
+    /// @notice Produces an EIP-712 compatible digest by hashing a TypedDataSign struct against the app's domain separator 
     function hashTypedDataSign(
         bytes32 contentsHash,
         bytes memory domainBytes,
@@ -27,6 +28,17 @@ library TypedDataSignBuilder {
         (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
         return MessageHashUtils.toTypedDataHash(
             appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
+        );
+    }
+
+    /// @notice Produces an EIP-712 compatible digest by hashing an ERC-191 signed personal message against the provided domain separator
+    function hashWrappedPersonalSign(
+        bytes32 messageHash,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes32) {
+        return MessageHashUtils.toTypedDataHash(
+            domainSeparator, 
+            PersonalSignLib.hash(messageHash)
         );
     }
 

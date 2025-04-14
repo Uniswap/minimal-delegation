@@ -5,7 +5,8 @@
     "scripts": {
         "build": "npm i && node build.js && rm -rf node_modules",
         "sign-typed-data": "node dist/sign-typed-data.js",
-        "sign-wrapped-typed-data": "node dist/sign-wrapped-typed-data.js"
+        "sign-wrapped-typed-data": "node dist/sign-wrapped-typed-data.js",
+        "sign-wrapped-personal-sign": "node dist/sign-wrapped-personal-sign.js"
     },
     "dependencies": {
         "viem": "^2.8.4"

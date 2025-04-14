@@ -16,14 +16,35 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 
 contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISignTypedData {
     using TestKeyManager for TestKey;
-    using TypedDataSignBuilder for bytes32;
-    using TypedDataSignBuilder for IERC5267;
+    using TypedDataSignBuilder for *;
     using KeyLib for Key;
 
     function setUp() public {
         setUpDelegation();
         setUpTokens();
         setUpERC1271();
+    }
+
+    function test_signPersonalSign_matches_signWrappedPersonalSign_ffi() public {
+        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
+
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(
+            bytes(message)
+        );
+        bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
+        bytes32 wrappedPersonalSignDigest = messageHash.hashWrappedPersonalSign(signerAccountDomainSeparator);
+        console2.log("wrappedPersonalSignDigest");
+        console2.logBytes32(wrappedPersonalSignDigest);
+
+        address verifyingContract = address(signerAccount);
+
+        (bytes memory signature) = ffi_signWrappedPersonalSign(
+            signerPrivateKey,
+            verifyingContract,
+            message
+        );
+        assertEq(signature, key.sign(wrappedPersonalSignDigest));
     }
 
     function test_signTypedSignData_matches_signWrappedTypedData_ffi() public {
@@ -37,8 +58,6 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         // Locally generate the full TypedSignData hash
         bytes32 contentsHash = mockERC1271VerifyingContract.hash(permitSingle);
         bytes32 appSeparator = mockERC1271VerifyingContract.domainSeparator();
-        bytes32 erc1271Digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
-
         string memory contentsDescrExplicit = mockERC1271VerifyingContract.contentsDescrExplicit();
 
         bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();

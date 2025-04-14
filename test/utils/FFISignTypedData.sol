@@ -39,6 +39,18 @@ contract FFISignTypedData is JavascriptFfi {
         return runScript("sign-wrapped-typed-data", jsonObj);
     }
 
+    function ffi_signWrappedPersonalSign(
+        uint256 privateKey,
+        address verifyingContract,
+        string memory message
+    ) public returns (bytes memory) {
+        // Create JSON object
+        string memory jsonObj = _createWrappedPersonalSignJsonInput(privateKey, verifyingContract, message);
+
+        // Run the JavaScript script
+        return runScript("sign-wrapped-personal-sign", jsonObj);
+    }
+
     /**
      * @dev Creates a JSON input string for the JavaScript script
      */
@@ -176,6 +188,30 @@ contract FFISignTypedData is JavascriptFfi {
             "",
             "}"
         );
+
+        return jsonObj;
+    }
+
+    function _createWrappedPersonalSignJsonInput(
+        uint256 privateKey,
+        address verifyingContract,
+        string memory message
+    ) internal pure returns (string memory) {
+        string memory jsonObj = string.concat(
+            "{",
+            '"privateKey":"',
+            vm.toString(privateKey),
+            '",',
+            '"verifyingContract":"',
+            vm.toString(verifyingContract),
+            '",',
+            '"message":"',
+            message,
+            '"',
+            "}"
+        );
+
+        console2.log(jsonObj);
 
         return jsonObj;
     }
