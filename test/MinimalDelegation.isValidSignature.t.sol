@@ -54,6 +54,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // Digest is what is calculated by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
         vm.snapshotGasLastCall("isValidSignature_P256");
         assertEq(result, _1271_MAGIC_VALUE);
@@ -74,6 +75,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.register(webAuthnP256Key.toKey());
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
         vm.snapshotGasLastCall("isValidSignature_WebAuthnP256");
         assertEq(result, _1271_MAGIC_VALUE);
@@ -89,6 +91,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
         // ensure the call returns the ERC1271 magic value
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
         vm.snapshotGasLastCall("isValidSignature_rootKey");
         assertEq(result, _1271_MAGIC_VALUE);
@@ -112,6 +115,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
         vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
+        vm.prank(address(mockERC1271VerifyingContract));
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
@@ -133,10 +137,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
         vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
+        vm.prank(address(mockERC1271VerifyingContract));
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    function test_isValidSignature_rootKey_notTypedDataSign_invalidSigner() public view {
+    function test_isValidSignature_rootKey_notNested_invalidSigner() public {
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
         // This is unsafe to sign because `digest` is not nested within a TypedDataSign
@@ -148,6 +153,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
 
         // ensure the call returns the ERC1271 invalid magic value
+        vm.prank(address(mockERC1271VerifyingContract));
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
     }
 
@@ -178,10 +184,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
         vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
+        vm.prank(address(mockERC1271VerifyingContract));
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    function test_isValidSignature_WebAuthnP256_notTypedDataSign_invalidSigner() public {
+    function test_isValidSignature_WebAuthnP256_notNested_invalidSigner() public {
         TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
         vm.prank(address(signer));
         signerAccount.register(webAuthnP256Key.toKey());
@@ -197,6 +204,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
         // ensure the call returns the ERC1271 invalid magic value
+        vm.prank(address(mockERC1271VerifyingContract));
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
     }
 
@@ -212,11 +220,12 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
         vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    function test_isValidSignature_sep256k1_invalidWrappedSignature_invalidSigner() public view {
+    function test_isValidSignature_sep256k1_invalidWrappedSignature_invalidSigner() public {
         // sign with a different private key
         uint256 invalidPrivateKey = 0xdeadbeef;
         TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
@@ -229,6 +238,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
         // ensure the call returns the ERC1271 invalid magic value
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
     }
@@ -236,6 +246,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     function test_isValidSignature_invalidSignatureLength_reverts() public {
         bytes32 hash = keccak256("test");
         bytes memory signature = new bytes(63);
+        vm.prank(address(mockERC1271VerifyingContract));
         vm.expectRevert();
         signerAccount.isValidSignature(hash, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
     }
@@ -255,6 +266,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
         vm.expectRevert();
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
@@ -268,6 +280,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
         signerAccount.update(keyHash, SettingsBuilder.init().fromHook(mockHook));
+        vm.stopPrank();
 
         bytes memory signature = p256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
@@ -284,11 +297,14 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_MAGIC_VALUE);
 
         mockHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
+        vm.prank(address(mockERC1271VerifyingContract));
         result = signerAccount.isValidSignature(digest, wrappedSignature);
         assertEq(result, _1271_INVALID_VALUE);
     }
 
-    function test_isValidSignature_personalSign_rootKey_isValid() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_rootKey_personalSign_isValid_gas() public {
         string memory message = "test";
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
         bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
@@ -297,12 +313,15 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = signerTestKey.sign(wrappedPersonalSignDigest);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
-        vm.snapshotGasLastCall("isValidSignature_personalSign_rootKey");
+        vm.snapshotGasLastCall("isValidSignature_rootKey_personalSign");
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_personalSign_p256Key_isValid() public {
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_p256Key_personalSign_isValid_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
@@ -316,18 +335,110 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = p256Key.sign(wrappedPersonalSignDigest);
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
-        vm.snapshotGasLastCall("isValidSignature_personalSign_P256Key");
+        vm.snapshotGasLastCall("isValidSignature_P256_personalSign");
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_personalSign_withoutWrappedPersonalSign_isInvalid() public {
+    function test_isValidSignature_personalSign_notNested_andNotHashTypedData_isInvalid() public {
         string memory message = "test";
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
         // Incorrectly do personal_sign instead of over the typed PersonalSign digest
         bytes memory signature = signerTestKey.sign(messageHash);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
         // Should return the invalid value
+        vm.prank(address(mockERC1271VerifyingContract));
         assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_personalSign_p256Key_notNested_andNotHashTypedData_isInvalid() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        // Incorrectly do personal_sign instead of over the typed PersonalSign digest
+        bytes memory signature = p256Key.sign(messageHash);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        // Should return the invalid value
+        vm.prank(address(mockERC1271VerifyingContract));
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_rootKey_notNested_safeERC1271Caller_isValid_gas() public {
+        // Set the caller as safe
+        vm.prank(address(signerAccount));
+        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
+
+        // Built by the ERC1271 contract which hashes its domain separator to the contents hash
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        // This is normally an unsafe digest to sign and would result in invalid signature
+        // but we set the caller as safe so expect it to be valid
+        bytes memory signature = signerTestKey.sign(digest);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+
+        vm.prank(address(mockERC1271VerifyingContract));
+        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+        vm.snapshotGasLastCall("isValidSignature_rootKey_typedData_notNested_safeERC1271Caller");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_p256Key_notNested_safeERC1271Caller_isValid_gas() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
+        vm.stopPrank();
+
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        // This is normally an unsafe digest to sign and would result in invalid signature
+        // but we set the caller as safe so expect it to be valid
+        bytes memory signature = p256Key.sign(digest);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+
+        vm.prank(address(mockERC1271VerifyingContract));
+        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+        vm.snapshotGasLastCall("isValidSignature_P256_typedData_notNested_safeERC1271Caller");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_rootKey_personalSign_notNested_usingHashTypedData_isValid_gas() public {
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        // We don't do ERC-7739 NestedPersonalSign, but rather apply EIP-712 hashing over the message
+        // which is also accepted since it protects against replay attacks by using the account's domain separator
+        bytes memory signature = signerTestKey.sign(signerAccount.hashTypedData(messageHash));
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        vm.prank(address(mockERC1271VerifyingContract));
+        // Should be valid and return the magic value
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_MAGIC_VALUE);
+        vm.snapshotGasLastCall("isValidSignature_rootKey_personalSign_notNested_usingHashTypedData");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_p256Key_personalSign_notNested_usingHashTypedData_isValid_gas() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        // We don't do ERC-7739 NestedPersonalSign, but rather apply EIP-712 hashing over the message
+        // which is also accepted since it protects against replay attacks by using the account's domain separator
+        bytes memory signature = p256Key.sign(signerAccount.hashTypedData(messageHash));
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        vm.prank(address(mockERC1271VerifyingContract));
+        // Should be valid and return the magic value
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_MAGIC_VALUE);
+        vm.snapshotGasLastCall("isValidSignature_P256_personalSign_notNested_usingHashTypedData");
     }
 }

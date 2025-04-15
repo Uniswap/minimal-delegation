@@ -197,11 +197,21 @@ contract MinimalDelegation is
 
         Key memory key = getKey(keyHash);
 
-        // Must be branched because we do abi decoding in memory which will throw since the ecnoding schemes are different
-        // Early check for personal signature which must be length 64 or 65 (k1 or r1 curve)
         bool isValid;
+        // Must be branched because we do abi decoding in memory which will throw since the encoding schemes are different
+        // ECDSA signatures are 65 bytes while P256 signatures are 64 bytes
         if (signature.length == 64 || signature.length == 65) {
-            isValid = _isValidNestedPersonalSignature(key, data, signature);
+            if(_isSafeERC1271Caller(msg.sender)) {
+                // If the caller is safe we can simply verify the key's signature over `data`
+                // Data is already hashed with the app's domain separator so we don't rehash
+                isValid = key.verify(data, signature);
+            } else {
+                // Otherwise, we try to verify the signature using NestedPersonalSign
+                // falling back to regular PersonalSign
+                isValid = 
+                    _isValidNestedPersonalSignature(key, data, signature) 
+                    || key.verify(hashTypedData(data), signature);
+            }
         } else {
             isValid = _isValidTypedDataSig(key, data, signature);
         }
