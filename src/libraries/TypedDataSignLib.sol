@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
-
 /// @title TypedDataSignLib
 /// @notice Library supporting nesting of EIP-712 typed data signatures
 /// Follows ERC-7739 spec

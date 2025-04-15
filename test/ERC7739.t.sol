@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {Test} from "forge-std/Test.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
@@ -32,8 +31,6 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
         bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
         bytes32 wrappedPersonalSignDigest = messageHash.hashWrappedPersonalSign(signerAccountDomainSeparator);
-        console2.log("wrappedPersonalSignDigest");
-        console2.logBytes32(wrappedPersonalSignDigest);
 
         address verifyingContract = address(signerAccount);
 
