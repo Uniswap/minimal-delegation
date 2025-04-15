@@ -16,32 +16,12 @@ abstract contract ERC7739 is EIP712 {
     using ERC7739Utils for *;
     using KeyLib for Key;
 
-    /// @notice Hash a PersonalSign struct with the app's domain separator to produce an EIP-712 compatible hash
-    /// @dev Uses this account's domain separator in the EIP-712 hash for replay protection
-    /// @param hash The hashed message, done offchain
-    /// @return The PersonalSign nested EIP-712 hash of the message
-    function _getPersonalSignTypedDataHash(bytes32 hash) private view returns (bytes32) {
-        return MessageHashUtils.toTypedDataHash(domainSeparator(), PersonalSignLib.hash(hash));
-    }
-
-    /// @notice Hash TypedDataSign with the app's domain separator to produce an EIP-712 compatible hash
-    /// @dev Includes this account's domain in the hash for replay protection
-    /// @param contentsName The top level type, per EIP-712
-    /// @param contentsType The full type string of the contents, per EIP-712
-    /// @param contentsHash The hash of the contents, per EIP-712
-    function _getNestedTypedDataSignHash(
-        bytes32 appSeparator,
-        string memory contentsName,
-        string memory contentsType,
-        bytes32 contentsHash
-    ) private view returns (bytes32) {
+    /// @notice Encode the EIP-5267 domain into bytes
+    function _domainBytes() private view returns (bytes memory) {
         // _eip712Domain().fields and _eip712Domain().extensions are not used
         (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
             eip712Domain();
-        bytes memory domainBytes =
-            abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
-        bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
-        return MessageHashUtils.toTypedDataHash(appSeparator, typedDataSignHash);
+        return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
     }
 
     /// @notice Verifies that the claimed contentsHash hashed with the app's separator matches the isValidSignature provided data
@@ -78,7 +58,8 @@ abstract contract ERC7739 is EIP712 {
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, hash, contentsHash)) return false;
 
-        bytes32 digest = _getNestedTypedDataSignHash(appSeparator, contentsName, contentsType, contentsHash);
+        bytes32 digest =
+            contentsHash.toNestedTypedDataSignHash(_domainBytes(), appSeparator, contentsName, contentsType);
         return key.verify(digest, signature);
     }
 
@@ -88,6 +69,6 @@ abstract contract ERC7739 is EIP712 {
         view
         returns (bool)
     {
-        return key.verify(_getPersonalSignTypedDataHash(hash), signature);
+        return key.verify(hash.toPersonalSignTypedDataHash(domainSeparator()), signature);
     }
 }

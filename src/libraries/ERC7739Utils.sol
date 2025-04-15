@@ -3,6 +3,9 @@
 pragma solidity ^0.8.20;
 
 import {LibString} from "solady/utils/LibString.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {PersonalSignLib} from "./PersonalSignLib.sol";
+import {TypedDataSignLib} from "./TypedDataSignLib.sol";
 
 /// @title ERC7739Utils
 /// @notice Modified from the original implementation at
@@ -11,6 +14,33 @@ import {LibString} from "solady/utils/LibString.sol";
 /// - Use in memory strings
 /// - Use Solady's LibString for memory string operations
 library ERC7739Utils {
+    /// @notice Hash a PersonalSign struct with the app's domain separator to produce an EIP-712 compatible hash
+    /// @dev Uses this account's domain separator in the EIP-712 hash for replay protection
+    /// @param hash The hashed message, calculated offchain
+    /// @param domainSeparator This account's domain separator
+    /// @return The PersonalSign nested EIP-712 hash of the message
+    function toPersonalSignTypedDataHash(bytes32 hash, bytes32 domainSeparator) internal view returns (bytes32) {
+        return MessageHashUtils.toTypedDataHash(domainSeparator, PersonalSignLib.hash(hash));
+    }
+
+    /// @notice Hash TypedDataSign with the app's domain separator to produce an EIP-712 compatible hash
+    /// @dev Includes this account's domain in the hash for replay protection
+    /// @param contentsHash The hash of the contents, per EIP-712
+    /// @param domainBytes The encoded domain bytes from EIP-5267
+    /// @param appSeparator The app's domain separator
+    /// @param contentsName The top level type, per EIP-712
+    /// @param contentsType The full type string of the contents, per EIP-712
+    function toNestedTypedDataSignHash(
+        bytes32 contentsHash,
+        bytes memory domainBytes,
+        bytes32 appSeparator,
+        string memory contentsName,
+        string memory contentsType
+    ) internal view returns (bytes32) {
+        bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
+        return MessageHashUtils.toTypedDataHash(appSeparator, typedDataSignHash);
+    }
+
     /// @notice Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit modes
     /// @dev Returns empty strings if the contentsDescr is invalid, which must be handled by the calling function
     /// @return contentsName The type name of the contents
