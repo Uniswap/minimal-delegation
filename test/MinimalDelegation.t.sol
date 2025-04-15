@@ -60,6 +60,12 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         signerAccount.register(mockSecp256k1Key);
     }
 
+    function test_register_revertsWithCannotRegisterRootKey() public {
+        vm.expectRevert(IKeyManagement.CannotRegisterRootKey.selector);
+        vm.prank(address(signerAccount));
+        signerAccount.register(signerTestKey.toKey());
+    }
+
     function test_register_expiryUpdated() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
         vm.startPrank(address(signerAccount));
@@ -370,6 +376,66 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
         assertEq(valid, 1); // 1 is invalid
+    }
+
+    function test_validateUserOp_revertsIfKeyHashDoesNotExist() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = signerTestKey.sign(userOpHash);
+
+        userOp.signature = abi.encode(keccak256("does not exist"), signature);
+
+        vm.prank(address(entryPoint));
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
+    }
+
+    function test_validateUserOp_invalidSignature_KeyHashIsRootKeyButSigningKeyIsNot() public {
+        TestKey memory secp256K1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(secp256K1Key.toKey());
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = secp256K1Key.sign(userOpHash);
+        // Signature is valid, but not for the provided key hash (which does exist), so expect invalid signature
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // 1 is invalid, and expect no expiry data to be returned
+        assertEq(valid, 1);
+    }
+
+    function test_validateUserOp_invalidSignatureEarlyReturn() public {
+        TestKey memory keyWithSettings = TestKeyManager.withSeed(KeyType.P256, vm.randomUint());
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        // register the keyWithSettings along with mockValidationHook
+        signerAccount.register(keyWithSettings.toKey());
+        Settings keySettings = SettingsBuilder.init().fromHook(mockValidationHook);
+        signerAccount.update(keyWithSettings.toKeyHash(), keySettings);
+        // register the p256Key
+        signerAccount.register(p256Key.toKey());
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        bytes memory signature = p256Key.sign(userOpHash);
+        bytes memory wrappedSignature = abi.encode(keyWithSettings.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+
+        // Set the validation hook to override validateUserOp with VALID
+        mockValidationHook.setValidateUserOpReturnValue(0);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // Expect an early return from validateUserOp because the signature is invalid, 1 is invalid
+        // If the signature was not validated before fetching settings, the hook would have been called and the return value would have been returned.
+        assertEq(valid, 1);
     }
 
     function test_validateUserOp_missingAccountFunds() public {
