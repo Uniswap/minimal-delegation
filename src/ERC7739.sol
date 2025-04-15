@@ -41,7 +41,7 @@ abstract contract ERC7739 is EIP712 {
     /// @dev Performs the required checks per the ERC-7739 spec:
     /// - contentsDescr is not empty
     /// - contentsName is not empty
-    /// - The reconstructed hash mathches the hash passed in via isValidSignature
+    /// - The reconstructed hash matches the hash passed in via isValidSignature
     function _isValidTypedDataSig(Key memory key, bytes32 hash, bytes memory wrappedSignature)
         internal
         view
