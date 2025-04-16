@@ -201,7 +201,7 @@ contract MinimalDelegation is
         // Must be branched because we do abi decoding in memory which will throw since the encoding schemes are different
         // ECDSA signatures are 65 bytes while P256 signatures are 64 bytes
         if (signature.length == 64 || signature.length == 65) {
-            if (_isSafeERC1271Caller(msg.sender)) {
+            if (isSafeERC1271Caller(msg.sender)) {
                 // If the caller is safe we can simply verify the key's signature over `data`
                 // Data is already hashed with the app's domain separator so we don't rehash
                 isValid = key.verify(data, signature);

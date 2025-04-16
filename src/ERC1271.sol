@@ -16,7 +16,7 @@ abstract contract ERC1271 is IERC1271, BaseAuthorization {
 
     /// @dev Returns whether the caller is considered safe, such
     /// that we don't need to use the nested EIP-712 workflow as defined by ERC-7739
-    function _isSafeERC1271Caller(address caller) internal view virtual returns (bool) {
+    function isSafeERC1271Caller(address caller) public view virtual returns (bool) {
         return _erc1271CallerIsSafe[caller];
     }
 

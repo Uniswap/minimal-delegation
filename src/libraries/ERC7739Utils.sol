@@ -19,7 +19,7 @@ library ERC7739Utils {
     /// @param hash The hashed message, calculated offchain
     /// @param domainSeparator This account's domain separator
     /// @return The PersonalSign nested EIP-712 hash of the message
-    function toPersonalSignTypedDataHash(bytes32 hash, bytes32 domainSeparator) internal view returns (bytes32) {
+    function toPersonalSignTypedDataHash(bytes32 hash, bytes32 domainSeparator) internal pure returns (bytes32) {
         return MessageHashUtils.toTypedDataHash(domainSeparator, PersonalSignLib.hash(hash));
     }
 
@@ -36,7 +36,7 @@ library ERC7739Utils {
         bytes32 appSeparator,
         string memory contentsName,
         string memory contentsType
-    ) internal view returns (bytes32) {
+    ) internal pure returns (bytes32) {
         bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
         return MessageHashUtils.toTypedDataHash(appSeparator, typedDataSignHash);
     }
