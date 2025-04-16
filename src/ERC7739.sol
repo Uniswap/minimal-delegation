@@ -16,6 +16,7 @@ abstract contract ERC7739 is EIP712 {
     using ERC7739Utils for *;
     using KeyLib for Key;
 
+    /// @notice The sentinel hash value to indicate support for ERC-7739. Meant for offchain use.
     bytes32 internal constant _ERC7739_HASH = 0x7739773977397739773977397739773977397739773977397739773977397739;
     bytes4 internal constant _ERC7739_MAGIC_VALUE = bytes4(0x77390001);
 
