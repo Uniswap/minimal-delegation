@@ -6,6 +6,7 @@ pragma solidity ^0.8.23;
 /// Follows ERC-7739 spec
 library TypedDataSignLib {
     /// @dev Generate the dynamic type string for the TypedDataSign struct
+    /// @notice contentsName and contentsType MUST be checked for length before hashing
     function _toTypedDataSignTypeString(string memory contentsName, string memory contentsType)
         internal
         pure
@@ -20,6 +21,7 @@ library TypedDataSignLib {
     }
 
     /// @dev Create the type hash for a TypedDataSign struct
+    /// @notice contentsName and contentsType MUST be checked for length before hashing
     function _toTypedDataSignTypeHash(string memory contentsName, string memory contentsType)
         internal
         pure
@@ -28,7 +30,7 @@ library TypedDataSignLib {
         return keccak256(_toTypedDataSignTypeString(contentsName, contentsType));
     }
 
-    /// @notice contentsName and contentsType MUST be checked for length before hashing
+    /// @notice EIP-712 hashStruct implementation for TypedDataSign
     /// @dev domainBytes is abi.encode(name, version, chainId, verifyingContract, salt)
     function hash(
         string memory contentsName,
@@ -37,7 +39,7 @@ library TypedDataSignLib {
         bytes memory domainBytes
     ) internal pure returns (bytes32) {
         return keccak256(
-            // because domainBytes is bytes
+            // encodePacked here because we have dynamic types (domainBytes is bytes)
             abi.encodePacked(_toTypedDataSignTypeHash(contentsName, contentsType), contentsHash, domainBytes)
         );
     }
