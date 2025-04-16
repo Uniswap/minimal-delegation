@@ -24,7 +24,7 @@ abstract contract ERC1271 is IERC1271, BaseAuthorization {
     function setERC1271CallerIsSafe(address caller, bool isSafe) external onlyThis {
         _erc1271CallerIsSafe[caller] = isSafe;
     }
-    
+
     /// @inheritdoc IERC1271
     function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4);
 }

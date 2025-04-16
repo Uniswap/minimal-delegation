@@ -341,27 +341,12 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_personalSign_notNested_andNotHashTypedData_isInvalid() public {
+    function test_isValidSignature_personalSign_notNested_isInvalid() public {
         string memory message = "test";
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
         // Incorrectly do personal_sign instead of over the typed PersonalSign digest
         bytes memory signature = signerTestKey.sign(messageHash);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        // Should return the invalid value
-        vm.prank(address(mockERC1271VerifyingContract));
-        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
-    }
-
-    function test_isValidSignature_personalSign_p256Key_notNested_andNotHashTypedData_isInvalid() public {
-        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        vm.prank(address(signerAccount));
-        signerAccount.register(p256Key.toKey());
-
-        string memory message = "test";
-        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
-        // Incorrectly do personal_sign instead of over the typed PersonalSign digest
-        bytes memory signature = p256Key.sign(messageHash);
-        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         // Should return the invalid value
         vm.prank(address(mockERC1271VerifyingContract));
         assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
@@ -406,39 +391,5 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
         assertEq(result, _1271_MAGIC_VALUE);
         vm.snapshotGasLastCall("isValidSignature_P256_typedData_notNested_safeERC1271Caller");
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_rootKey_personalSign_notNested_usingHashTypedData_isValid_gas() public {
-        string memory message = "test";
-        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
-        // We don't do ERC-7739 NestedPersonalSign, but rather apply EIP-712 hashing over the message
-        // which is also accepted since it protects against replay attacks by using the account's domain separator
-        bytes memory signature = signerTestKey.sign(signerAccount.hashTypedData(messageHash));
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        vm.prank(address(mockERC1271VerifyingContract));
-        // Should be valid and return the magic value
-        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_MAGIC_VALUE);
-        vm.snapshotGasLastCall("isValidSignature_rootKey_personalSign_notNested_usingHashTypedData");
-    }
-
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_p256Key_personalSign_notNested_usingHashTypedData_isValid_gas() public {
-        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        vm.prank(address(signerAccount));
-        signerAccount.register(p256Key.toKey());
-
-        string memory message = "test";
-        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
-        // We don't do ERC-7739 NestedPersonalSign, but rather apply EIP-712 hashing over the message
-        // which is also accepted since it protects against replay attacks by using the account's domain separator
-        bytes memory signature = p256Key.sign(signerAccount.hashTypedData(messageHash));
-        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
-        vm.prank(address(mockERC1271VerifyingContract));
-        // Should be valid and return the magic value
-        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_MAGIC_VALUE);
-        vm.snapshotGasLastCall("isValidSignature_P256_personalSign_notNested_usingHashTypedData");
     }
 }
