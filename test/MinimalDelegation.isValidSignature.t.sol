@@ -24,6 +24,8 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
+    bytes4 private constant _ERC7739_MAGIC_VALUE = 0x77390001;
+    bytes32 private constant _ERC7739_HASH = 0x7739773977397739773977397739773977397739773977397739773977397739;
 
     // Test hashed TypedDataSign digest
     bytes32 TEST_TYPED_DATA_SIGN_DIGEST;
@@ -37,6 +39,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         TEST_TYPED_DATA_SIGN_DIGEST = TEST_CONTENTS_HASH.hashTypedDataSign(
             signerAccountDomainBytes, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_DESCR
         );
+    }
+
+    function test_isValidSignature_ERC7739_magicValue() public {
+        bytes4 result = signerAccount.isValidSignature(_ERC7739_HASH, "");
+        assertEq(result, _ERC7739_MAGIC_VALUE);
     }
 
     /// forge-config: default.isolate = true
