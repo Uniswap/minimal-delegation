@@ -5,7 +5,7 @@ import {IHook} from "../interfaces/IHook.sol";
 
 type Settings is uint256;
 
-/// The most significant 8 bits are reserved to specify if the key is an admin key or not. An admin key is allowed to self-call.
+/// The most significant 7 bits are reserved to specify if the key is an admin key or not. An admin key is allowed to self-call.
 /// The least significant 160 bits specify an address to callout to for extra or overrideable validation.
 ///  6 bytes |   1 byte       | 5 bytes           | 20 bytes
 //   UNUSED  |   isAdmin      | expiration        | VALIDATION_ADDRESS
