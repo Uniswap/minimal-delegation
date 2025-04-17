@@ -45,6 +45,6 @@ library SettingsLib {
     function isExpired(Settings settings) internal view returns (bool _isExpired, uint40 _expiration) {
         uint40 _exp = expiration(settings);
         if (_exp == 0) return (false, 0);
-        return (_exp <= block.timestamp, _exp);
+        return (_exp < block.timestamp, _exp);
     }
 }
