@@ -185,7 +185,9 @@ contract MinimalDelegation is
 
     /// @inheritdoc ERC1271
     /// @dev WrappedSignature is used for both NestedTypedDataSign and NestedPersonalSign signatures.
-    /// TypedDataSign signatures are of the form: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr)`))
+    ///      If the caller implementing ERC-1271 is considered safe, we verify the signature over the data directly
+    /// TypedDataSign signatures are of the form: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`))
+    /// No extra data is needed for NestedPersonalSign signatures.
     function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
         public
         view
@@ -218,7 +220,6 @@ contract MinimalDelegation is
                 isValid = _isValidNestedPersonalSignature(key, data, signature);
             }
         } else {
-            // If there is additional data in the signature we assume we are using the TypedDataSign path
             isValid = _isValidTypedDataSig(key, data, signature);
         }
         // Early return if the signature is invalid
