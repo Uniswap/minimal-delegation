@@ -1,7 +1,7 @@
 {
-  "minimalDelegationEntry bytecode size": "21091",
+  "minimalDelegationEntry bytecode size": "21205",
   "register": "184758",
-  "revoke": "54560",
+  "revoke": "54578",
   "validateUserOp_missingAccountFunds": "64567",
   "validateUserOp_no_missingAccountFunds": "33929"
 }
