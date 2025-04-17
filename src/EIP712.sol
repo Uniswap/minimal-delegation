@@ -57,6 +57,15 @@ contract EIP712 is IEIP712, IERC5267 {
         extensions = new uint256[](0);
     }
 
+    /// @notice Encode the EIP-5267 domain into bytes
+    /// @dev for use in ERC-7739
+    function domainBytes() public view returns (bytes memory) {
+        // _eip712Domain().fields and _eip712Domain().extensions are not used
+        (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
+            eip712Domain();
+        return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
+    }
+
     /// @notice Returns the `domainSeparator` used to create EIP-712 compliant hashes.
     /// @return The 32 bytes domain separator result.
     function domainSeparator() public view returns (bytes32) {

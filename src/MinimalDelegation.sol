@@ -45,6 +45,7 @@ contract MinimalDelegation is
     ERC7914,
     ERC7201,
     ERC7739,
+    EIP712,
     Multicall
 {
     using ModeDecoder for bytes32;
@@ -217,10 +218,10 @@ contract MinimalDelegation is
                 isValid = key.verify(data, signature);
             } else {
                 // Otherwise, we try to verify the signature using NestedPersonalSign
-                isValid = _isValidNestedPersonalSignature(key, data, signature);
+                isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
             }
         } else {
-            isValid = _isValidTypedDataSig(key, data, signature);
+            isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
         }
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
