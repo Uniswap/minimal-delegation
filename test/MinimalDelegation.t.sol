@@ -246,7 +246,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         address caller = makeAddr("caller");
         vm.prank(address(signerAccount));
         signerAccount.setERC1271CallerIsSafe(caller, true);
-        assertEq(signerAccount.isSafeERC1271Caller(caller), true);
+        assertEq(signerAccount.erc1271CallerIsSafe(caller), true);
     }
 
     function test_setERC1271CallerIsSafe_revertsWithUnauthorized() public {

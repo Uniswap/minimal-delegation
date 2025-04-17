@@ -51,8 +51,9 @@ abstract contract ERC7739 is EIP712 {
         view
         returns (bool)
     {
-        (bytes memory signature, bytes32 appSeparator, bytes32 contentsHash, string memory contentsDescr) =
-            abi.decode(wrappedSignature, (bytes, bytes32, bytes32, string));
+        // uint16(contentsDescription.length) is not used since we do memory decoding right now
+        (bytes memory signature, bytes32 appSeparator, bytes32 contentsHash, string memory contentsDescr,) =
+            abi.decode(wrappedSignature, (bytes, bytes32, bytes32, string, uint16));
 
         if (bytes(contentsDescr).length == 0) return false;
 
