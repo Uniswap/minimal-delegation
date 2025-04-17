@@ -1,10 +1,10 @@
 {
-  "isValidSignature_P256": "40672",
-  "isValidSignature_P256_personalSign": "33148",
-  "isValidSignature_P256_typedData_notNested_safeERC1271Caller": "32291",
-  "isValidSignature_P256_withHook": "47136",
-  "isValidSignature_WebAuthnP256": "47284",
-  "isValidSignature_rootKey": "15950",
-  "isValidSignature_rootKey_personalSign": "8451",
-  "isValidSignature_rootKey_typedData_notNested_safeERC1271Caller": "7588"
+  "isValidSignature_P256": "40694",
+  "isValidSignature_P256_personalSign": "33170",
+  "isValidSignature_P256_typedData_notNested_safeERC1271Caller": "32313",
+  "isValidSignature_P256_withHook": "47158",
+  "isValidSignature_WebAuthnP256": "47306",
+  "isValidSignature_rootKey": "15972",
+  "isValidSignature_rootKey_personalSign": "8473",
+  "isValidSignature_rootKey_typedData_notNested_safeERC1271Caller": "7610"
 }
