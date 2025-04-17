@@ -193,7 +193,12 @@ contract MinimalDelegation is
         returns (bytes4 result)
     {
         // Per ERC-7739, return 0x77390001 for the sentinel hash value
-        if (data == _ERC7739_HASH) return _ERC7739_MAGIC_VALUE;
+        unchecked {
+            if (wrappedSignature.length == uint256(0)) {
+                // Forces the compiler to optimize for smaller bytecode size.
+                if (uint256(data) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
+            }
+        }
 
         (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
             abi.decode(wrappedSignature, (bytes32, bytes, bytes));
