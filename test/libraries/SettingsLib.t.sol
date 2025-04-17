@@ -55,4 +55,12 @@ contract SettingsLibTest is Test {
         assertEq(expired, true);
         assertEq(expiry, expiration);
     }
+
+    function test_isExpired_equalToBlockTimeStamp_isNotExpired() public {
+        vm.warp(10); // don't use 0 since it is special cased
+        Settings settings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp));
+        (bool expired, uint40 expiry) = settings.isExpired();
+        assertEq(expired, false);
+        assertEq(expiry, block.timestamp);
+    }
 }
