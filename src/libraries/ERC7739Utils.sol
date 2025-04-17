@@ -8,11 +8,8 @@ import {PersonalSignLib} from "./PersonalSignLib.sol";
 import {TypedDataSignLib} from "./TypedDataSignLib.sol";
 
 /// @title ERC7739Utils
-/// @notice Modified from the original implementation at
+/// @author Extends the original implementation at
 /// https://github.com/OpenZeppelin/openzeppelin-community-contracts/blob/53f590e4f4902bee0e06e455332e3321c697ea8b/contracts/utils/cryptography/ERC7739Utils.sol
-/// Changelog
-/// - Use in memory strings
-/// - Use Solady's LibString for memory string operations
 library ERC7739Utils {
     /// @notice Hash a PersonalSign struct with the app's domain separator to produce an EIP-712 compatible hash
     /// @dev Uses this account's domain separator in the EIP-712 hash for replay protection
@@ -81,7 +78,7 @@ library ERC7739Utils {
             }
         }
         // If we didn't find a valid contentsName, return empty strings
-        assembly {
+        assembly ("memory-safe") {
             contentsName.offset := 0
             contentsName.length := 0
             contentsType.offset := 0
