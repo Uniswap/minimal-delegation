@@ -34,8 +34,8 @@ library ERC7739Utils {
         bytes32 contentsHash,
         bytes memory domainBytes,
         bytes32 appSeparator,
-        string memory contentsName,
-        string memory contentsType
+        string calldata contentsName,
+        string calldata contentsType
     ) internal pure returns (bytes32) {
         bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
         return MessageHashUtils.toTypedDataHash(appSeparator, typedDataSignHash);
@@ -45,12 +45,12 @@ library ERC7739Utils {
     /// @dev Returns empty strings if the contentsDescr is invalid, which must be handled by the calling function
     /// @return contentsName The type name of the contents
     /// @return contentsType The type description of the contents
-    function decodeContentsDescr(string memory contentsDescr)
+    function decodeContentsDescr(string calldata contentsDescr)
         internal
         pure
-        returns (string memory contentsName, string memory contentsType)
+        returns (string calldata contentsName, string calldata contentsType)
     {
-        bytes memory buffer = bytes(contentsDescr);
+        bytes calldata buffer = bytes(contentsDescr);
         if (buffer.length == 0) {
             // pass through (fail)
         } else if (buffer[buffer.length - 1] == bytes1(")")) {
@@ -61,9 +61,7 @@ library ERC7739Utils {
                     // if name is empty - passthrough (fail)
                     if (i == 0) break;
                     // we found the end of the contentsName
-                    contentsName = LibString.slice(contentsDescr, 0, i);
-                    contentsType = contentsDescr;
-                    return (contentsName, contentsType);
+                    return (string(buffer[:i]), contentsDescr);
                 } else if (_isForbiddenChar(current)) {
                     // we found an invalid character (forbidden) - passthrough (fail)
                     break;
@@ -75,16 +73,20 @@ library ERC7739Utils {
                 bytes1 current = buffer[i - 1];
                 if (current == bytes1(")")) {
                     // we found the end of the contentsName
-                    contentsName = LibString.slice(contentsDescr, i, buffer.length);
-                    contentsType = LibString.slice(contentsDescr, 0, i);
-                    return (contentsName, contentsType);
+                    return (string(buffer[i:]), string(buffer[:i]));
                 } else if (_isForbiddenChar(current)) {
                     // we found an invalid character (forbidden) - passthrough (fail)
                     break;
                 }
             }
         }
-        return ("", "");
+        // If we didn't find a valid contentsName, return empty strings
+        assembly {
+            contentsName.offset := 0
+            contentsName.length := 0
+            contentsType.offset := 0
+            contentsType.length := 0
+        }
     }
 
     /// @notice Perform onchain sanitization of contentsName as defined by the ERC-7739 spec

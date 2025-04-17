@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {TypedDataSignLib} from "../../src/libraries/TypedDataSignLib.sol";
@@ -23,9 +22,9 @@ library TypedDataSignBuilder {
         bytes32 contentsHash,
         bytes memory domainBytes,
         bytes32 appSeparator,
-        string memory contentsDescr
+        string memory contentsName,
+        string memory contentsType
     ) internal pure returns (bytes32) {
-        (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
         return MessageHashUtils.toTypedDataHash(
             appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
         );
