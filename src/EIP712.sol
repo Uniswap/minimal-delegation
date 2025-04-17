@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IEIP712} from "./interfaces/IEIP712.sol";
 
 /// @title EIP712
@@ -35,7 +36,7 @@ contract EIP712 is IEIP712, IERC5267 {
     /// @return salt The value of the `EIP712Domain.salt` field.
     /// @return extensions The list of EIP numbers, that extends EIP-712 with new domain fields.
     function eip712Domain()
-        external
+        public
         view
         virtual
         returns (
@@ -52,8 +53,17 @@ contract EIP712 is IEIP712, IERC5267 {
         (name, version) = _domainNameAndVersion();
         chainId = block.chainid;
         verifyingContract = address(this);
-        salt = salt; // `bytes32(0)`.
-        extensions = extensions; // `new uint256[](0)`.
+        salt = bytes32(0);
+        extensions = new uint256[](0);
+    }
+
+    /// @notice Encode the EIP-5267 domain into bytes
+    /// @dev for use in ERC-7739
+    function domainBytes() public view returns (bytes memory) {
+        // _eip712Domain().fields and _eip712Domain().extensions are not used
+        (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
+            eip712Domain();
+        return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
     }
 
     /// @notice Returns the `domainSeparator` used to create EIP-712 compliant hashes.
@@ -63,18 +73,10 @@ contract EIP712 is IEIP712, IERC5267 {
             keccak256(abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this)));
     }
 
-    /// @notice Public getter for `_hashTypedData()` to produce a replay-safe hash from the given `hash`.
-    /// @param hash The nested typed data hash as defined by EIP-712. Assumes the hash is the result of applying EIP-712 hashStruct.
-    /// @return The corresponding replay-safe hash.
+    /// @notice Public getter for `_hashTypedData()` to produce a EIP-712 hash using this account's domain separator
+    /// @param hash The nested typed data. Assumes the hash is the result of applying EIP-712 `hashStruct`.
     function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
-        return _hashTypedData(hash);
-    }
-
-    /// @notice Returns the EIP-712 typed data hash
-    /// @param hash The nested typed data hash as defined by EIP-712.  Assumes the hash is already compliant with EIP-712.
-    /// @return The resulting EIP-712 hash.
-    function _hashTypedData(bytes32 hash) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), hash));
+        return MessageHashUtils.toTypedDataHash(domainSeparator(), hash);
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.

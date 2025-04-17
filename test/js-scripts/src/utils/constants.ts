@@ -5,6 +5,11 @@ import {type Address} from "viem"
 export const DOMAIN_NAME = 'Uniswap Minimal Delegation';
 export const DOMAIN_VERSION = "1";
 
+export interface InputData {
+  privateKey: string;
+  verifyingContract: Address;
+}
+
 // Define the struct types
 export const types = {
   SignedBatchedCall: [

@@ -17,12 +17,13 @@ contract MinimalDelegationStorageTest is DelegationHandler {
      * 4: mapping(uint256 key => uint256 seq) nonceSequenceNumber
      * 5: mapping(address => uint256) allowance;
      */
-    uint256 private constant ENTRY_POINT_SLOT = 0;
-    uint256 private constant KEY_EXTRA_STORAGE_SLOT = 1;
-    uint256 private constant KEY_STORAGE_SLOT = 2;
-    uint256 private constant KEY_HASHES_SLOT = 3;
-    uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 4;
-    uint256 private constant ALLOWANCE_SLOT = 5;
+    uint256 private constant ERC1271_CALLER_IS_SAFE_SLOT = 0;
+    uint256 private constant ENTRY_POINT_SLOT = 1;
+    uint256 private constant KEY_EXTRA_STORAGE_SLOT = 2;
+    uint256 private constant KEY_STORAGE_SLOT = 3;
+    uint256 private constant KEY_HASHES_SLOT = 4;
+    uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 5;
+    uint256 private constant ALLOWANCE_SLOT = 6;
 
     function setUp() public {
         setUpDelegation();

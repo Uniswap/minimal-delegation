@@ -1,6 +1,6 @@
 const { build } = require("esbuild");
 
-const entryPoints = ["sign-typed-data"];
+const entryPoints = ["sign-typed-data", "sign-wrapped-typed-data", "sign-wrapped-personal-sign"];
 
 const sharedConfig = {
     bundle: true,
