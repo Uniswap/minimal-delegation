@@ -64,7 +64,7 @@ contract MinimalDelegation is
         _dispatch(batchedCall, keyHash);
     }
 
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
+    function execute(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature) public payable {
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
@@ -125,8 +125,8 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(userOp.signature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
+            userOp.signature.decodeWrappedSignatureWithHookData();
 
         /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
@@ -154,12 +154,12 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
+    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature)
         private
     {
         _useNonce(signedBatchedCall.nonce);
 
-        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
+        (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeSignatureWithHookData();
 
         bytes32 digest = hashTypedData(signedBatchedCall.hash());
 
@@ -202,8 +202,10 @@ contract MinimalDelegation is
             }
         }
 
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(wrappedSignature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
+            wrappedSignature.decodeWrappedSignatureWithHookData();
+
+        if (signature.length < 64) revert InvalidSignatureLength();
 
         Key memory key = getKey(keyHash);
 

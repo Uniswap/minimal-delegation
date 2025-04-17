@@ -3,6 +3,9 @@ pragma solidity ^0.8.0;
 
 /// @title IERC1271
 interface IERC1271 {
+    /// @dev The signature length is invalid.
+    error InvalidSignatureLength();
+
     /// @notice Returns whether the caller is considered safe to skip the nested EIP-712 workflow
     function erc1271CallerIsSafe(address caller) external view returns (bool);
 
