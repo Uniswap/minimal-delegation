@@ -12,7 +12,7 @@ interface IValidationHook {
     /// @param keyHash the key which signed over userOpHash
     /// @param userOp UserOperation
     /// @param userOpHash hash of the UserOperation
-    /// @param hookData any data to be passed to the hook
+    /// @param hookData any data to be passed to the hook. This has NOT been validated by the user signature
     /// @return selector Must be afterValidateUserOp.selector
     /// @return validationData The validation data to be returned, overriding the validation done within the account
     function afterValidateUserOp(
@@ -25,7 +25,7 @@ interface IValidationHook {
     /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
-    /// @param hookData any data to be passed to the hook
+    /// @param hookData any data to be passed to the hook.This has NOT been validated by the user signature
     /// @return selector Must be afterIsValidSignature.selector
     /// @return magicValue The EIP-1271 magic value (or invalid value) to return, overriding the validation done within the account
     function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
@@ -36,7 +36,7 @@ interface IValidationHook {
     /// @notice Hook called after verifying a signature over `SignedBatchedCall`. MUST revert if the signature is invalid
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
-    /// @param hookData any data to be passed to the hook
+    /// @param hookData any data to be passed to the hook. This has NOT been validated by the user signature
     /// @return selector Must be afterVerifySignature.selector
     function afterVerifySignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external

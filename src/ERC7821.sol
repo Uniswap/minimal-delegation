@@ -6,6 +6,7 @@ import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 
 /// @title ERC7821
 /// @notice A base contract that implements the ERC7821 interface
+/// @dev This contract supports only two of the execution modes defined in the specification. See IERC7821.supportsExecutionMode() for more details.
 abstract contract ERC7821 is IERC7821 {
     using ModeDecoder for bytes32;
 
