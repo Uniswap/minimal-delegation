@@ -64,7 +64,7 @@ contract MinimalDelegation is
     }
 
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
-        if (!_senderCanExecute(signedBatchedCall.executor)) revert Unauthorized();
+        if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
@@ -186,7 +186,7 @@ contract MinimalDelegation is
 
     /// @notice Returns true if the msg.sender is the executor or if the executor is address(0)
     /// @param executor The address of the allowed executor of the signed batched call
-    function _senderCanExecute(address executor) private view returns (bool) {
+    function _senderIsExecutor(address executor) private view returns (bool) {
         return executor == address(0) || executor == msg.sender;
     }
 

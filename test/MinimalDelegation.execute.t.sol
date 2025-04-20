@@ -438,6 +438,67 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         signerAccount.execute(batchedCall);
     }
 
+    function test_execute_withAnyExecutor_succeeds() public {
+        address random_executor = makeAddr("b0b");
+
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(address(0));
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.prank(random_executor);
+        signerAccount.execute(signedCall, wrappedSignature);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_withValidExecutor_succeeds() public {
+        address executor = makeAddr("executor");
+
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(executor);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.prank(executor);
+        signerAccount.execute(signedCall, wrappedSignature);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_withInvalidExecutor_revertsUnauthorized() public {
+        address executor = makeAddr("executor");
+
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(executor);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        // Do not prank the executor, which should fail.
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
+        signerAccount.execute(signedCall, wrappedSignature);
+    }
+
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true

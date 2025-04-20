@@ -155,7 +155,16 @@ library CallUtils {
         return signedBatchedCall;
     }
 
+    function withExecutor(SignedBatchedCall memory signedBatchedCall, address executor)
+        internal
+        pure
+        returns (SignedBatchedCall memory)
+    {
+        signedBatchedCall.executor = executor;
+        return signedBatchedCall;
+    }
     /// @dev Create a single execute call for a multicall with a signed batched call
+
     function encodeSignedExecuteCall(SignedBatchedCall memory signedBatchedCall, bytes memory signature)
         internal
         pure
