@@ -499,6 +499,27 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         signerAccount.execute(signedCall, wrappedSignature);
     }
 
+    function test_execute_withExecutor_senderIsOwner_revertsUnauthorized() public {
+        address executor = makeAddr("executor");
+
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(executor);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        // Even the owner on the account cannot execute the signed batched call.
+        vm.startPrank(address(signerAccount));
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
+        signerAccount.execute(signedCall, wrappedSignature);
+        vm.stopPrank();
+    }
+
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
@@ -571,6 +592,28 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_execute_signedBatchedCall_rootSigner_executor_gas() public {
+        address executor = makeAddr("executor");
+
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withNonce(nonce).withKeyHash(KeyLib.ROOT_KEY_HASH).withExecutor(executor);
+        bytes32 hashToSign = signerAccount.hashTypedData(signedBatchedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+        vm.prank(executor);
+        signerAccount.execute(signedBatchedCall, wrappedSignature);
+        vm.snapshotGasLastCall("execute_signedBatchedCallL_executor_singleCall");
     }
 
     /// forge-config: default.isolate = true

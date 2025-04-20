@@ -9,5 +9,6 @@
   "execute_BATCHED_CALL_singleCall_native": "59701",
   "execute_BATCHED_CALL_twoCalls": "95416",
   "execute_invalidMode_reverts": "23019",
+  "execute_signedBatchedCallL_executor_singleCall": "93242",
   "multicall": "178569"
 }
