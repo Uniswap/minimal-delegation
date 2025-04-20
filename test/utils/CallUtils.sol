@@ -124,9 +124,8 @@ library CallUtils {
     }
 
     // SignedBatchedCall operations
-
     function initSignedBatchedCall() internal pure returns (SignedBatchedCall memory) {
-        return SignedBatchedCall({batchedCall: initBatchedCall(), keyHash: bytes32(0), nonce: 0});
+        return SignedBatchedCall({batchedCall: initBatchedCall(), keyHash: bytes32(0), nonce: 0, executor: address(0)});
     }
 
     function withBatchedCall(SignedBatchedCall memory signedBatchedCall, BatchedCall memory batchedCall)
@@ -162,7 +161,8 @@ library CallUtils {
         pure
         returns (bytes memory)
     {
-        bytes4 executeSelector = bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)"));
+        bytes4 executeSelector =
+            bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32,address),bytes)"));
         return abi.encodeWithSelector(executeSelector, signedBatchedCall, signature);
     }
 

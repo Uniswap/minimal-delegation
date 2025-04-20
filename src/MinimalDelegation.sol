@@ -64,6 +64,7 @@ contract MinimalDelegation is
     }
 
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
+        if (!_senderCanExecute(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
@@ -180,6 +181,12 @@ contract MinimalDelegation is
     function _checkExpiry(Settings settings) private view {
         (bool isExpired, uint40 expiry) = settings.isExpired();
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+    }
+
+    /// @notice Returns true if the msg.sender is the executor or if the executor is address(0)
+    /// @param executor The address of the allowed executor of the signed batched call
+    function _senderCanExecute(address executor) private view returns (bool) {
+        return executor == address(0) || executor == msg.sender;
     }
 
     /// @inheritdoc ERC1271
