@@ -75,6 +75,9 @@ contract FFISignTypedData is JavascriptFfi {
             ",",
             '"keyHash":"',
             vm.toString(signedBatchedCall.keyHash),
+            '",',
+            '"executor":"',
+            vm.toString(signedBatchedCall.executor),
             '"',
             "}"
         );
