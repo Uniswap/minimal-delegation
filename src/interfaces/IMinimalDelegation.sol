@@ -17,7 +17,7 @@ import {Call} from "../libraries/CallLib.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
 /// This implementation supports:
-/// ERC-4337 relayable userOps
+/// ERC-4337 relayable userOps, with version v0.8.0 of the Entrypoint contract.
 /// ERC-7821 batched actions
 /// EIP-712 typed data signature verification
 /// ERC-7201 compliant storage use
