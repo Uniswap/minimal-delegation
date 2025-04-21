@@ -10,8 +10,7 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 /// @dev A base contract for managing keys
 abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using KeyLib for Key;
-    using KeyLib for bytes32;
+    using KeyLib for *;
     using SettingsLib for Settings;
 
     EnumerableSetLib.Bytes32Set keyHashes;

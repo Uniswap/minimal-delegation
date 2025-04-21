@@ -45,14 +45,15 @@ contract MinimalDelegation is
     ERC7201,
     Multicall
 {
-    using ModeDecoder for bytes32;
-    using KeyLib for *;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CalldataDecoder for bytes;
-    using WrappedDataHash for bytes32;
     using CallLib for Call[];
     using BatchedCallLib for BatchedCall;
     using SignedBatchedCallLib for SignedBatchedCall;
+    using KeyLib for *;
+    using ModeDecoder for bytes32;
+    using WrappedDataHash for bytes32;
+    using CalldataDecoder for bytes;
+
     using HooksLib for IHook;
     using SettingsLib for Settings;
 
