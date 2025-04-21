@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
 import {INonceManager} from "./interfaces/INonceManager.sol";
