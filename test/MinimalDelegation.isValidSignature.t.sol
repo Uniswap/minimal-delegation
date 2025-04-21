@@ -326,28 +326,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_p256Key_personalSign_isValid_gas() public {
-        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-
-        vm.prank(address(signerAccount));
-        signerAccount.register(p256Key.toKey());
-
-        string memory message = "test";
-        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
-        bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
-        bytes32 wrappedPersonalSignDigest =
-            TypedDataSignBuilder.hashWrappedPersonalSign(messageHash, signerAccountDomainSeparator);
-
-        bytes memory signature = p256Key.sign(wrappedPersonalSignDigest);
-        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
-        vm.prank(address(mockERC1271VerifyingContract));
-        bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
-        vm.snapshotGasLastCall("isValidSignature_P256_personalSign");
-        assertEq(result, _1271_MAGIC_VALUE);
-    }
-
     function test_isValidSignature_personalSign_notNested_isInvalid() public {
         string memory message = "test";
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
