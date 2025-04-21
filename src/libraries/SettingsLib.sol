@@ -40,7 +40,8 @@ library SettingsLib {
         }
     }
 
-    /// @notice A key is expired if its expiration is less than or equal to the current block timestamp.
+    /// @notice A key is expired if its expiration is less than the current block timestamp
+    ///         Strictly less than is inline with how expiry is handled in the ERC-4337 EntryPoint contract
     /// @dev Keys with expiry of 0 never expire.
     function isExpired(Settings settings) internal view returns (bool _isExpired, uint40 _expiration) {
         uint40 _exp = expiration(settings);
