@@ -28,6 +28,16 @@ contract SettingsLibTest is Test {
         assertEq(settings.isAdmin(), isAdmin);
     }
 
+    function test_isAdmin_fuzz(bool isAdmin) public pure {
+        Settings settings = SettingsBuilder.init().fromIsAdmin(isAdmin);
+        assertEq(settings.isAdmin(), isAdmin);
+    }
+
+    function test_isAdmin_ignoresUpperBytes() public pure {
+        Settings settings = Settings.wrap(0xFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000);
+        assertEq(settings.isAdmin(), false);
+    }
+
     function test_hook() public pure {
         IHook hook = IHook(address(1));
         Settings settings = SettingsBuilder.init().fromHook(hook);
