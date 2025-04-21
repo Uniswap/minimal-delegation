@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Settings, SettingsLib} from "./SettingsLib.sol";
 

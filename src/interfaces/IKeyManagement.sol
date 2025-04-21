@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {Key} from "../libraries/KeyLib.sol";
 import {IHook} from "./IHook.sol";
+import {Key} from "../libraries/KeyLib.sol";
 import {Settings} from "../libraries/SettingsLib.sol";
 
 interface IKeyManagement {

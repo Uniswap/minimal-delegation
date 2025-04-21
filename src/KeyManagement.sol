@@ -2,10 +2,9 @@
 pragma solidity ^0.8.29;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
+import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
 /// @dev A base contract for managing keys
@@ -71,7 +70,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     }
 
     /// @inheritdoc IKeyManagement
-    function isRegistered(bytes32 keyHash) view p ublic returns (bool) {
+    function isRegistered(bytes32 keyHash) public view returns (bool) {
         return keyHashes.contains(keyHash);
     }
 
