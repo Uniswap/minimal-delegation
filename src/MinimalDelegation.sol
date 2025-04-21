@@ -138,7 +138,7 @@ contract MinimalDelegation is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-        // If the signature is valid, return validationData with the expiry and SIG_VALIDATION_SUCCEEDED
+        // Set the `validUntil` parameter within validationData to the key expiry which is checked by the EntryPoint
         validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
 
         IHook hook = settings.hook();
