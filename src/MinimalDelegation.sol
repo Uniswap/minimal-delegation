@@ -57,17 +57,20 @@ contract MinimalDelegation is
     using HooksLib for IHook;
     using SettingsLib for Settings;
 
+    /// @inheritdoc IMinimalDelegation
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
         if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
         _dispatch(batchedCall, keyHash);
     }
 
+    /// @inheritdoc IMinimalDelegation
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
+    /// @inheritdoc IERC7821
     function execute(bytes32 mode, bytes memory executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
@@ -172,7 +175,7 @@ contract MinimalDelegation is
 
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
-            // Hook must revert to signal that signature verification
+            // The hook must revert if validation should fail
             hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
         }
     }

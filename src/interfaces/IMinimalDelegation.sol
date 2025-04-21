@@ -24,6 +24,7 @@ import {Call} from "../libraries/CallLib.sol";
 /// ERC-1271 compliant signature verification
 /// ERC-7914 transfer from native
 /// Alternative key management and verification
+/// Multicall
 interface IMinimalDelegation is
     IKeyManagement,
     IERC4337Account,
@@ -36,9 +37,20 @@ interface IMinimalDelegation is
     INonceManager,
     IMulticall
 {
+    /// @notice Generic error to bubble up errors from batched calls
+    /// @param reason The revert data from the inner call
     error CallFailed(bytes reason);
+
+    /// @dev Used when internally verifying signatures over batched calls
     error InvalidSignature();
 
+    /// @notice Execute entrypoint for trusted callers
+    /// @dev This function is only callable by this account or an admin key
+    /// @param batchedCall The batched call to execute
     function execute(BatchedCall memory batchedCall) external payable;
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory signature) external payable;
+
+    /// @notice Execute entrypoint for relayed batched calls
+    /// @param signedBatchedCall The signed batched call to execute
+    /// @param wrappedSignature The signature along with any optional hook data, equivalent to abi.encode(bytes, bytes)
+    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) external payable;
 }
