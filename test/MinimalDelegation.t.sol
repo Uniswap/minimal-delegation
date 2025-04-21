@@ -331,8 +331,9 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = wrappedSignature;
 
         vm.prank(address(entryPoint));
-        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
-        signerAccount.validateUserOp(userOp, userOpHash, 0);
+        uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // Expect that the validation data contains the expiration + that the signature is valid
+        assertEq(validationData, uint256(keySettings.expiration()) << 160 | 0);
     }
 
     function test_validateUserOp_missingAccountFunds() public {

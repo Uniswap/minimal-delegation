@@ -138,8 +138,6 @@ contract MinimalDelegation is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-        _checkExpiry(settings);
-
         // If the signature is valid, return validationData with the expiry and SIG_VALIDATION_SUCCEEDED
         validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
 
