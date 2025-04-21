@@ -13,6 +13,7 @@ import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 /// @notice This contract assumes that all data verified through ERC-1271 `isValidSignature` implements the defensive nested hashing scheme defined in EIP-7739
 /// @dev See https://eips.ethereum.org/EIPS/eip-7739
 abstract contract ERC7739 {
+    using CalldataDecoder for bytes;
     using ERC7739Utils for *;
     using KeyLib for Key;
 
@@ -67,6 +68,6 @@ abstract contract ERC7739 {
         view
         returns (bool)
     {
-        return key.verify(hash.toPersonalSignTypedDataHash(domainSeparator()), signature);
+        return key.verify(hash.toPersonalSignTypedDataHash(domainSeparator), signature);
     }
 }
