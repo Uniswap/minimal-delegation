@@ -336,7 +336,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(valid, 0);
     }
 
-    function test_validateUserOp_expiredKey() public {
+    function test_validateUserOp_expiredKey_returns_validSignature() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.startPrank(address(signerAccount));
@@ -354,8 +354,33 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = wrappedSignature;
 
         vm.prank(address(entryPoint));
-        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
-        signerAccount.validateUserOp(userOp, userOpHash, 0);
+        uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // Expect that validation data is returned which contains the expiry and 0 for a valid signature
+        assertEq(validationData, uint256(block.timestamp - 1) << 160 | 0);
+    }
+
+    function test_validateUserOp_expiredKey_invalidSignature_returns_invalidSignature() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.startPrank(address(signerAccount));
+        vm.warp(100);
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1));
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        // incorrect private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+
+        vm.prank(address(entryPoint));
+        uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // Expect that validation data does NOT contain expiry and is 1 for an invalid signature
+        assertEq(validationData, 1);
     }
 
     function test_validateUserOp_invalidSignature() public {
