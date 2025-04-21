@@ -5,10 +5,14 @@ import {IHook} from "../interfaces/IHook.sol";
 
 type Settings is uint256;
 
-/// The most significant 8 bits are reserved to specify if the key is an admin key or not. An admin key is allowed to self-call.
-/// The least significant 160 bits specify an address to callout to for extra or overrideable validation.
-///  6 bytes |   1 byte       | 5 bytes           | 20 bytes
-//   UNUSED  |   isAdmin      | expiration        | VALIDATION_ADDRESS
+/// @title SettingsLib
+/// @notice Key settings are packed into a uint256 where
+/// - the least significant 20 bytes (0-19) specify an address to callout to for extra or overrideable validation.
+/// - bytes 20-24 are used for the expiration timestamp.
+/// - byte 25 is used to specify if the key is an admin key or not.
+/// - the remaining bytes are reserved for future use.
+///   6 bytes |   1 byte       | 5 bytes           | 20 bytes
+///   UNUSED  |   isAdmin      | expiration        | VALIDATION_ADDRESS
 library SettingsLib {
     uint160 constant MASK_20_BYTES = uint160(0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF);
     uint40 constant MASK_5_BYTES = uint40(0xFFFFFFFFFF);
