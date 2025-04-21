@@ -17,24 +17,10 @@ abstract contract ERC7739 {
     using ERC7739Utils for *;
     using KeyLib for Key;
 
-    /// @notice Verifies that the claimed contentsHash hashed with the app's separator matches the isValidSignature provided data
-    /// @dev This is a necessary check to ensure that the caller provided contentsHash is correct
-    /// @param appSeparator The app's domain separator
-    /// @param hash The data provided in `isValidSignature`
-    /// @param contentsHash The hash of the contents, i.e. hashStruct(contents)
-    function _callerHashMatchesReconstructedHash(bytes32 appSeparator, bytes32 hash, bytes32 contentsHash)
-        private
-        pure
-        returns (bool)
-    {
-        return hash == MessageHashUtils.toTypedDataHash(appSeparator, contentsHash);
-    }
-
     /// @notice Decodes the data for TypedDataSign and verifies the signature against the key over the hash
     /// @dev Performs the required checks per the ERC-7739 spec:
-    /// - contentsDescr is not empty
-    /// - contentsName is not empty
     /// - The reconstructed hash matches the hash passed in via isValidSignature
+    /// - The contentsDescr is valid
     function _isValidTypedDataSig(Key memory key, bytes32 hash, bytes memory domainBytes, bytes calldata wrappedSignature)
         internal
         view
@@ -43,21 +29,12 @@ abstract contract ERC7739 {
         (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr) =
             wrappedSignature.decodeTypedDataSig();
 
-        bytes32 digest;
-        {
-            (string calldata contentsName, string calldata contentsType) =
-                ERC7739Utils.decodeContentsDescr(contentsDescr);
-            assembly {
-                // Check if either contentsName or contentsType is empty
-                if or(iszero(contentsName.length), iszero(contentsType.length)) {
-                    // return false
-                    mstore(0x00, 0)
-                    return(0x00, 32)
-                }
-            }
-            digest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType);
-        }
-        if (!_callerHashMatchesReconstructedHash(appSeparator, hash, contentsHash)) return false;
+        // If the reconstructed hash does not match the caller's hash, the signature is invalid
+        if (hash != MessageHashUtils.toTypedDataHash(appSeparator, contentsHash)) return false;
+
+        bytes32 digest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
+        // If the digest is 0, the contentsDescr was invalid
+        if(digest == bytes32(0)) return false;
 
         return key.verify(digest, signature);
     }

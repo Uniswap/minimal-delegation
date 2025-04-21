@@ -221,15 +221,12 @@ contract MinimalDelegation is
 
         bool isValid;
         if (erc1271CallerIsSafe[msg.sender]) {
-            // If the caller is safe we can simply verify the key's signature over `data`
-            // Data is already hashed with the app's domain separator so we don't rehash
             isValid = key.verify(data, signature);
         } else {
             // We only support PersonalSign for ECDSA keys
-            if (key.keyType == KeyType.Secp256k1) {
+            if (signature.length == 65) {
                 isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
             } else {
-                // Otherwise the signature must be a TypedDataSign
                 isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
             }
         }
