@@ -327,9 +327,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_p256Key_personalSign_isValid_gas() public {
+    function test_isValidSignature_p256Key_personalSign_reverts_sliceOutOfBounds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));

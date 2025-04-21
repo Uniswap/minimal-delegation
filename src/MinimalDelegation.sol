@@ -205,25 +205,26 @@ contract MinimalDelegation is
         (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
             wrappedSignature.decodeWrappedSignatureWithHookData();
 
+        // The minimum length of a valid signature is 64 bytes (P256)
         if (signature.length < 64) revert InvalidSignatureLength();
 
         Key memory key = getKey(keyHash);
 
         bool isValid;
-        // Must be branched because we do abi decoding in memory which will throw since the encoding schemes are different
-        // ECDSA signatures are 65 bytes while P256 signatures are 64 bytes
-        if (signature.length == 64 || signature.length == 65) {
-            if (erc1271CallerIsSafe[msg.sender]) {
-                // If the caller is safe we can simply verify the key's signature over `data`
-                // Data is already hashed with the app's domain separator so we don't rehash
-                isValid = key.verify(data, signature);
-            } else {
-                // Otherwise, we try to verify the signature using NestedPersonalSign
-                isValid = _isValidNestedPersonalSignature(key, data, signature);
-            }
+        if (erc1271CallerIsSafe[msg.sender]) {
+            // If the caller is safe we can simply verify the key's signature over `data`
+            // Data is already hashed with the app's domain separator so we don't rehash
+            isValid = key.verify(data, signature);
         } else {
-            isValid = _isValidTypedDataSig(key, data, signature);
+            // We only support PersonalSign for ECDSA keys
+            if (key.keyType == KeyType.Secp256k1) {
+                isValid = _isValidNestedPersonalSignature(key, data, signature);
+            } else {
+                // Otherwise the signature must be a TypedDataSign
+                isValid = _isValidTypedDataSig(key, data, signature);
+            }
         }
+
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
         result = _1271_MAGIC_VALUE;
