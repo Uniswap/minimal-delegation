@@ -3,6 +3,9 @@ pragma solidity ^0.8.23;
 
 using ModeDecoder for bytes32;
 
+/// @title ModeDecoder
+/// @notice Decodes a bytes32 mode as specified in ERC-7821 and ERC-7579.
+/// @dev This library only supports two modes: BATCHED_CALL and BATCHED_CAN_REVERT_CALL.
 library ModeDecoder {
     // Mode layout adhering to ERC-7579
     // 1 byte           | 1 byte    | 4 bytes       | 4 bytes       | 22 bytes

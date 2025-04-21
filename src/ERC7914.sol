@@ -26,7 +26,7 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
 
     /// @inheritdoc IERC7914
     function transferFromNative(address from, address recipient, uint256 amount) external returns (bool) {
-        if (amount == 0) return false;
+        if (amount == 0) return true;
         _transferFrom(from, recipient, amount, false);
         emit TransferFromNative(address(this), recipient, amount);
         return true;
@@ -34,7 +34,7 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
 
     /// @inheritdoc IERC7914
     function transferFromNativeTransient(address from, address recipient, uint256 amount) external returns (bool) {
-        if (amount == 0) return false;
+        if (amount == 0) return true;
         _transferFrom(from, recipient, amount, true);
         emit TransferFromNativeTransient(address(this), recipient, amount);
         return true;

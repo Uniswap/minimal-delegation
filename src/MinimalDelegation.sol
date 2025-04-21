@@ -45,6 +45,7 @@ contract MinimalDelegation is
     ERC7914,
     ERC7201,
     ERC7739,
+    EIP712,
     Multicall
 {
     using ModeDecoder for bytes32;
@@ -65,6 +66,7 @@ contract MinimalDelegation is
     }
 
     function execute(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature) public payable {
+        if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
@@ -79,6 +81,7 @@ contract MinimalDelegation is
     /// @dev This function is executeable only by the EntryPoint contract, and is the main pathway for UserOperations to be executed.
     /// UserOperations can be executed through the execute function, but another method of authorization (ie through a passed in signature) is required.
     /// userOp.callData is abi.encodeCall(IAccountExecute.executeUserOp.selector, (abi.encode(Call[]), bool))
+    /// Note that this contract is only compatible with Entrypoint versions v0.7.0 and v0.8.0. It is not compatible with v0.6.0, as that version does not support the "executeUserOp" selector.
     function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
         // Parse the keyHash from the signature. This is the keyHash that has been pre-validated as the correct signer over the UserOp data
         // and must be used to check further on-chain permissions over the call execution.
@@ -183,6 +186,12 @@ contract MinimalDelegation is
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
     }
 
+    /// @notice Returns true if the msg.sender is the executor or if the executor is address(0)
+    /// @param executor The address of the allowed executor of the signed batched call
+    function _senderIsExecutor(address executor) private view returns (bool) {
+        return executor == address(0) || executor == msg.sender;
+    }
+
     /// @inheritdoc ERC1271
     /// @dev WrappedSignature is used for both NestedTypedDataSign and NestedPersonalSign signatures.
     ///      If the caller implementing ERC-1271 is considered safe, we verify the signature over the data directly
@@ -218,10 +227,10 @@ contract MinimalDelegation is
         } else {
             // We only support PersonalSign for ECDSA keys
             if (key.keyType == KeyType.Secp256k1) {
-                isValid = _isValidNestedPersonalSignature(key, data, signature);
+                isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
             } else {
                 // Otherwise the signature must be a TypedDataSign
-                isValid = _isValidTypedDataSig(key, data, signature);
+                isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
             }
         }
 
