@@ -120,7 +120,8 @@ contract MinimalDelegation is
 
     /// @inheritdoc IAccount
     /// @dev Only return validationData if the signature from the key associated with `keyHash` is valid over the userOpHash
-    ///      The ERC-4337 spec requires that `validateUserOp` does not early return if the signature is invalid such that gas estimation can be done
+    ///      - The ERC-4337 spec requires that `validateUserOp` does not early return if the signature is invalid such that accurate gas estimation can be done
+    ///      - Thus, validationData can only be overriden by the hook if the signature is valid
     /// @return validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (isValid ? 0 : 1)
     /// - `validAfter` is always 0.
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
@@ -137,6 +138,7 @@ contract MinimalDelegation is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
+        _checkExpiry(settings);
 
         // If the signature is valid, return validationData with the expiry and SIG_VALIDATION_SUCCEEDED
         validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
@@ -147,7 +149,7 @@ contract MinimalDelegation is
             validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
         }
 
-        // If the signature is invalid, we return SIG_VALIDATION_FAILED without expiry
+        // If the signature is invalid we simply return SIG_VALIDATION_FAILED
         if (!isValid) {
             return SIG_VALIDATION_FAILED;
         }
