@@ -8947,7 +8947,8 @@ var types = {
   SignedBatchedCall: [
     { name: "batchedCall", type: "BatchedCall" },
     { name: "nonce", type: "uint256" },
-    { name: "keyHash", type: "bytes32" }
+    { name: "keyHash", type: "bytes32" },
+    { name: "executor", type: "address" }
   ],
   BatchedCall: [
     { name: "calls", type: "Call[]" },
