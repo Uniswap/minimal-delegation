@@ -32,36 +32,34 @@ library HooksLib {
     /// @notice Handles the afterValidateUserOp hook
     /// @notice MAY revert if desired according to ERC-4337 spec
     /// @dev Expected to validate the userOp and return a validationData which will override the internally computed validationData
-    /// @return validationData encoded according to ERC-4337 spec
     function handleAfterValidateUserOp(
         IHook self,
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
         bytes memory hookData
-    ) internal view returns (uint256 validationData) {
-        (bytes4 hookSelector, uint256 hookValidationData) =
-            self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
-        if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
-        return hookValidationData;
+    ) internal view {
+        if (self.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
+            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
+            if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterIsValidSignature hook
-    /// @notice MAY revert if desired
+    /// @notice MUST revert if validation fails
     /// @dev Expected to validate the signature and return a value which will override the internally computed ERC-1271 magic value
-    /// @return magicValue the ERC-1271 magic value returned by the hook
     function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
-        returns (bytes4 magicValue)
     {
-        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, hookData);
-        if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
-        return hookMagicValue;
+        if (self.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
+            bytes4 hookSelector = self.afterIsValidSignature(keyHash, digest, hookData);
+            if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterVerifySignature hook
-    /// @notice MUST revert if the signature is deemed invalid by the hook
+    /// @notice MUST revert if validation fails
     function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
