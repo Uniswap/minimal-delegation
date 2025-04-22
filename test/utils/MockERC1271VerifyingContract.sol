@@ -80,7 +80,7 @@ contract MockERC1271VerifyingContract is EIP712 {
 
     /// Testing functions to return default values
 
-    function defaultContents() public view returns (PermitSingle memory) {
+    function defaultContents() public pure returns (PermitSingle memory) {
         return PermitSingle({
             details: PermitDetails({token: address(0), amount: 0, expiration: 0, nonce: 0}),
             spender: address(0),

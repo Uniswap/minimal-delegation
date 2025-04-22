@@ -41,7 +41,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         );
     }
 
-    function test_isValidSignature_ERC7739_magicValue() public {
+    function test_isValidSignature_ERC7739_magicValue() public view {
         bytes4 result = signerAccount.isValidSignature(_ERC7739_HASH, "");
         assertEq(result, _ERC7739_MAGIC_VALUE);
     }

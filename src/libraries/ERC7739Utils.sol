@@ -41,7 +41,7 @@ library ERC7739Utils {
     }
 
     /// @notice Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit modes
-    /// @author Modified from https://github.com/OpenZeppelin/openzeppelin-community-contracts/blob/53f590e4f4902bee0e06e455332e3321c697ea8b/contracts/utils/cryptography/ERC7739Utils.sol
+    /// @dev Modified from https://github.com/OpenZeppelin/openzeppelin-community-contracts/blob/53f590e4f4902bee0e06e455332e3321c697ea8b/contracts/utils/cryptography/ERC7739Utils.sol
     /// @dev Returns empty strings if the contentsDescr is invalid, which must be handled by the calling function
     /// @return contentsName The type name of the contents
     /// @return contentsType The type description of the contents

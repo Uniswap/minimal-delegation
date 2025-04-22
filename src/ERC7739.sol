@@ -42,6 +42,7 @@ abstract contract ERC7739 {
             abi.decode(wrappedSignature, (bytes, bytes32, bytes32, string, uint16));
 
         (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
+        // These returned values will be empty if the contentsDescr is invalid
         if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return false;
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
