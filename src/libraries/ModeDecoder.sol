@@ -3,6 +3,9 @@ pragma solidity ^0.8.23;
 
 using ModeDecoder for bytes32;
 
+/// @title ModeDecoder
+/// @notice Decodes a bytes32 mode as specified in ERC-7821 and ERC-7579.
+/// @dev This library only supports two modes: BATCHED_CALL and BATCHED_CAN_REVERT_CALL.
 library ModeDecoder {
     // Mode layout adhering to ERC-7579
     // 1 byte           | 1 byte    | 4 bytes       | 4 bytes       | 22 bytes
@@ -24,7 +27,7 @@ library ModeDecoder {
 
     // Revert if the EXEC_TYPE is 0.
     // The EXEC_TYPE is guaranteed to be ONLY 1 or 0 since the mode is checked with strict equality in isBatchedCall().
-    function shouldRevert(bytes32 mode) internal pure returns (bool) {
+    function revertOnFailure(bytes32 mode) internal pure returns (bool) {
         return mode & EXTRACT_EXEC_TYPE == 0;
     }
 }
