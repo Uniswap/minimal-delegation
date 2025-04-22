@@ -2,17 +2,15 @@
 pragma solidity ^0.8.29;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
+import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
 /// @dev A base contract for managing keys
 abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using KeyLib for Key;
-    using KeyLib for bytes32;
+    using KeyLib for *;
     using SettingsLib for Settings;
 
     EnumerableSetLib.Bytes32Set keyHashes;
@@ -30,6 +28,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         emit Registered(keyHash, key);
     }
 
+    /// @inheritdoc IKeyManagement
     function update(bytes32 keyHash, Settings settings) external onlyThis {
         if (keyHash.isRootKey()) revert CannotUpdateRootKey();
         if (!isRegistered(keyHash)) revert KeyDoesNotExist();
@@ -74,6 +73,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         return keyHashes.contains(keyHash);
     }
 
+    /// @notice Check if the keyHash is the root key or an admin key
     function _isOwnerOrAdmin(bytes32 keyHash) internal view returns (bool) {
         if (keyHash.isRootKey()) return true;
         if (!isRegistered(keyHash)) return false;
