@@ -102,7 +102,7 @@ library CallUtils {
     // BatchedCall operations
 
     function initBatchedCall() internal pure returns (BatchedCall memory) {
-        return BatchedCall({calls: new Call[](0), shouldRevert: false});
+        return BatchedCall({calls: new Call[](0), revertOnFailure: false});
     }
 
     function withCalls(BatchedCall memory batchedCall, Call[] memory calls)
@@ -114,12 +114,12 @@ library CallUtils {
         return batchedCall;
     }
 
-    function withShouldRevert(BatchedCall memory batchedCall, bool shouldRevert)
+    function withShouldRevert(BatchedCall memory batchedCall, bool revertOnFailure)
         internal
         pure
         returns (BatchedCall memory)
     {
-        batchedCall.shouldRevert = shouldRevert;
+        batchedCall.revertOnFailure = revertOnFailure;
         return batchedCall;
     }
 

@@ -8952,7 +8952,7 @@ var types = {
   ],
   BatchedCall: [
     { name: "calls", type: "Call[]" },
-    { name: "shouldRevert", type: "bool" }
+    { name: "revertOnFailure", type: "bool" }
   ],
   Call: [
     { name: "to", type: "address" },

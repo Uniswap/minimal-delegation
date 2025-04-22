@@ -20,7 +20,7 @@ export const types = {
   ],
   BatchedCall: [
     { name: 'calls', type: 'Call[]' },
-    { name: 'shouldRevert', type: 'bool' }
+    { name: 'revertOnFailure', type: 'bool' }
   ],
   Call: [
     { name: 'to', type: 'address' },
@@ -38,7 +38,7 @@ export type Call = {
 
 export type BatchedCall = {
     calls: Call[];
-    shouldRevert: boolean;
+    revertOnFailure: boolean;
   }
 
 export interface SignedBatchedCall {

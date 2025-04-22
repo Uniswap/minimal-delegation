@@ -27,7 +27,7 @@ library ModeDecoder {
 
     // Revert if the EXEC_TYPE is 0.
     // The EXEC_TYPE is guaranteed to be ONLY 1 or 0 since the mode is checked with strict equality in isBatchedCall().
-    function shouldRevert(bytes32 mode) internal pure returns (bool) {
+    function revertOnFailure(bytes32 mode) internal pure returns (bool) {
         return mode & EXTRACT_EXEC_TYPE == 0;
     }
 }
