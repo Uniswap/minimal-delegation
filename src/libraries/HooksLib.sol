@@ -12,6 +12,8 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 /// has the lowest bits '0001 1010' which would cause the 'VALIDATE_USER_OP', 'BEFORE_EXECUTE', and 'AFTER_EXECUTE' hooks to be used.
 /// @author Inspired by https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol
 library HooksLib {
+    using HooksLib for IHook;
+
     /// @notice Internal constant hook flags
     uint160 internal constant AFTER_VERIFY_SIGNATURE_FLAG = 1 << 0;
     uint160 internal constant AFTER_VALIDATE_USER_OP_FLAG = 1 << 1;
@@ -37,8 +39,10 @@ library HooksLib {
         bytes32 userOpHash,
         bytes memory hookData
     ) internal view {
-        (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
-        if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
+        if (self.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
+            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
+            if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterIsValidSignature hook

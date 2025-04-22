@@ -379,7 +379,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
         vm.startPrank(address(entryPoint));
         vm.expectRevert();
-        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
         vm.stopPrank();
     }
 

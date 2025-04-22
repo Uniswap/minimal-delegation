@@ -142,11 +142,7 @@ contract MinimalDelegation is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-
-        IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
-            hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
-        }
+        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
 
         validationData =
             isValid ? uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED : SIG_VALIDATION_FAILED;
