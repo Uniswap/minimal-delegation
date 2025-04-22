@@ -120,6 +120,10 @@ contract MinimalDelegation is
     }
 
     /// @inheritdoc IAccount
+    /// @dev Only return validationData if the signature from the key associated with `keyHash` is valid over the userOpHash
+    ///      - The ERC-4337 spec requires that `validateUserOp` does not early return if the signature is invalid such that accurate gas estimation can be done
+    /// @return validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (isValid ? 0 : 1)
+    /// - `validAfter` is always 0.
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
         onlyEntryPoint
@@ -129,29 +133,17 @@ contract MinimalDelegation is
         (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
             abi.decode(userOp.signature, (bytes32, bytes, bytes));
 
-        /// The userOpHash does not need to be safe hashed with _hashTypedData, as the EntryPoint will always call the sender contract of the UserOperation for validation.
-        /// It is possible that the signature is a wrapped signature, so any supported key can be used to validate the signature.
-        /// This is because the signature field is not defined by the protocol, but by the account implementation. See https://eips.ethereum.org/EIPS/eip-4337#definitions
+        /// The userOpHash does not need to be made replay-safe, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         Key memory key = getKey(keyHash);
         bool isValid = key.verify(userOpHash, signature);
 
-        // If signature verification failed, return failure immediately WITHOUT expiry as it cannot be trusted
-        if (!isValid) {
-            return SIG_VALIDATION_FAILED;
-        }
-
         Settings settings = getKeySettings(keyHash);
-        _checkExpiry(settings);
+        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
 
         /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
         /// `validAfter` is always 0.
-        validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
-
-        IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
-            // The hook can override the validation data
-            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
-        }
+        validationData =
+            isValid ? uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED : SIG_VALIDATION_FAILED;
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
