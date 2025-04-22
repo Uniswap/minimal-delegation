@@ -22,7 +22,7 @@ contract MockHook is IHook {
         _isValidSignatureReturnValue = returnValue;
     }
 
-    function setValidateUserOfpReturnValue(uint256 returnValue) external {
+    function setValidateUserOpReturnValue(uint256 returnValue) external {
         _validateUserOpReturnValue = returnValue;
     }
 
