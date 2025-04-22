@@ -28,14 +28,26 @@ contract SettingsLibTest is Test {
         assertEq(settings.isAdmin(), isAdmin);
     }
 
-    function test_isAdmin_fuzz(bool isAdmin) public pure {
-        Settings settings = SettingsBuilder.init().fromIsAdmin(isAdmin);
-        assertEq(settings.isAdmin(), isAdmin);
+    function test_isAdmin_fuzz(uint256 _settings) public pure {
+        uint8 isAdmin = uint8(_settings >> 200);
+        bool _isAdmin = isAdmin == 0 ? false : true;
+        Settings settings = Settings.wrap(_settings);
+        assertEq(settings.isAdmin(), _isAdmin);
     }
 
     function test_isAdmin_ignoresUpperBytes() public pure {
         Settings settings = Settings.wrap(0xFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000);
         assertEq(settings.isAdmin(), false);
+    }
+
+    function test_isAdmin_returnsTrueDirtyUpperBits() public pure {
+        Settings settings = Settings.wrap(0xFFFFFFFFFFFFE000000000000000000000000000000000000000000000000000);
+        assertEq(settings.isAdmin(), true);
+    }
+
+    function test_isAdmin_returnsTrueIfSet() public pure {
+        Settings settings = Settings.wrap(0xFFFFFFFFFFFFFF00000000000000000000000000000000000000000000000000);
+        assertEq(settings.isAdmin(), true);
     }
 
     function test_hook() public pure {

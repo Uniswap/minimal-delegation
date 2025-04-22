@@ -31,4 +31,10 @@ library SettingsBuilder {
         uint256 _settings = (Settings.unwrap(settings) & CLEAR_1_BYTE) | (uint256(_isAdmin)) << 200;
         return Settings.wrap(_settings);
     }
+
+    /// @notice Used to fuzz dirty values for settings.
+    function fromIsAdmin(Settings settings, uint8 isAdmin) internal pure returns (Settings) {
+        uint256 _settings = (Settings.unwrap(settings) | (uint256(isAdmin) << 200));
+        return Settings.wrap(_settings);
+    }
 }
