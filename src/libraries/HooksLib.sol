@@ -65,8 +65,10 @@ library HooksLib {
         internal
         view
     {
-        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
-        if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
+        if (self.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
+            bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
+            if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the beforeExecute hook
@@ -74,18 +76,22 @@ library HooksLib {
     /// @return beforeExecuteData any data which the hook wishes to be passed into the afterExecute hook
     function handleBeforeExecute(IHook self, bytes32 keyHash, address to, uint256 value, bytes memory data)
         internal
-        returns (bytes memory)
+        returns (bytes memory beforeExecuteData)
     {
-        (bytes4 hookSelector, bytes memory beforeExecuteData) = self.beforeExecute(keyHash, to, value, data);
-        if (hookSelector != IExecutionHook.beforeExecute.selector) revert InvalidHookResponse();
-        return beforeExecuteData;
+        if (self.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
+            bytes4 hookSelector;
+            (hookSelector, beforeExecuteData) = self.beforeExecute(keyHash, to, value, data);
+            if (hookSelector != IExecutionHook.beforeExecute.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterExecute hook
     /// @param beforeExecuteData data returned from the beforeExecute hook
     /// @dev Expected to revert if the execution should be reverted
     function handleAfterExecute(IHook self, bytes32 keyHash, bytes memory beforeExecuteData) internal {
-        bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
-        if (hookSelector != IExecutionHook.afterExecute.selector) revert InvalidHookResponse();
+        if (self.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) {
+            bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
+            if (hookSelector != IExecutionHook.afterExecute.selector) revert InvalidHookResponse();
+        }
     }
 }

@@ -75,7 +75,7 @@ contract MinimalDelegation is
     function execute(bytes32 mode, bytes memory executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
-        BatchedCall memory batchedCall = BatchedCall({calls: calls, shouldRevert: mode.shouldRevert()});
+        BatchedCall memory batchedCall = BatchedCall({calls: calls, revertOnFailure: mode.revertOnFailure()});
         execute(batchedCall);
     }
 
@@ -99,7 +99,7 @@ contract MinimalDelegation is
         for (uint256 i = 0; i < batchedCall.calls.length; i++) {
             (bool success, bytes memory output) = _execute(batchedCall.calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && batchedCall.shouldRevert) revert IMinimalDelegation.CallFailed(output);
+            if (!success && batchedCall.revertOnFailure) revert IMinimalDelegation.CallFailed(output);
         }
     }
 
@@ -112,14 +112,11 @@ contract MinimalDelegation is
         if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
 
         IHook hook = settings.hook();
-        bytes memory beforeExecuteData;
-        if (hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
-            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
-        }
+        bytes memory beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
+        hook.handleAfterExecute(keyHash, beforeExecuteData);
     }
 
     /// @inheritdoc IAccount
@@ -166,11 +163,7 @@ contract MinimalDelegation is
         Settings settings = getKeySettings(signedBatchedCall.keyHash);
         _checkExpiry(settings);
 
-        IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
-            // The hook must revert if validation should fail
-            hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
-        }
+        settings.hook().handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
     }
 
     /// @notice Reverts if the key settings are expired
