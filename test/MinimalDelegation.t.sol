@@ -358,6 +358,31 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(entryPoint.getDepositInfo(address(signerAccount)).deposit, beforeDeposit + 1e18);
     }
 
+    function test_validateUserOp_withHook_reverts() public {
+        bytes32 validUserOpHash = keccak256("valid");
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes memory signature = p256Key.sign(validUserOpHash);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        // Spoofed signature and userOpHash
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+        bytes32 userOpHash = validUserOpHash;
+
+        mockHook.setValidateUserOpReturnValue(false);
+
+        vm.startPrank(address(entryPoint));
+        vm.expectRevert();
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.stopPrank();
+    }
+
     /// GAS TESTS
 
     /// forge-config: default.isolate = true

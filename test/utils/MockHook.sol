@@ -37,9 +37,13 @@ contract MockHook is IHook {
     function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, bytes calldata)
         external
         view
-        returns (bytes4 selector, bool isValid)
+        returns (bytes4 selector)
     {
-        return (IValidationHook.afterValidateUserOp.selector, _validateUserOpReturnValue);
+        if (_validateUserOpReturnValue) {
+            return (IValidationHook.afterValidateUserOp.selector);
+        } else {
+            revert();
+        }
     }
 
     function afterIsValidSignature(bytes32, bytes32, bytes calldata)
