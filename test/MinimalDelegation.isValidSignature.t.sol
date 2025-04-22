@@ -305,8 +305,9 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         mockHook.setIsValidSignatureReturnValue(false);
         vm.prank(address(mockERC1271VerifyingContract));
-        result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_INVALID_VALUE);
+        
+        vm.expectRevert();
+        signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
     function test_isValidSignature_rootKey_personalSign_isValid() public {

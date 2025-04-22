@@ -243,9 +243,8 @@ contract MinimalDelegation is
 
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
-            if (!hook.handleAfterIsValidSignature(keyHash, digest, hookData)) {
-                return _1271_INVALID_VALUE;
-            }
+            // The hook must revert to fail validation
+            hook.handleAfterIsValidSignature(keyHash, digest, hookData);
         }
 
         return _1271_MAGIC_VALUE;
