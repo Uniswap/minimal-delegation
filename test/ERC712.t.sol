@@ -5,7 +5,6 @@ import {IERC5267} from "openzeppelin-contracts/contracts/interfaces/IERC5267.sol
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC1271} from "../src/interfaces/IERC1271.sol";
 import {IEIP712} from "../src/interfaces/IEIP712.sol";
-import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
@@ -17,7 +16,6 @@ import {SignedBatchedCallLib, SignedBatchedCall} from "../src/libraries/SignedBa
 import {BatchedCallLib, BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
 contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
-    using WrappedDataHash for bytes32;
     using CallLib for Call[];
     using CallUtils for *;
     using TestKeyManager for TestKey;
