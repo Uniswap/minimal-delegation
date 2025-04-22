@@ -17,7 +17,7 @@ library SignedBatchedCallLib {
 
     /// @dev The type string for the SignedBatchedCall struct
     bytes internal constant SIGNED_BATCHED_CALL_TYPE =
-        "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash,address executor)BatchedCall(Call[] calls,bool shouldRevert)Call(address to,uint256 value,bytes data)";
+        "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash,address executor)BatchedCall(Call[] calls,bool revertOnFailure)Call(address to,uint256 value,bytes data)";
     /// @dev The typehash for the SignedBatchedCall struct
     bytes32 internal constant SIGNED_BATCHED_CALL_TYPEHASH = keccak256(SIGNED_BATCHED_CALL_TYPE);
 
