@@ -14,13 +14,13 @@ interface IValidationHook {
     /// @param userOpHash hash of the UserOperation
     /// @param hookData any data to be passed to the hook. This has NOT been validated by the user signature
     /// @return selector Must be afterValidateUserOp.selector
-    /// @return validationData The validation data to be returned, overriding the validation done within the account
+    /// @dev The hook can revert to prevent the UserOperation from being validated.
     function afterValidateUserOp(
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
         bytes calldata hookData
-    ) external view returns (bytes4 selector, uint256 validationData);
+    ) external view returns (bytes4 selector);
 
     /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback. 
     /// @dev MUST revert to signal that validation should fail

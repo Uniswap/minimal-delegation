@@ -32,18 +32,17 @@ library HooksLib {
     /// @notice Handles the afterValidateUserOp hook
     /// @notice MAY revert if desired according to ERC-4337 spec
     /// @dev Expected to validate the userOp and return a validationData which will override the internally computed validationData
-    /// @return validationData encoded according to ERC-4337 spec
     function handleAfterValidateUserOp(
         IHook self,
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
         bytes memory hookData
-    ) internal view returns (uint256 validationData) {
-        (bytes4 hookSelector, uint256 hookValidationData) =
-            self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
-        if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
-        return hookValidationData;
+    ) internal view {
+        if (self.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
+            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
+            if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterIsValidSignature hook

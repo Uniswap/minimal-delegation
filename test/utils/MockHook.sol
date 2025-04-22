@@ -10,7 +10,7 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 contract MockHook is IHook {
     bool internal _verifySignatureReturnValue;
     bool internal _isValidSignatureReturnValue;
-    uint256 internal _validateUserOpReturnValue;
+    bool internal _validateUserOpReturnValue;
     bytes internal _beforeExecuteReturnValue;
     bytes internal _beforeExecuteRevertData;
 
@@ -22,8 +22,8 @@ contract MockHook is IHook {
         _isValidSignatureReturnValue = returnValue;
     }
 
-    function setValidateUserOpReturnValue(uint256 returnValue) external {
-        _validateUserOpReturnValue = returnValue;
+    function setValidateUserOpReturnValue(bool isValid) external {
+        _validateUserOpReturnValue = isValid;
     }
 
     function setBeforeExecuteReturnValue(bytes memory returnValue) external {
@@ -37,9 +37,13 @@ contract MockHook is IHook {
     function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, bytes calldata)
         external
         view
-        returns (bytes4 selector, uint256 validationData)
+        returns (bytes4 selector)
     {
-        return (IValidationHook.afterValidateUserOp.selector, _validateUserOpReturnValue);
+        if (_validateUserOpReturnValue) {
+            return (IValidationHook.afterValidateUserOp.selector);
+        } else {
+            revert();
+        }
     }
 
     function afterIsValidSignature(bytes32, bytes32, bytes calldata)
