@@ -16,6 +16,7 @@ type Settings is uint256;
 library SettingsLib {
     uint160 constant MASK_20_BYTES = uint160(0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF);
     uint40 constant MASK_5_BYTES = uint40(0xFFFFFFFFFF);
+    uint8 constant MASK_1_BYTE = uint8(0xFF);
 
     Settings constant DEFAULT = Settings.wrap(0);
     // RootKey has the settings: (isAdmin = true, 0 expiration, no hook)
@@ -23,8 +24,9 @@ library SettingsLib {
 
     /// @notice Returns whether the key is an admin key
     function isAdmin(Settings settings) internal pure returns (bool _isAdmin) {
+        uint8 mask = MASK_1_BYTE;
         assembly {
-            _isAdmin := shr(200, settings)
+            _isAdmin := and(shr(200, settings), mask)
         }
     }
 
