@@ -326,29 +326,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(validationData, 1);
     }
 
-    function test_validateUserOp_withHook_validSignature() public {
-        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        bytes memory signature = p256Key.sign(KeyLib.ROOT_KEY_HASH);
-
-        vm.startPrank(address(signerAccount));
-        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
-        signerAccount.register(p256Key.toKey());
-        signerAccount.update(p256Key.toKeyHash(), keySettings);
-        vm.stopPrank();
-
-        PackedUserOperation memory userOp;
-        // Spoofed signature and userOpHash
-        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
-        userOp.signature = wrappedSignature;
-        bytes32 userOpHash = KeyLib.ROOT_KEY_HASH;
-
-        mockHook.setValidateUserOpReturnValue(0);
-
-        vm.prank(address(entryPoint));
-        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
-        assertEq(valid, 0);
-    }
-
     function test_validateUserOp_expiredKey() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
@@ -367,22 +344,9 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = wrappedSignature;
 
         vm.prank(address(entryPoint));
-        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
-        signerAccount.validateUserOp(userOp, userOpHash, 0);
-    }
-
-    function test_validateUserOp_invalidSignature() public {
-        PackedUserOperation memory userOp;
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        // incorrect private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        userOp.signature = wrappedSignature;
-
-        vm.prank(address(entryPoint));
-        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
-        assertEq(valid, 1); // 1 is invalid
+        uint256 validationData = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        // Expect that the validation data contains the expiration + that the signature is valid
+        assertEq(validationData, uint256(keySettings.expiration()) << 160 | 0);
     }
 
     function test_validateUserOp_missingAccountFunds() public {
@@ -405,6 +369,31 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         // account sent in 1e18 to the entry point and their deposit was updated
         assertEq(address(signerAccount).balance, 0);
         assertEq(entryPoint.getDepositInfo(address(signerAccount)).deposit, beforeDeposit + 1e18);
+    }
+
+    function test_validateUserOp_withHook_reverts() public {
+        bytes32 validUserOpHash = keccak256("valid");
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes memory signature = p256Key.sign(validUserOpHash);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        // Spoofed signature and userOpHash
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+        bytes32 userOpHash = validUserOpHash;
+
+        mockHook.setValidateUserOpReturnValue(false);
+
+        vm.startPrank(address(entryPoint));
+        vm.expectRevert();
+        signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.stopPrank();
     }
 
     /// GAS TESTS
@@ -482,5 +471,77 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         vm.prank(address(entryPoint));
         signerAccount.validateUserOp(userOp, userOpHash, missingAccountFunds);
         vm.snapshotGasLastCall("validateUserOp_missingAccountFunds");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_withHook_validSignature_gas() public {
+        bytes32 validUserOpHash = keccak256("valid");
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes memory signature = p256Key.sign(validUserOpHash);
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        // Spoofed signature and userOpHash
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+        bytes32 userOpHash = validUserOpHash;
+
+        mockHook.setValidateUserOpReturnValue(true);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_withHook_validSignature");
+        assertEq(valid, 0);
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_withHook_invalidSignature_gas() public {
+        bytes32 validUserOpHash = keccak256("valid");
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        bytes memory signature = p256Key.sign(keccak256("invalid"));
+
+        vm.startPrank(address(signerAccount));
+        Settings keySettings = SettingsBuilder.init().fromHook(mockHook);
+        signerAccount.register(p256Key.toKey());
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp;
+        // Spoofed signature and userOpHash
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+        bytes32 userOpHash = validUserOpHash;
+
+        // Hook returns 0 for valid signature, expect that this value is not used since the signature is invalid
+        mockHook.setValidateUserOpReturnValue(true);
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_withHook_invalidSignature");
+        assertEq(valid, 1);
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_validateUserOp_invalidSignature_gas() public {
+        PackedUserOperation memory userOp;
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+        // incorrect private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        userOp.signature = wrappedSignature;
+
+        vm.prank(address(entryPoint));
+        uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
+        vm.snapshotGasLastCall("validateUserOp_invalidSignature");
+        assertEq(valid, 1); // 1 is invalid
     }
 }

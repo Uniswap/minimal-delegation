@@ -1,7 +1,7 @@
 {
   "isValidSignature_P256": "44106",
   "isValidSignature_P256_typedData_notNested_safeERC1271Caller": "32817",
-  "isValidSignature_P256_withHook": "50264",
+  "isValidSignature_P256_withHook": "50308",
   "isValidSignature_WebAuthnP256": "50793",
   "isValidSignature_rootKey": "19648",
   "isValidSignature_rootKey_typedData_notNested_safeERC1271Caller": "8355"
