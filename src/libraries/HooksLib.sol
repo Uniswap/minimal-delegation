@@ -12,6 +12,8 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 /// has the lowest bits '0001 1010' which would cause the 'VALIDATE_USER_OP', 'BEFORE_EXECUTE', and 'AFTER_EXECUTE' hooks to be used.
 /// @author Inspired by https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol
 library HooksLib {
+    using HooksLib for IHook;
+
     /// @notice Internal constant hook flags
     uint160 internal constant AFTER_VERIFY_SIGNATURE_FLAG = 1 << 0;
     uint160 internal constant AFTER_VALIDATE_USER_OP_FLAG = 1 << 1;
@@ -61,8 +63,10 @@ library HooksLib {
         internal
         view
     {
-        bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
-        if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
+        if (self.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
+            bytes4 hookSelector = self.afterVerifySignature(keyHash, digest, hookData);
+            if (hookSelector != IValidationHook.afterVerifySignature.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the beforeExecute hook
@@ -70,18 +74,22 @@ library HooksLib {
     /// @return beforeExecuteData any data which the hook wishes to be passed into the afterExecute hook
     function handleBeforeExecute(IHook self, bytes32 keyHash, address to, uint256 value, bytes memory data)
         internal
-        returns (bytes memory)
+        returns (bytes memory beforeExecuteData)
     {
-        (bytes4 hookSelector, bytes memory beforeExecuteData) = self.beforeExecute(keyHash, to, value, data);
-        if (hookSelector != IExecutionHook.beforeExecute.selector) revert InvalidHookResponse();
-        return beforeExecuteData;
+        if (self.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
+            bytes4 hookSelector;
+            (hookSelector, beforeExecuteData) = self.beforeExecute(keyHash, to, value, data);
+            if (hookSelector != IExecutionHook.beforeExecute.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterExecute hook
     /// @param beforeExecuteData data returned from the beforeExecute hook
     /// @dev Expected to revert if the execution should be reverted
     function handleAfterExecute(IHook self, bytes32 keyHash, bytes memory beforeExecuteData) internal {
-        bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
-        if (hookSelector != IExecutionHook.afterExecute.selector) revert InvalidHookResponse();
+        if (self.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) {
+            bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
+            if (hookSelector != IExecutionHook.afterExecute.selector) revert InvalidHookResponse();
+        }
     }
 }

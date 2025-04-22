@@ -1,14 +1,14 @@
 {
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "92889",
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "129506",
-  "execute_BATCHED_CALL_opData_P256_singleCall": "118201",
-  "execute_BATCHED_CALL_opData_singleCall": "92889",
-  "execute_BATCHED_CALL_opData_singleCall_native": "93707",
-  "execute_BATCHED_CALL_opData_twoCalls": "129506",
-  "execute_BATCHED_CALL_singleCall": "59697",
-  "execute_BATCHED_CALL_singleCall_native": "59754",
-  "execute_BATCHED_CALL_twoCalls": "95500",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "93015",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "129700",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "118327",
+  "execute_BATCHED_CALL_opData_singleCall": "93015",
+  "execute_BATCHED_CALL_opData_singleCall_native": "93833",
+  "execute_BATCHED_CALL_opData_twoCalls": "129700",
+  "execute_BATCHED_CALL_singleCall": "59777",
+  "execute_BATCHED_CALL_singleCall_native": "59834",
+  "execute_BATCHED_CALL_twoCalls": "95660",
   "execute_invalidMode_reverts": "23085",
-  "execute_signedBatchedCallL_executor_singleCall": "93141",
-  "multicall": "178409"
+  "execute_signedBatchedCallL_executor_singleCall": "93279",
+  "multicall": "178673"
 }
