@@ -75,7 +75,7 @@ contract MinimalDelegation is
     function execute(bytes32 mode, bytes memory executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
-        BatchedCall memory batchedCall = BatchedCall({calls: calls, shouldRevert: mode.shouldRevert()});
+        BatchedCall memory batchedCall = BatchedCall({calls: calls, revertOnFailure: mode.revertOnFailure()});
         execute(batchedCall);
     }
 
@@ -99,7 +99,7 @@ contract MinimalDelegation is
         for (uint256 i = 0; i < batchedCall.calls.length; i++) {
             (bool success, bytes memory output) = _execute(batchedCall.calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && batchedCall.shouldRevert) revert IMinimalDelegation.CallFailed(output);
+            if (!success && batchedCall.revertOnFailure) revert IMinimalDelegation.CallFailed(output);
         }
     }
 

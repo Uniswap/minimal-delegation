@@ -59,8 +59,8 @@ contract FFISignTypedData is JavascriptFfi {
             '"calls":',
             callsJson,
             ",",
-            '"shouldRevert":',
-            signedBatchedCall.batchedCall.shouldRevert ? "true" : "false",
+            '"revertOnFailure":',
+            signedBatchedCall.batchedCall.revertOnFailure ? "true" : "false",
             "}"
         );
 

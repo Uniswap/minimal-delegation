@@ -140,7 +140,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
-        // TODO: remove the hardcoded shouldRevert once we can test for it
+        // TODO: remove the hardcoded revertOnFailure once we can test for it
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
         SignedBatchedCall memory signedBatchedCall =
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withKeyHash(currentKeyHash).withNonce(nonce);
