@@ -309,9 +309,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_INVALID_VALUE);
     }
 
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_rootKey_personalSign_isValid_gas() public {
+    function test_isValidSignature_rootKey_personalSign_isValid() public {
         string memory message = "test";
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
         bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
@@ -320,9 +318,9 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = signerTestKey.sign(wrappedPersonalSignDigest);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        vm.prank(address(mockERC1271VerifyingContract));
+        // Should return the magic value when called offchain
+        vm.prank(address(0));
         bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
-        vm.snapshotGasLastCall("isValidSignature_rootKey_personalSign");
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
@@ -332,8 +330,8 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         // Incorrectly do personal_sign instead of over the typed PersonalSign digest
         bytes memory signature = signerTestKey.sign(messageHash);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        // Should return the invalid value
-        vm.prank(address(mockERC1271VerifyingContract));
+        // Should return the invalid value when called offchain
+        vm.prank(address(0));
         assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
     }
 
