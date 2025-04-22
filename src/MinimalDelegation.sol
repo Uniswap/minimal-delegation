@@ -112,14 +112,11 @@ contract MinimalDelegation is
         if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
 
         IHook hook = settings.hook();
-        bytes memory beforeExecuteData;
-        if (hook.hasPermission(HooksLib.BEFORE_EXECUTE_FLAG)) {
-            beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
-        }
+        bytes memory beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        if (hook.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) hook.handleAfterExecute(keyHash, beforeExecuteData);
+        hook.handleAfterExecute(keyHash, beforeExecuteData);
     }
 
     /// @inheritdoc IAccount
@@ -174,11 +171,7 @@ contract MinimalDelegation is
         Settings settings = getKeySettings(signedBatchedCall.keyHash);
         _checkExpiry(settings);
 
-        IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
-            // The hook must revert if validation should fail
-            hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
-        }
+        settings.hook().handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
     }
 
     /// @notice Reverts if the key settings are expired
