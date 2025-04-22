@@ -180,18 +180,13 @@ contract MinimalDelegation is
     }
 
     /// @inheritdoc ERC1271
-    /// @dev WrappedSignature is used for both NestedTypedDataSign and NestedPersonalSign signatures.
-    ///      If the caller implementing ERC-1271 is considered safe, we verify the signature over the data directly
-    /// The signature is wrapped with the keyhash, signature, and any optional hook data
-    /// - If the caller is considered safe then we verify the signature over the data directly
-    /// - Otherwise, we assume the signature is a NestedTypedDataSign signature following ERC-7739.
-    ///   Which is encoded as: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`))
-    /// - No extra data is needed for EIP-191 personal sign signatures.
+    /// @dev wrappedSignature contains a keyHash, signature, and any optional hook data
+    ///      `signature` can contain extra fields used for webauthn verification or ERC7739 nested typed data verification
     function isValidSignature(bytes32 digest, bytes calldata wrappedSignature)
         public
         view
         override(ERC1271, IERC1271)
-        returns (bytes4 result)
+        returns (bytes4)
     {
         // Per ERC-7739, return 0x77390001 for the sentinel hash value
         unchecked {
@@ -222,15 +217,12 @@ contract MinimalDelegation is
 
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
-        result = _1271_MAGIC_VALUE;
 
         Settings settings = getKeySettings(keyHash);
         _checkExpiry(settings);
 
-        IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
-            // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
-        }
+        settings.hook().handleAfterIsValidSignature(keyHash, digest, hookData);
+
+        return _1271_MAGIC_VALUE;
     }
 }
