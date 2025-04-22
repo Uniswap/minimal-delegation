@@ -26,6 +26,7 @@ library TypedDataSignBuilder {
         string memory contentsDescr
     ) internal pure returns (bytes32) {
         (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
+        if(bytes(contentsName).length == 0 || bytes(contentsType).length == 0) revert("Invalid contentsDescr");
         return MessageHashUtils.toTypedDataHash(
             appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
         );
