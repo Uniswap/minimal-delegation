@@ -216,17 +216,20 @@ contract MinimalDelegation is
 
         Key memory key = getKey(keyHash);
 
+        /// There are 3 ways to validate a signature through ERC-1271:
+        /// 1. The caller is allowlisted, so we can validate the signature directly against the data.
+        /// 2. The caller is address(0), meaning it is an offchain call, so we can validate the signature as if it is a PersonalSign.
+        /// 3. If none of the above is true, the signature must be validated as a TypedDataSign struct according to ERC-7739.
         bool isValid;
         if (erc1271CallerIsSafe[msg.sender]) {
             isValid = key.verify(data, signature);
+        } else if (msg.sender == address(0)) {
+            // We only support PersonalSign for offchain calls
+            isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
         } else {
-            // We only support PersonalSign for ECDSA keys
-            if (signature.length == 65) {
-                isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
-            } else {
-                isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
-            }
+            isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
         }
+
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
         result = _1271_MAGIC_VALUE;
