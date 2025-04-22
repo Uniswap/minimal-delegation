@@ -16,7 +16,7 @@ abstract contract ERC7739 {
     using KeyLib for Key;
 
     /// @notice Verifies that the claimed contentsHash hashed with the app's separator matches the isValidSignature provided data
-    /// @dev This is a necessary check to ensure that the caller provided contentsHash is correct
+    /// @dev This is a necessary check to ensure that the contentsHash and appSeparator provided in the signature are correct
     /// @param appSeparator The app's domain separator
     /// @param hash The data provided in `isValidSignature`
     /// @param contentsHash The hash of the contents, i.e. hashStruct(contents)
