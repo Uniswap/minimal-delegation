@@ -73,6 +73,12 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         return keyHashes.contains(keyHash);
     }
 
+    /// @notice Reverts if the key settings are expired
+    function _checkExpiry(Settings settings) internal view {
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+    }
+
     /// @notice Check if the keyHash is the root key or an admin key
     function _isOwnerOrAdmin(bytes32 keyHash) internal view returns (bool) {
         if (keyHash.isRootKey()) return true;

@@ -88,7 +88,7 @@ contract MockERC1271VerifyingContract is EIP712 {
         });
     }
 
-    function defaultContentsHash() public view returns (bytes32) {
+    function defaultContentsHash() public pure returns (bytes32) {
         return hash(defaultContents());
     }
 }
