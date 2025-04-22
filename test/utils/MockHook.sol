@@ -8,8 +8,6 @@ import {IExecutionHook} from "src/interfaces/IExecutionHook.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 contract MockHook is IHook {
-    error MockHookError();
-
     bool internal _verifySignatureReturnValue;
     bool internal _isValidSignatureReturnValue;
     uint256 internal _validateUserOpReturnValue;
@@ -49,17 +47,19 @@ contract MockHook is IHook {
         view
         returns (bytes4 selector)
     {
-        if (!_isValidSignatureReturnValue) {
-            revert MockHookError();
+        if(_isValidSignatureReturnValue) {
+            return IValidationHook.afterIsValidSignature.selector;
+        } else {
+            revert();
         }
-        return IValidationHook.afterIsValidSignature.selector;
     }
 
     function afterVerifySignature(bytes32, bytes32, bytes calldata) external view returns (bytes4 selector) {
-        if(!_verifySignatureReturnValue) {
-            revert MockHookError();
+        if(_verifySignatureReturnValue) {
+            return IValidationHook.afterVerifySignature.selector;
+        } else {
+            revert();
         }
-        return IValidationHook.afterVerifySignature.selector;
     }
 
     function beforeExecute(bytes32, address, uint256, bytes calldata) external view returns (bytes4, bytes memory) {
