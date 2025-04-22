@@ -194,7 +194,7 @@ contract MinimalDelegation is
         public
         view
         override(ERC1271, IERC1271)
-        returns (bytes4 result)
+        returns (bytes4)
     {
         // Per ERC-7739, return 0x77390001 for the sentinel hash value
         unchecked {
