@@ -30,10 +30,9 @@ abstract contract ERC7739 {
 
     /// @notice Decodes the data for TypedDataSign and verifies the signature against the key over the hash
     /// @dev Performs the required checks per the ERC-7739 spec:
-    /// - contentsDescr is not empty
-    /// - contentsName is not empty
+    /// - contentsName and contentsType are not empty
     /// - The reconstructed hash matches the hash passed in via isValidSignature
-    function _isValidTypedDataSig(Key memory key, bytes32 hash, bytes memory domainBytes, bytes memory wrappedSignature)
+    function _isValidTypedDataSig(Key memory key, bytes32 digest, bytes memory domainBytes, bytes memory wrappedSignature)
         internal
         view
         returns (bool)
@@ -42,25 +41,21 @@ abstract contract ERC7739 {
         (bytes memory signature, bytes32 appSeparator, bytes32 contentsHash, string memory contentsDescr,) =
             abi.decode(wrappedSignature, (bytes, bytes32, bytes32, string, uint16));
 
-        if (bytes(contentsDescr).length == 0) return false;
-
         (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
+        if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return false;
 
-        if (bytes(contentsName).length == 0) return false;
+        if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
 
-        if (!_callerHashMatchesReconstructedHash(appSeparator, hash, contentsHash)) return false;
-
-        bytes32 digest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType);
-        return key.verify(digest, signature);
+        return key.verify(contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType), signature);
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash
-    function _isValidNestedPersonalSignature(
+    function _isValidNestedPersonalSig(
         Key memory key,
-        bytes32 hash,
+        bytes32 digest,
         bytes32 domainSeparator,
         bytes memory signature
     ) internal view returns (bool) {
-        return key.verify(hash.toPersonalSignTypedDataHash(domainSeparator), signature);
+        return key.verify(digest.toPersonalSignTypedDataHash(domainSeparator), signature);
     }
 }

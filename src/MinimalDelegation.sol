@@ -195,9 +195,12 @@ contract MinimalDelegation is
     /// @inheritdoc ERC1271
     /// @dev WrappedSignature is used for both NestedTypedDataSign and NestedPersonalSign signatures.
     ///      If the caller implementing ERC-1271 is considered safe, we verify the signature over the data directly
-    /// TypedDataSign signatures are of the form: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`))
-    /// No extra data is needed for NestedPersonalSign signatures.
-    function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
+    /// The signature is wrapped with the keyhash, signature, and any optional hook data
+    /// - If the caller is considered safe then we verify the signature over the data directly
+    /// - Otherwise, we assume the signature is a NestedTypedDataSign signature following ERC-7739.
+    ///   Which is encoded as: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`))
+    /// - No extra data is needed for EIP-191 personal sign signatures.
+    function isValidSignature(bytes32 digest, bytes calldata wrappedSignature)
         public
         view
         override(ERC1271, IERC1271)
@@ -207,7 +210,7 @@ contract MinimalDelegation is
         unchecked {
             if (wrappedSignature.length == uint256(0)) {
                 // Forces the compiler to optimize for smaller bytecode size.
-                if (uint256(data) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
+                if (uint256(digest) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
             }
         }
 
@@ -218,13 +221,13 @@ contract MinimalDelegation is
 
         bool isValid;
         if (erc1271CallerIsSafe[msg.sender]) {
-            isValid = key.verify(data, signature);
+            isValid = key.verify(digest, signature);
         } else {
             // We only support PersonalSign for ECDSA keys
             if (signature.length == 65) {
-                isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
+                isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
             } else {
-                isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
+                isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature);
             }
         }
         // Early return if the signature is invalid
@@ -237,7 +240,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, data, hookData);
+            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
         }
     }
 }
