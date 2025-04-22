@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
@@ -26,15 +27,18 @@ abstract contract ERC7739 {
         view
         returns (bool)
     {
+        console2.log("isValidTypedDataSig");
         (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr) =
             wrappedSignature.decodeTypedDataSig();
-
-        // If the reconstructed hash does not match the caller's hash, the signature is invalid
-        if (hash != MessageHashUtils.toTypedDataHash(appSeparator, contentsHash)) return false;
-
+        
         bytes32 digest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
         // If the digest is 0, the contentsDescr was invalid
         if(digest == bytes32(0)) return false;
+        
+        console2.log("isValidTypedDataSig 2");
+
+        // If the reconstructed hash does not match the caller's hash, the signature is invalid
+        if (hash != MessageHashUtils.toTypedDataHash(appSeparator, contentsHash)) return false;
 
         return key.verify(digest, signature);
     }

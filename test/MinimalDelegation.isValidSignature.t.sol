@@ -327,7 +327,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_p256Key_personalSign_reverts_sliceOutOfBounds() public {
+    function test_isValidSignature_p256Key_personalSign() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));

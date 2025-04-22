@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.20;
 
+import {console2} from "forge-std/console2.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {PersonalSignLib} from "./PersonalSignLib.sol";
@@ -34,16 +35,8 @@ library ERC7739Utils {
     ) internal pure returns (bytes32) {
         (string calldata contentsName, string calldata contentsType) =
             decodeContentsDescr(contentsDescr);
-        assembly {
-            // Check if either contentsName or contentsType is empty
-            if or(iszero(contentsName.length), iszero(contentsType.length)) {
-                // return bytes32(0)
-                mstore(0x00, 0)
-                return(0x00, 32)
-            }
-        }
-        bytes32 typedDataSignHash = TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes);
-        return MessageHashUtils.toTypedDataHash(appSeparator, typedDataSignHash);
+        if(bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return bytes32(0);
+        return MessageHashUtils.toTypedDataHash(appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes));
     }
 
     /// @notice Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit modes

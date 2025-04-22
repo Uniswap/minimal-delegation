@@ -223,12 +223,7 @@ contract MinimalDelegation is
         if (erc1271CallerIsSafe[msg.sender]) {
             isValid = key.verify(data, signature);
         } else {
-            // We only support PersonalSign for ECDSA keys
-            if (signature.length == 65) {
-                isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
-            } else {
-                isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
-            }
+            isValid = _isValidTypedDataSig(key, data, domainBytes(), signature) || _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
         }
 
         // Early return if the signature is invalid

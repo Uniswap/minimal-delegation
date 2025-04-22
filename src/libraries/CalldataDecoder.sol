@@ -62,13 +62,11 @@ library CalldataDecoder {
         assembly {
             keyHash := calldataload(data.offset)
         }
-        // length check in toBytes()
         signature = toBytes(data, 1);
         hookData = toBytes(data, 2);
     }
 
     /// @notice Decode the signature, appSeparator, contentsHash, and contentsDescr from the calldata
-    // TODO: uint16 contentsDescrLength is not supported and decoded
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes32 appSeparator, bytes32 contentsHash, string contentsDescr)`
     function decodeTypedDataSig(bytes calldata data)
         internal
@@ -87,8 +85,8 @@ library CalldataDecoder {
         }
     }
 
-    /// TODO: Import CalldataDecoder.sol, has been previously audited.
     /// @notice Decode the `_arg`-th element in `_bytes` as `bytes`
+    /// @dev Performs a length check, returning empty bytes if it fails. This MUST be checked by the caller.
     // @param _bytes The input bytes string to extract a bytes string from
     // @param _arg The index of the argument to extract
     function toBytes(bytes calldata _bytes, uint256 _arg) internal pure returns (bytes calldata res) {
@@ -106,10 +104,10 @@ library CalldataDecoder {
             res.length := length
             res.offset := offset
 
-            // if the provided bytes string isnt as long as the encoding says, revert
+            // if the provided bytes string isnt as long as the encoding says, return empty bytes
             if lt(add(_bytes.length, _bytes.offset), add(length, offset)) {
-                mstore(0, SLICE_ERROR_SELECTOR)
-                revert(0x1c, 4)
+                res.length := 0
+                res.offset := 0
             }
         }
     }
