@@ -2,9 +2,9 @@
 pragma solidity ^0.8.29;
 
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
-import {Static} from "./libraries/Static.sol";
-import {EntrypointLib} from "./libraries/EntrypointLib.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
+import {EntrypointLib} from "./libraries/EntrypointLib.sol";
+import {Static} from "./libraries/Static.sol";
 
 /// @title ERC4337Account
 /// @notice A base contract which allows for the entrypoint to have a default value that can be updated
