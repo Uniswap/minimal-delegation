@@ -142,19 +142,18 @@ contract MinimalDelegation is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-        // Set the `validUntil` parameter within validationData to the key expiry which is checked by the EntryPoint
-        validationData = uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
 
+        bool isValidAfterHook;
         IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
-            // The hook can override the validation data
-            validationData = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
+        if (isValid && hook.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
+            // The hook can override the validation data only if the signature was originally valid.
+            isValidAfterHook = hook.handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
         }
 
-        // If the signature is invalid we simply return SIG_VALIDATION_FAILED
-        if (!isValid) {
-            return SIG_VALIDATION_FAILED;
-        }
+        // If the signature is originally invalid, OR is set to invalid after the hook call, we simply return SIG_VALIDATION_FAILED
+        if (!isValid || !isValidAfterHook) return SIG_VALIDATION_FAILED;
+        // Otherwise, on a valid signature, we set the `validUntil` parameter within validationData to the key expiry which is checked by the EntryPoint
+        else return uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED;
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()

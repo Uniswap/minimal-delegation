@@ -454,7 +454,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         userOp.signature = wrappedSignature;
         bytes32 userOpHash = validUserOpHash;
 
-        mockHook.setValidateUserOpReturnValue(0);
+        mockHook.setValidateUserOpReturnValue(true);
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
@@ -482,7 +482,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         bytes32 userOpHash = validUserOpHash;
 
         // Hook returns 0 for valid signature, expect that this value is not used since the signature is invalid
-        mockHook.setValidateUserOpReturnValue(0);
+        mockHook.setValidateUserOpReturnValue(true);
 
         vm.prank(address(entryPoint));
         uint256 valid = signerAccount.validateUserOp(userOp, userOpHash, 0);
