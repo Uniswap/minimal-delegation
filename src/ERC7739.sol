@@ -27,7 +27,6 @@ abstract contract ERC7739 {
         view
         returns (bool)
     {
-        console2.log("isValidTypedDataSig");
         (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr) =
             wrappedSignature.decodeTypedDataSig();
         
@@ -35,8 +34,6 @@ abstract contract ERC7739 {
         // If the digest is 0, the contentsDescr was invalid
         if(digest == bytes32(0)) return false;
         
-        console2.log("isValidTypedDataSig 2");
-
         // If the reconstructed hash does not match the caller's hash, the signature is invalid
         if (hash != MessageHashUtils.toTypedDataHash(appSeparator, contentsHash)) return false;
 
