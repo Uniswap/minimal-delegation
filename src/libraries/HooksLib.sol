@@ -53,8 +53,10 @@ library HooksLib {
         internal
         view
     {
-        bytes4 hookSelector = self.afterIsValidSignature(keyHash, digest, hookData);
-        if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
+        if (self.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
+            bytes4 hookSelector = self.afterIsValidSignature(keyHash, digest, hookData);
+            if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterVerifySignature hook
