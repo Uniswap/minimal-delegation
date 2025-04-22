@@ -22,18 +22,19 @@ interface IValidationHook {
         bytes calldata hookData
     ) external view returns (bytes4 selector);
 
-    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback
+    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback. 
+    /// @dev MUST revert to signal that validation should fail
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
     /// @param hookData any data to be passed to the hook.This has NOT been validated by the user signature
     /// @return selector Must be afterIsValidSignature.selector
-    /// @return magicValue The EIP-1271 magic value (or invalid value) to return, overriding the validation done within the account
     function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
-        returns (bytes4 selector, bytes4 magicValue);
+        returns (bytes4 selector);
 
-    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. MUST revert if the signature is invalid
+    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. 
+    /// @dev MUST revert to signal that validation should fail
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
     /// @param hookData any data to be passed to the hook. This has NOT been validated by the user signature

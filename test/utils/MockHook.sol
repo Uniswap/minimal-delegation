@@ -9,7 +9,7 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 
 contract MockHook is IHook {
     bool internal _verifySignatureReturnValue;
-    bytes4 internal _isValidSignatureReturnValue;
+    bool internal _isValidSignatureReturnValue;
     bool internal _validateUserOpReturnValue;
     bytes internal _beforeExecuteReturnValue;
     bytes internal _beforeExecuteRevertData;
@@ -18,7 +18,7 @@ contract MockHook is IHook {
         _verifySignatureReturnValue = returnValue;
     }
 
-    function setIsValidSignatureReturnValue(bytes4 returnValue) external {
+    function setIsValidSignatureReturnValue(bool returnValue) external {
         _isValidSignatureReturnValue = returnValue;
     }
 
@@ -49,13 +49,21 @@ contract MockHook is IHook {
     function afterIsValidSignature(bytes32, bytes32, bytes calldata)
         external
         view
-        returns (bytes4 selector, bytes4 magicValue)
+        returns (bytes4 selector)
     {
-        return (IValidationHook.afterIsValidSignature.selector, _isValidSignatureReturnValue);
+        if(_isValidSignatureReturnValue) {
+            return IValidationHook.afterIsValidSignature.selector;
+        } else {
+            revert();
+        }
     }
 
-    function afterVerifySignature(bytes32, bytes32, bytes calldata) external pure returns (bytes4 selector) {
-        return IValidationHook.afterVerifySignature.selector;
+    function afterVerifySignature(bytes32, bytes32, bytes calldata) external view returns (bytes4 selector) {
+        if(_verifySignatureReturnValue) {
+            return IValidationHook.afterVerifySignature.selector;
+        } else {
+            revert();
+        }
     }
 
     function beforeExecute(bytes32, address, uint256, bytes calldata) external view returns (bytes4, bytes memory) {

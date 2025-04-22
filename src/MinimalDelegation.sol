@@ -18,31 +18,33 @@ import {ERC4337Account} from "./ERC4337Account.sol";
 import {ERC7201} from "./ERC7201.sol";
 import {ERC7821} from "./ERC7821.sol";
 import {ERC7914} from "./ERC7914.sol";
+import {ERC7739} from "./ERC7739.sol";
 import {KeyManagement} from "./KeyManagement.sol";
 import {Multicall} from "./Multicall.sol";
 import {NonceManager} from "./NonceManager.sol";
 import {BatchedCallLib, BatchedCall} from "./libraries/BatchedCallLib.sol";
 import {Call, CallLib} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
+import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
 import {Static} from "./libraries/Static.sol";
-import {WrappedDataHash} from "./libraries/WrappedDataHash.sol";
 
 contract MinimalDelegation is
     IMinimalDelegation,
     ERC7821,
     ERC1271,
-    EIP712,
     ERC4337Account,
     Receiver,
     KeyManagement,
     NonceManager,
     ERC7914,
     ERC7201,
+    ERC7739,
+    EIP712,
     Multicall
 {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -51,11 +53,10 @@ contract MinimalDelegation is
     using SignedBatchedCallLib for SignedBatchedCall;
     using KeyLib for *;
     using ModeDecoder for bytes32;
-    using WrappedDataHash for bytes32;
     using CalldataDecoder for bytes;
-
     using HooksLib for IHook;
     using SettingsLib for Settings;
+    using ERC7739Utils for bytes;
 
     /// @inheritdoc IMinimalDelegation
     function execute(BatchedCall memory batchedCall) public payable {
@@ -154,7 +155,7 @@ contract MinimalDelegation is
 
         (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
 
-        bytes32 digest = _hashTypedData(signedBatchedCall.hash());
+        bytes32 digest = hashTypedData(signedBatchedCall.hash());
 
         Key memory key = getKey(signedBatchedCall.keyHash);
         bool isValid = key.verify(digest, signature);
@@ -179,28 +180,49 @@ contract MinimalDelegation is
     }
 
     /// @inheritdoc ERC1271
-    function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
+    /// @dev wrappedSignature contains a keyHash, signature, and any optional hook data
+    ///      `signature` can contain extra fields used for webauthn verification or ERC7739 nested typed data verification
+    function isValidSignature(bytes32 digest, bytes calldata wrappedSignature)
         public
         view
         override(ERC1271, IERC1271)
-        returns (bytes4 result)
+        returns (bytes4)
     {
+        // Per ERC-7739, return 0x77390001 for the sentinel hash value
+        unchecked {
+            if (wrappedSignature.length == uint256(0)) {
+                // Forces the compiler to optimize for smaller bytecode size.
+                if (uint256(digest) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
+            }
+        }
+
         (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
             abi.decode(wrappedSignature, (bytes32, bytes, bytes));
-        bytes32 digest = _hashTypedData(data.hashWithWrappedType());
 
         Key memory key = getKey(keyHash);
-        bool isValid = key.verify(digest, signature);
+
+        /// There are 3 ways to validate a signature through ERC-1271:
+        /// 1. The caller is allowlisted, so we can validate the signature directly against the data.
+        /// 2. The caller is address(0), meaning it is an offchain call, so we can validate the signature as if it is a PersonalSign.
+        /// 3. If none of the above is true, the signature must be validated as a TypedDataSign struct according to ERC-7739.
+        bool isValid;
+        if (erc1271CallerIsSafe[msg.sender]) {
+            isValid = key.verify(digest, signature);
+        } else if (msg.sender == address(0)) {
+            // We only support PersonalSign for offchain calls
+            isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
+        } else {
+            isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature);
+        }
+
+        // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
-        result = _1271_MAGIC_VALUE;
 
         Settings settings = getKeySettings(keyHash);
         _checkExpiry(settings);
 
-        IHook hook = settings.hook();
-        if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
-            // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
-        }
+        settings.hook().handleAfterIsValidSignature(keyHash, digest, hookData);
+
+        return _1271_MAGIC_VALUE;
     }
 }

@@ -46,21 +46,20 @@ library HooksLib {
     }
 
     /// @notice Handles the afterIsValidSignature hook
-    /// @notice MAY revert if desired
+    /// @notice MUST revert if validation fails
     /// @dev Expected to validate the signature and return a value which will override the internally computed ERC-1271 magic value
-    /// @return magicValue the ERC-1271 magic value returned by the hook
     function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
-        returns (bytes4 magicValue)
     {
-        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, hookData);
-        if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
-        return hookMagicValue;
+        if (self.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
+            bytes4 hookSelector = self.afterIsValidSignature(keyHash, digest, hookData);
+            if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
+        }
     }
 
     /// @notice Handles the afterVerifySignature hook
-    /// @notice MUST revert if the signature is deemed invalid by the hook
+    /// @notice MUST revert if validation fails
     function handleAfterVerifySignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
