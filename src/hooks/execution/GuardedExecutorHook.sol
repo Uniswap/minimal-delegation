@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {LibBytes} from "solady/utils/LibBytes.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {Call} from "../../libraries/CallLib.sol";
-import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
+import {LibBytes} from "solady/utils/LibBytes.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
 import {BaseAuthorization} from "../../BaseAuthorization.sol";
+import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
 
 interface IGuardedExecutorHook is IExecutionHook {
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external;
