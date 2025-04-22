@@ -186,7 +186,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.update(p256Key.toKeyHash(), keySettings);
 
         // Mock the hook return value to true, check that it isn't called
-        mockValidationHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
+        mockValidationHook.setIsValidSignatureReturnValue(true);
         vm.stopPrank();
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
@@ -298,12 +298,12 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
 
-        mockHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
+        mockHook.setIsValidSignatureReturnValue(true);
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
         vm.snapshotGasLastCall("isValidSignature_P256_withHook");
         assertEq(result, _1271_MAGIC_VALUE);
 
-        mockHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
+        mockHook.setIsValidSignatureReturnValue(false);
         vm.prank(address(mockERC1271VerifyingContract));
         result = signerAccount.isValidSignature(digest, wrappedSignature);
         assertEq(result, _1271_INVALID_VALUE);

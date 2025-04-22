@@ -27,11 +27,11 @@ interface IValidationHook {
     /// @param digest the digest to verify
     /// @param hookData any data to be passed to the hook.This has NOT been validated by the user signature
     /// @return selector Must be afterIsValidSignature.selector
-    /// @return magicValue The EIP-1271 magic value (or invalid value) to return, overriding the validation done within the account
+    /// @return isValid Whether or not the signature is valid
     function afterIsValidSignature(bytes32 keyHash, bytes32 digest, bytes calldata hookData)
         external
         view
-        returns (bytes4 selector, bytes4 magicValue);
+        returns (bytes4 selector, bool isValid);
 
     /// @notice Hook called after verifying a signature over `SignedBatchedCall`. MUST revert if the signature is invalid
     /// @param keyHash the key which signed over digest

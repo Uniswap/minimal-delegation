@@ -51,11 +51,11 @@ library HooksLib {
     function handleAfterIsValidSignature(IHook self, bytes32 keyHash, bytes32 digest, bytes memory hookData)
         internal
         view
-        returns (bytes4 magicValue)
+        returns (bool)
     {
-        (bytes4 hookSelector, bytes4 hookMagicValue) = self.afterIsValidSignature(keyHash, digest, hookData);
+        (bytes4 hookSelector, bool isValid) = self.afterIsValidSignature(keyHash, digest, hookData);
         if (hookSelector != IValidationHook.afterIsValidSignature.selector) revert InvalidHookResponse();
-        return hookMagicValue;
+        return isValid;
     }
 
     /// @notice Handles the afterVerifySignature hook

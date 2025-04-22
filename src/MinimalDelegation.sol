@@ -237,15 +237,17 @@ contract MinimalDelegation is
 
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
-        result = _1271_MAGIC_VALUE;
 
         Settings settings = getKeySettings(keyHash);
         _checkExpiry(settings);
 
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
-            // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
+            if (!hook.handleAfterIsValidSignature(keyHash, digest, hookData)) {
+                return _1271_INVALID_VALUE;
+            }
         }
+
+        return _1271_MAGIC_VALUE;
     }
 }
