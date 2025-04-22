@@ -41,8 +41,9 @@ library TypedDataSignBuilder {
         bytes memory signature,
         bytes32 appSeparator,
         bytes32 contentsHash,
-        string memory contentsDescr
+        string memory contentsDescr,
+        uint16 contentsDescrLength
     ) internal pure returns (bytes memory) {
-        return abi.encode(signature, appSeparator, contentsHash, contentsDescr);
+        return abi.encode(signature, appSeparator, contentsHash, contentsDescr, contentsDescrLength);
     }
 }
