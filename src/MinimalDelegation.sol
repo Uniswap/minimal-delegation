@@ -3,36 +3,35 @@ pragma solidity ^0.8.29;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {Receiver} from "solady/accounts/Receiver.sol";
-import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
-import {Call, CallLib} from "./libraries/CallLib.sol";
+import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
+import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {IERC1271} from "./interfaces/IERC1271.sol";
+import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
+import {IERC7821} from "./interfaces/IERC7821.sol";
+import {IHook} from "./interfaces/IHook.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
+import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
+import {EIP712} from "./EIP712.sol";
+import {ERC1271} from "./ERC1271.sol";
+import {ERC4337Account} from "./ERC4337Account.sol";
+import {ERC7201} from "./ERC7201.sol";
+import {ERC7821} from "./ERC7821.sol";
+import {ERC7914} from "./ERC7914.sol";
+import {ERC7739} from "./ERC7739.sol";
+import {KeyManagement} from "./KeyManagement.sol";
+import {Multicall} from "./Multicall.sol";
+import {NonceManager} from "./NonceManager.sol";
+import {BatchedCallLib, BatchedCall} from "./libraries/BatchedCallLib.sol";
+import {Call, CallLib} from "./libraries/CallLib.sol";
+import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
+import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
+import {HooksLib} from "./libraries/HooksLib.sol";
 import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
-import {ERC1271} from "./ERC1271.sol";
-import {IERC1271} from "./interfaces/IERC1271.sol";
-import {EIP712} from "./EIP712.sol";
-import {ERC7201} from "./ERC7201.sol";
-import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
-import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
-import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
-import {NonceManager} from "./NonceManager.sol";
-import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
-import {ERC4337Account} from "./ERC4337Account.sol";
-import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
-import {ERC7914} from "./ERC7914.sol";
-import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
-import {BatchedCallLib, BatchedCall} from "./libraries/BatchedCallLib.sol";
-import {KeyManagement} from "./KeyManagement.sol";
-import {IHook} from "./interfaces/IHook.sol";
-import {HooksLib} from "./libraries/HooksLib.sol";
-import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
+import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
 import {Static} from "./libraries/Static.sol";
-import {ERC7821} from "./ERC7821.sol";
-import {IERC7821} from "./interfaces/IERC7821.sol";
-import {ERC7739} from "./ERC7739.sol";
-import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
-import {Multicall} from "./Multicall.sol";
 
 contract MinimalDelegation is
     IMinimalDelegation,
@@ -48,29 +47,32 @@ contract MinimalDelegation is
     EIP712,
     Multicall
 {
-    using ModeDecoder for bytes32;
-    using KeyLib for *;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using CalldataDecoder for bytes;
     using CallLib for Call[];
     using BatchedCallLib for BatchedCall;
     using SignedBatchedCallLib for SignedBatchedCall;
+    using KeyLib for *;
+    using ModeDecoder for bytes32;
+    using CalldataDecoder for bytes;
     using HooksLib for IHook;
     using SettingsLib for Settings;
     using ERC7739Utils for bytes;
 
+    /// @inheritdoc IMinimalDelegation
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
         if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
         _dispatch(batchedCall, keyHash);
     }
 
+    /// @inheritdoc IMinimalDelegation
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
+    /// @inheritdoc IERC7821
     function execute(bytes32 mode, bytes memory executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
@@ -175,7 +177,7 @@ contract MinimalDelegation is
 
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_VERIFY_SIGNATURE_FLAG)) {
-            // Hook must revert to signal that signature verification
+            // The hook must revert if validation should fail
             hook.handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
         }
     }
@@ -195,9 +197,12 @@ contract MinimalDelegation is
     /// @inheritdoc ERC1271
     /// @dev WrappedSignature is used for both NestedTypedDataSign and NestedPersonalSign signatures.
     ///      If the caller implementing ERC-1271 is considered safe, we verify the signature over the data directly
-    /// TypedDataSign signatures are of the form: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`))
-    /// No extra data is needed for NestedPersonalSign signatures.
-    function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
+    /// The signature is wrapped with the keyhash, signature, and any optional hook data
+    /// - If the caller is considered safe then we verify the signature over the data directly
+    /// - Otherwise, we assume the signature is a NestedTypedDataSign signature following ERC-7739.
+    ///   Which is encoded as: abi.encode(bytes32, bytes(`signature ‖ APP_DOMAIN_SEPARATOR ‖ contentsHash ‖ contentsDescr ‖ uint16(contentsDescr.length)`))
+    /// - No extra data is needed for EIP-191 personal sign signatures.
+    function isValidSignature(bytes32 digest, bytes calldata wrappedSignature)
         public
         view
         override(ERC1271, IERC1271)
@@ -207,7 +212,7 @@ contract MinimalDelegation is
         unchecked {
             if (wrappedSignature.length == uint256(0)) {
                 // Forces the compiler to optimize for smaller bytecode size.
-                if (uint256(data) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
+                if (uint256(digest) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
             }
         }
 
@@ -222,12 +227,12 @@ contract MinimalDelegation is
         /// 3. If none of the above is true, the signature must be validated as a TypedDataSign struct according to ERC-7739.
         bool isValid;
         if (erc1271CallerIsSafe[msg.sender]) {
-            isValid = key.verify(data, signature);
+            isValid = key.verify(digest, signature);
         } else if (msg.sender == address(0)) {
             // We only support PersonalSign for offchain calls
-            isValid = _isValidNestedPersonalSignature(key, data, domainSeparator(), signature);
+            isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
         } else {
-            isValid = _isValidTypedDataSig(key, data, domainBytes(), signature);
+            isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature);
         }
 
         // Early return if the signature is invalid
@@ -240,7 +245,7 @@ contract MinimalDelegation is
         IHook hook = settings.hook();
         if (hook.hasPermission(HooksLib.AFTER_IS_VALID_SIGNATURE_FLAG)) {
             // Hook can override the result
-            result = hook.handleAfterIsValidSignature(keyHash, data, hookData);
+            result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
         }
     }
 }
