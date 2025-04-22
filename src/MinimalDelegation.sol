@@ -61,14 +61,14 @@ contract MinimalDelegation is
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
         if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
-        _dispatch(batchedCall, keyHash);
+        _processBatch(batchedCall, keyHash);
     }
 
     /// @inheritdoc IMinimalDelegation
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
-        _dispatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
+        _processBatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
     /// @inheritdoc IERC7821
@@ -92,31 +92,7 @@ contract MinimalDelegation is
         bytes calldata executionData = userOp.callData.removeSelector();
         (BatchedCall memory batchedCall) = abi.decode(executionData, (BatchedCall));
 
-        _dispatch(batchedCall, keyHash);
-    }
-
-    function _dispatch(BatchedCall memory batchedCall, bytes32 keyHash) private {
-        for (uint256 i = 0; i < batchedCall.calls.length; i++) {
-            (bool success, bytes memory output) = _execute(batchedCall.calls[i], keyHash);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && batchedCall.revertOnFailure) revert IMinimalDelegation.CallFailed(output);
-        }
-    }
-
-    /// @dev Executes a low level call using execution hooks if set
-    function _execute(Call memory _call, bytes32 keyHash) internal returns (bool success, bytes memory output) {
-        // Per ERC7821, replace address(0) with address(this)
-        address to = _call.to == address(0) ? address(this) : _call.to;
-
-        Settings settings = getKeySettings(keyHash);
-        if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
-
-        IHook hook = settings.hook();
-        bytes memory beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
-
-        (success, output) = to.call{value: _call.value}(_call.data);
-
-        hook.handleAfterExecute(keyHash, beforeExecuteData);
+        _processBatch(batchedCall, keyHash);
     }
 
     /// @inheritdoc IAccount
@@ -154,38 +130,6 @@ contract MinimalDelegation is
         }
     }
 
-    /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
-        private
-    {
-        _useNonce(signedBatchedCall.nonce);
-
-        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
-
-        bytes32 digest = _hashTypedData(signedBatchedCall.hash());
-
-        Key memory key = getKey(signedBatchedCall.keyHash);
-        bool isValid = key.verify(digest, signature);
-        if (!isValid) revert IMinimalDelegation.InvalidSignature();
-
-        Settings settings = getKeySettings(signedBatchedCall.keyHash);
-        _checkExpiry(settings);
-
-        settings.hook().handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
-    }
-
-    /// @notice Reverts if the key settings are expired
-    function _checkExpiry(Settings settings) private view {
-        (bool isExpired, uint40 expiry) = settings.isExpired();
-        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
-    }
-
-    /// @notice Returns true if the msg.sender is the executor or if the executor is address(0)
-    /// @param executor The address of the allowed executor of the signed batched call
-    function _senderIsExecutor(address executor) private view returns (bool) {
-        return executor == address(0) || executor == msg.sender;
-    }
-
     /// @inheritdoc ERC1271
     function isValidSignature(bytes32 data, bytes calldata wrappedSignature)
         public
@@ -210,5 +154,56 @@ contract MinimalDelegation is
             // Hook can override the result
             result = hook.handleAfterIsValidSignature(keyHash, digest, hookData);
         }
+    }
+
+    /// @dev Iterates through calls, reverting according to specified failure mode
+    function _processBatch(BatchedCall memory batchedCall, bytes32 keyHash) private {
+        for (uint256 i = 0; i < batchedCall.calls.length; i++) {
+            (bool success, bytes memory output) = _process(batchedCall.calls[i], keyHash);
+            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            if (!success && batchedCall.revertOnFailure) revert IMinimalDelegation.CallFailed(output);
+        }
+    }
+
+    /// @dev Executes a low level call using execution hooks if set
+    function _process(Call memory _call, bytes32 keyHash) private returns (bool success, bytes memory output) {
+        // Per ERC7821, replace address(0) with address(this)
+        address to = _call.to == address(0) ? address(this) : _call.to;
+
+        Settings settings = getKeySettings(keyHash);
+        if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
+
+        IHook hook = settings.hook();
+        bytes memory beforeExecuteData = hook.handleBeforeExecute(keyHash, to, _call.value, _call.data);
+
+        (success, output) = to.call{value: _call.value}(_call.data);
+
+        hook.handleAfterExecute(keyHash, beforeExecuteData);
+    }
+
+    /// @dev This function is used to handle the verification of signatures sent through execute()
+    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
+        private
+    {
+        _useNonce(signedBatchedCall.nonce);
+
+        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
+
+        bytes32 digest = _hashTypedData(signedBatchedCall.hash());
+
+        Key memory key = getKey(signedBatchedCall.keyHash);
+        bool isValid = key.verify(digest, signature);
+        if (!isValid) revert IMinimalDelegation.InvalidSignature();
+
+        Settings settings = getKeySettings(signedBatchedCall.keyHash);
+        _checkExpiry(settings);
+
+        settings.hook().handleAfterVerifySignature(signedBatchedCall.keyHash, digest, hookData);
+    }
+
+    /// @notice Returns true if the msg.sender is the executor or if the executor is address(0)
+    /// @param executor The address of the allowed executor of the signed batched call
+    function _senderIsExecutor(address executor) private view returns (bool) {
+        return executor == address(0) || executor == msg.sender;
     }
 }
