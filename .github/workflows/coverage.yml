@@ -1,9 +1,7 @@
 name: code coverage
 
 on:
-  push:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   comment-forge-coverage:
@@ -22,11 +20,16 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-      - name: Run Forge build
+
+      - name: Show Forge version
         run: |
           forge --version
-          forge build --sizes --via-ir
+
+      - name: Run Forge build
+        run: |
+          forge build --sizes
         id: build
+
       - name: Run forge coverage
         id: coverage
         run: |
