@@ -35,7 +35,22 @@ jobs:
         run: |
           {
           echo 'COVERAGE<<EOF'
-          forge coverage | grep '^|' | grep -v 'test/'
+          forge coverage \
+            | grep '^|' \
+            | grep -v 'test/' \
+            | grep -v '+' \
+            | awk 'NR==1 { 
+                header = $0; 
+                print header;
+
+                sep = header;
+                gsub(/[^|]/, "-", sep);
+                gsub(/\|+/, "|", sep);
+                gsub(/[^|]+/, "------", sep);
+                print sep;
+
+                next 
+              } 1'
           echo EOF
           } >> "$GITHUB_OUTPUT"
         env:
