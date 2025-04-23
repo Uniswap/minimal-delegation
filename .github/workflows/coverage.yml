@@ -73,7 +73,7 @@ jobs:
             const botComment = comments.find(comment => comment.user.id === 41898282)
 
             const output = `${{ steps.coverage.outputs.COVERAGE }}`;
-            const commentBody = `Forge code coverage:\n\`\`\`\n${output}\n\`\`\``;
+            const commentBody = `Forge code coverage:\n${output}\n`;
 
             if (botComment) {
               github.rest.issues.updateComment({
