@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Settings, SettingsLib} from "./SettingsLib.sol";
 
@@ -35,14 +35,14 @@ library KeyLib {
         return keyHash == ROOT_KEY_HASH;
     }
 
-    /// @notice A helper function to get the root key object.
-    function toRootKey() internal view returns (Key memory) {
-        return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
-    }
-
     /// @notice Returns whether the key is the root key
     function isRootKey(Key memory key) internal view returns (bool) {
         return key.keyType == KeyType.Secp256k1 && abi.decode(key.publicKey, (address)) == address(this);
+    }
+
+    /// @notice A helper function to get the root key object.
+    function toRootKey() internal view returns (Key memory) {
+        return Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(address(this))});
     }
 
     /// @notice Turns a calling address into a key hash.

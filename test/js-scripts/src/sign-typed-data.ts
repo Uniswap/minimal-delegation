@@ -13,12 +13,10 @@ import {
   pad,
 } from 'viem'
 
-import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall} from './utils/constants';
+import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall, InputData} from './utils/constants';
 
 
-interface InputData {
-  privateKey: string;
-  verifyingContract: Address;
+interface SignedBatchedCallInputData extends InputData {
   signedBatchedCall: SignedBatchedCall;
 }
 
@@ -30,7 +28,7 @@ if (args.length < 1) {
 }
 
 // Parse the JSON input
-const jsonInput = JSON.parse(args[0]) as InputData;
+const jsonInput = JSON.parse(args[0]) as SignedBatchedCallInputData;
 const { privateKey, verifyingContract, signedBatchedCall } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));

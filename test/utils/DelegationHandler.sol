@@ -10,6 +10,7 @@ import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 import {Constants} from "./Constants.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./SettingsBuilder.sol";
+import {MockERC1271VerifyingContract} from "./MockERC1271VerifyingContract.sol";
 
 contract DelegationHandler is Test {
     using KeyLib for Key;

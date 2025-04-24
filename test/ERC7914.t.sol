@@ -57,12 +57,12 @@ contract ERC7914Test is DelegationHandler {
         signerAccount.transferFromNative(address(signerAccount), bob, 2 ether);
     }
 
-    function test_transferFromNative_zeroAmount_returnsFalse() public {
+    function test_transferFromNative_zeroAmount_returnsTrue() public {
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, 1 ether);
         vm.prank(bob);
         success = signerAccount.transferFromNative(address(signerAccount), bob, 0);
-        assertEq(success, false);
+        assertEq(success, true);
     }
 
     function test_transferFromNative_succeeds() public {
@@ -172,12 +172,12 @@ contract ERC7914Test is DelegationHandler {
         signerAccount.transferFromNativeTransient(address(signerAccount), bob, 2 ether);
     }
 
-    function test_transferFromNativeTransient_zeroAmount_returnsFalse() public {
+    function test_transferFromNativeTransient_zeroAmount_returnsTrue() public {
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNativeTransient(bob, 1 ether);
         assertTrue(success);
         success = signerAccount.transferFromNativeTransient(address(signerAccount), bob, 0);
-        assertEq(success, false);
+        assertEq(success, true);
     }
 
     function test_transferFromNativeTransient_succeeds() public {

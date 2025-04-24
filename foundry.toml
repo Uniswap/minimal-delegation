@@ -11,10 +11,11 @@ ffi = true
 remappings = [
     "webauthn-sol/=lib/webauthn-sol/"
 ]
-additional_compiler_profiles = [{ name = "via_ir", optimizer_runs = 1000, via_ir = true }]
+additional_compiler_profiles = [{ name = "via_ir", optimizer_runs = 10000, via_ir = true }]
 
 compilation_restrictions = [
-  { paths = "src/MinimalDelegationEntry.sol", via_ir = true }
+  { paths = "src/MinimalDelegationEntry.sol", via_ir = true },
+  { paths = "src/MinimalDelegation.sol", via_ir = true }
 ]
 
 [profile.default.invariant]

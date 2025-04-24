@@ -5,16 +5,22 @@ import {type Address} from "viem"
 export const DOMAIN_NAME = 'Uniswap Minimal Delegation';
 export const DOMAIN_VERSION = "1";
 
+export interface InputData {
+  privateKey: string;
+  verifyingContract: Address;
+}
+
 // Define the struct types
 export const types = {
   SignedBatchedCall: [
     { name: 'batchedCall', type: 'BatchedCall' },
     { name: 'nonce', type: 'uint256' },
-    { name: 'keyHash', type: 'bytes32' }
+    { name: 'keyHash', type: 'bytes32' },
+    { name: 'executor', type: 'address' }
   ],
   BatchedCall: [
     { name: 'calls', type: 'Call[]' },
-    { name: 'shouldRevert', type: 'bool' }
+    { name: 'revertOnFailure', type: 'bool' }
   ],
   Call: [
     { name: 'to', type: 'address' },
@@ -32,11 +38,12 @@ export type Call = {
 
 export type BatchedCall = {
     calls: Call[];
-    shouldRevert: boolean;
+    revertOnFailure: boolean;
   }
 
-export type SignedBatchedCall = {
-    batchedCall: BatchedCall;
-    nonce: number;
-    keyHash: string;
-  }
+export interface SignedBatchedCall {
+  batchedCall: BatchedCall;
+  nonce: bigint;
+  keyHash: string;
+  executor: string;
+}

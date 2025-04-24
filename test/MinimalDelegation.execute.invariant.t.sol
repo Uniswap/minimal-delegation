@@ -17,7 +17,6 @@ import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {Call, CallLib} from "../src/libraries/CallLib.sol";
 import {KeyType, Key, KeyLib} from "../src/libraries/KeyLib.sol";
 import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
-import {WrappedDataHash} from "../src/libraries/WrappedDataHash.sol";
 import {FunctionCallGenerator} from "./utils/FunctionCallGenerator.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
@@ -140,7 +139,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         (uint256 nonce,) = _buildNextValidNonce(nonceKey);
         Call[] memory calls = handlerCalls.toCalls();
 
-        // TODO: remove the hardcoded shouldRevert once we can test for it
+        // TODO: remove the hardcoded revertOnFailure once we can test for it
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
         SignedBatchedCall memory signedBatchedCall =
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withKeyHash(currentKeyHash).withNonce(nonce);
@@ -199,7 +198,6 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
     using TestKeyManager for TestKey;
     using CallUtils for Call;
     using CallUtils for Call[];
-    using WrappedDataHash for bytes32;
 
     MinimalDelegationExecuteInvariantHandler internal invariantHandler;
 
