@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.29;
+pragma solidity ^0.8.23;
 
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";

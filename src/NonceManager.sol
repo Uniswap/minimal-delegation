@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.29;
+pragma solidity ^0.8.23;
 
 import {INonceManager} from "./interfaces/INonceManager.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
