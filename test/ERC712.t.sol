@@ -47,11 +47,12 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(version, "1");
         bytes32 expected = keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"),
                 keccak256(bytes(name)),
                 keccak256(bytes(version)),
                 chainId,
-                verifyingContract
+                verifyingContract,
+                salt
             )
         );
         assertEq(expected, signerAccount.domainSeparator());
