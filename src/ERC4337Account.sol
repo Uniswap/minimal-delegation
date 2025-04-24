@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.29;
+pragma solidity ^0.8.23;
 
 import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";

@@ -32,11 +32,12 @@ abstract contract ERC7739 {
     /// @dev Performs the required checks per the ERC-7739 spec:
     /// - contentsName and contentsType are not empty
     /// - The reconstructed hash matches the hash passed in via isValidSignature
-    function _isValidTypedDataSig(Key memory key, bytes32 digest, bytes memory domainBytes, bytes memory wrappedSignature)
-        internal
-        view
-        returns (bool)
-    {
+    function _isValidTypedDataSig(
+        Key memory key,
+        bytes32 digest,
+        bytes memory domainBytes,
+        bytes memory wrappedSignature
+    ) internal view returns (bool) {
         // uint16(contentsDescription.length) is not used since we do memory decoding right now
         (bytes memory signature, bytes32 appSeparator, bytes32 contentsHash, string memory contentsDescr,) =
             abi.decode(wrappedSignature, (bytes, bytes32, bytes32, string, uint16));
@@ -47,16 +48,17 @@ abstract contract ERC7739 {
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
 
-        return key.verify(contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType), signature);
+        return key.verify(
+            contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType), signature
+        );
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash
-    function _isValidNestedPersonalSig(
-        Key memory key,
-        bytes32 digest,
-        bytes32 domainSeparator,
-        bytes memory signature
-    ) internal view returns (bool) {
+    function _isValidNestedPersonalSig(Key memory key, bytes32 digest, bytes32 domainSeparator, bytes memory signature)
+        internal
+        view
+        returns (bool)
+    {
         return key.verify(digest.toPersonalSignTypedDataHash(domainSeparator), signature);
     }
 }
