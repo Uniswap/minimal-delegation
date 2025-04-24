@@ -526,7 +526,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         calls = calls.push(call);
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
         SignedBatchedCall memory signedCall =
-            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(address(0));
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(address(0)).withDeadline(0);
 
         bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
         bytes memory signature = signerTestKey.sign(hashToSign);

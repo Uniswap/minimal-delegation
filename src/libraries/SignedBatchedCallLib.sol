@@ -8,7 +8,7 @@ struct SignedBatchedCall {
     uint256 nonce;
     bytes32 keyHash;
     address executor; // address(0) allows anyone to execute the batched call
-    uint256 deadline;
+    uint256 deadline; // a deadline of 0 never expires
 }
 
 /// @title SignedBatchedCallLib
