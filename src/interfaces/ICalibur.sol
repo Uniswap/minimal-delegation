@@ -25,7 +25,7 @@ import {SignedBatchedCall} from "../libraries/SignedBatchedCallLib.sol";
 /// ERC-7914 transfer from native
 /// Alternative key management and verification
 /// Multicall
-interface IMinimalDelegation is
+interface ICalibur is
     IKeyManagement,
     IERC4337Account,
     IERC7821,

@@ -1,0 +1,14 @@
+{
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "92928",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "129720",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "118279",
+  "execute_BATCHED_CALL_opData_singleCall": "92928",
+  "execute_BATCHED_CALL_opData_singleCall_native": "93870",
+  "execute_BATCHED_CALL_opData_twoCalls": "129720",
+  "execute_BATCHED_CALL_singleCall": "59515",
+  "execute_BATCHED_CALL_singleCall_native": "59878",
+  "execute_BATCHED_CALL_twoCalls": "95623",
+  "execute_invalidMode_reverts": "22940",
+  "execute_signedBatchedCallL_executor_singleCall": "93195",
+  "multicall": "177891"
+}

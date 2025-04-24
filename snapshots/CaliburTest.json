@@ -1,0 +1,10 @@
+{
+  "caliburEntry bytecode size": "25402",
+  "register": "184779",
+  "revoke": "54183",
+  "validateUserOp_invalidSignature": "34080",
+  "validateUserOp_missingAccountFunds": "64695",
+  "validateUserOp_no_missingAccountFunds": "34076",
+  "validateUserOp_withHook_invalidSignature": "299435",
+  "validateUserOp_withHook_validSignature": "66612"
+}
