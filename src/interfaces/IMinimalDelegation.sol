@@ -44,6 +44,9 @@ interface IMinimalDelegation is
     /// @dev Used when internally verifying signatures over batched calls
     error InvalidSignature();
 
+    /// @dev Thrown when the signature has expired
+    error SignatureExpired();
+
     /// @notice Execute entrypoint for trusted callers
     /// @dev This function is only callable by this account or an admin key
     /// @param batchedCall The batched call to execute

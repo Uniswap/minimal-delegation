@@ -16,7 +16,8 @@ export const types = {
     { name: 'batchedCall', type: 'BatchedCall' },
     { name: 'nonce', type: 'uint256' },
     { name: 'keyHash', type: 'bytes32' },
-    { name: 'executor', type: 'address' }
+    { name: 'executor', type: 'address' },
+    { name: 'deadline', type: 'uint256' }
   ],
   BatchedCall: [
     { name: 'calls', type: 'Call[]' },
@@ -46,4 +47,5 @@ export interface SignedBatchedCall {
   nonce: bigint;
   keyHash: string;
   executor: string;
+  deadline: bigint;
 }
