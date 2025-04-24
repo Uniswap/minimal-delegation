@@ -3,8 +3,6 @@ pragma solidity ^0.8.29;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 
-import "forge-std/console2.sol";
-
 contract CaliburStorageTest is DelegationHandler {
     /**
      * Calibur storage layout
