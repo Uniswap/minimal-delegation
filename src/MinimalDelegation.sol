@@ -145,18 +145,20 @@ contract MinimalDelegation is
 
         Key memory key = getKey(keyHash);
 
-        /// There are 3 ways to validate a signature through ERC-1271:
-        /// 1. The caller is allowlisted, so we can validate the signature directly against the data.
-        /// 2. The caller is address(0), meaning it is an offchain call, so we can validate the signature as if it is a PersonalSign.
-        /// 3. If none of the above is true, the signature must be validated as a TypedDataSign struct according to ERC-7739.
-        bool isValid;
-        if (erc1271CallerIsSafe[msg.sender]) {
-            isValid = key.verify(digest, signature);
-        } else if (msg.sender == address(0)) {
-            // We only support PersonalSign for offchain calls
-            isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
-        } else {
+        // If there is enough data to validate as a typed data sign, do so per ERC-7739. 
+        // WebAuthn signatures go through this flow automatically since they are longer than 65 bytes,
+        // and should return false if not valid for the TypedDataSign flow instead of reverting.
+        if(signature.length > 65) {
             isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature);
+        }
+        // If TypedDataSign failed, check if the caller is marked as safe and as such the signature was not wrapped for ERC-7739
+        // otherwise, validate the signature as a PersonalSign
+        if(!isValid) {
+            if(erc1271CallerIsSafe[msg.sender]) {
+                isValid = key.verify(digest, signature);
+            } else {
+                isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
+            }
         }
 
         // Early return if the signature is invalid
