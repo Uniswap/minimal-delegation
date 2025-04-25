@@ -70,24 +70,22 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
         return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
     }
 
-    /// @notice Returns the `domainSeparator` used to create EIP-712 compliant hashes.
-    /// @return The 32 bytes domain separator result.
+    /// @inheritdoc IEIP712
     function domainSeparator() public view returns (bytes32) {
-        return
-            keccak256(abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this), _salt));
+        return keccak256(
+            abi.encode(_DOMAIN_TYPEHASH, _cachedNameHash, _cachedVersionHash, block.chainid, address(this), _salt)
+        );
     }
 
-    /// @notice Public getter for `_hashTypedData()` to produce a EIP-712 hash using this account's domain separator
-    /// @param hash The nested typed data. Assumes the hash is the result of applying EIP-712 `hashStruct`.
+    /// @inheritdoc IEIP712
     function hashTypedData(bytes32 hash) public view virtual returns (bytes32) {
         return MessageHashUtils.toTypedDataHash(domainSeparator(), hash);
     }
 
-    /// @notice Set the salt for the EIP-712 domain
-    /// @dev Use this to invalidate all existing signatures made under the old domain separator
-    /// @param salt The salt to set
+    /// @inheritdoc IEIP712
     function setSalt(bytes32 salt) external onlyThis {
         _salt = salt;
+        // per EIP-5267, emit an event to notify that the domain separator has changed
         emit EIP712DomainChanged();
     }
 
@@ -96,5 +94,5 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     /// @return version The current major version of the signing domain.
     function _domainNameAndVersion() internal pure returns (string memory name, string memory version) {
         return ("Uniswap Minimal Delegation", "1");
-    } 
+    }
 }
