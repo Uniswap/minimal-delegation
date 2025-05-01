@@ -11,6 +11,7 @@ contract ERC7914Test is DelegationHandler {
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
     event TransferFromNativeTransient(address indexed from, address indexed to, uint256 value);
+    event AllowanceUpdated(address indexed spender, uint256 value);
 
     address bob = makeAddr("bob");
     address recipient = makeAddr("recipient");
@@ -28,6 +29,8 @@ contract ERC7914Test is DelegationHandler {
         vm.expectEmit(true, true, false, true);
         emit ApproveNative(address(signerAccount), bob, 1 ether);
         vm.prank(address(signerAccount));
+        vm.expectEmit(true, true, false, true);
+        emit AllowanceUpdated(bob, 1 ether);
         bool success = signerAccount.approveNative(bob, 1 ether);
         assertTrue(success);
         assertEq(signerAccount.allowance(bob), 1 ether);
@@ -73,6 +76,8 @@ contract ERC7914Test is DelegationHandler {
         assertTrue(success);
         uint256 bobBalanceBefore = bob.balance;
         uint256 signerAccountBalanceBefore = address(signerAccount).balance;
+        vm.expectEmit(true, true, false, true);
+        emit AllowanceUpdated(bob, 0 ether);
         vm.expectEmit(true, true, false, true);
         emit TransferFromNative(address(signerAccount), bob, 1 ether);
         vm.prank(bob);

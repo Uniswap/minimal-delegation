@@ -22,6 +22,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     event Registered(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
+    event ERC1271CallerIsSafeSet(address indexed caller, bool isSafe);
 
     function setUp() public {
         setUpDelegation();
@@ -244,6 +245,10 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     function test_setERC1271CallerIsSafe() public {
         address caller = makeAddr("caller");
+
+        vm.expectEmit(true, false, false, true);
+        emit ERC1271CallerIsSafeSet(caller, true);
+
         vm.prank(address(signerAccount));
         signerAccount.setERC1271CallerIsSafe(caller, true);
         assertEq(signerAccount.erc1271CallerIsSafe(caller), true);

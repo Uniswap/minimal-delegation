@@ -10,6 +10,9 @@ interface INonceManager {
     /// @notice The event emitted when a nonce is invalidated
     event NonceInvalidated(uint256 nonce);
 
+    /// @notice The event emitted when a nonce sequence number is updated
+    event NonceSequenceNumberUpdated(uint256 indexed key, uint256 seq);
+
     /// @notice The error emitted when a nonce is invalid
     error InvalidNonce();
 

@@ -14,6 +14,7 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
     function approveNative(address spender, uint256 amount) external onlyThis returns (bool) {
         allowance[spender] = amount;
         emit ApproveNative(address(this), spender, amount);
+        emit AllowanceUpdated(spender, amount);
         return true;
     }
 
@@ -68,6 +69,7 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
                 TransientAllowance.set(msg.sender, newAllowance);
             } else {
                 allowance[msg.sender] = newAllowance;
+                emit AllowanceUpdated(msg.sender, newAllowance);
             }
         }
 

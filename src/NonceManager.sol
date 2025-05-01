@@ -22,6 +22,7 @@ abstract contract NonceManager is INonceManager, BaseAuthorization {
         }
         nonceSequenceNumber[key] = targetSeq;
         emit NonceInvalidated(newNonce);
+        emit NonceSequenceNumberUpdated(key, targetSeq);
     }
 
     /// @inheritdoc INonceManager
@@ -40,5 +41,6 @@ abstract contract NonceManager is INonceManager, BaseAuthorization {
         if (!(nonceSequenceNumber[key]++ == seq)) {
             revert InvalidNonce();
         }
+        emit NonceSequenceNumberUpdated(key, seq++);
     }
 }
