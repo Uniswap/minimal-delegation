@@ -56,14 +56,14 @@ library KeyLib {
     }
 
     /// @notice Verifies a signature from `key` over a `_hash`
-    function verify(Key memory key, bytes32 _hash, bytes calldata signature) internal view returns (bool isValid) {
+    function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
-            isValid = ECDSA.tryRecoverCalldata(_hash, signature) == abi.decode(key.publicKey, (address));
+            isValid = ECDSA.tryRecover(_hash, signature) == abi.decode(key.publicKey, (address));
         } else if (key.keyType == KeyType.P256) {
             // Extract x,y from the public key
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
             // Split signature into r and s values.
-            (bytes32 r, bytes32 s) = signature.decodeP256Signature();
+            (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
             isValid = P256.verify(_hash, r, s, x, y);
         } else if (key.keyType == KeyType.WebAuthnP256) {
             (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));

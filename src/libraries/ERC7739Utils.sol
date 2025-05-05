@@ -32,10 +32,11 @@ library ERC7739Utils {
         bytes32 appSeparator,
         string calldata contentsDescr
     ) internal pure returns (bytes32) {
-        (string calldata contentsName, string calldata contentsType) =
-            decodeContentsDescr(contentsDescr);
-        if(bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return bytes32(0);
-        return MessageHashUtils.toTypedDataHash(appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes));
+        (string calldata contentsName, string calldata contentsType) = decodeContentsDescr(contentsDescr);
+        if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return bytes32(0);
+        return MessageHashUtils.toTypedDataHash(
+            appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
+        );
     }
 
     /// @notice Parse the type name out of the ERC-7739 contents type description. Supports both the implicit and explicit modes

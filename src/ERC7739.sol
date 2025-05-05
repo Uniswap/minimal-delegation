@@ -48,17 +48,18 @@ abstract contract ERC7739 {
 
         bytes32 computed = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
         // If the computed digest is 0, the contentsDescr was invalid
-        if(computed == bytes32(0)) return false;
+        if (computed == bytes32(0)) return false;
 
-         return key.verify(computed, signature);
+        return key.verify(computed, signature);
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash
-    function _isValidNestedPersonalSig(Key memory key, bytes32 digest, bytes32 domainSeparator, bytes calldata signature)
-        internal
-        view
-        returns (bool)
-    {
+    function _isValidNestedPersonalSig(
+        Key memory key,
+        bytes32 digest,
+        bytes32 domainSeparator,
+        bytes calldata signature
+    ) internal view returns (bool) {
         return key.verify(digest.toPersonalSignTypedDataHash(domainSeparator), signature);
     }
 }
