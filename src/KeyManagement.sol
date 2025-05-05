@@ -33,6 +33,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         if (keyHash.isRootKey()) revert CannotUpdateRootKey();
         if (!isRegistered(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
+        emit KeySettingsUpdated(keyHash, settings);
     }
 
     /// @inheritdoc IKeyManagement
