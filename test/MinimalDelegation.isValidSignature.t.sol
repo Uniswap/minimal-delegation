@@ -55,7 +55,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = p256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -74,7 +78,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = webAuthnP256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -93,7 +101,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     function test_isValidSignature_rootKey_isValid_gas() public {
         bytes memory signature = signerTestKey.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
         // ensure the call returns the ERC1271 magic value
@@ -108,7 +120,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, 0xb0b);
         bytes memory signature = key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -130,7 +146,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         bytes memory signature = p256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -155,7 +175,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory signature = signerTestKey.sign(digest);
         // Still build the signature as expected to pass in memory abi decoding
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -172,7 +196,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = p256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -206,7 +234,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes memory signature = webAuthnP256Key.sign(digest);
         // Still build the signature as expected to pass in memory abi decoding
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -221,7 +253,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
         bytes memory signature = invalidSigner.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(invalidSigner.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -238,7 +274,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         TestKey memory invalidSigner = TestKeyManager.withSeed(KeyType.Secp256k1, invalidPrivateKey);
         bytes memory signature = invalidSigner.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         // trying to spoof the root key hash causes the signature verification to fail
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
@@ -250,12 +290,14 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
     }
 
-    function test_isValidSignature_invalidSignatureLength_reverts() public {
+    function test_isValidSignature_invalidSignatureLength_invalidSigner() public {
         bytes32 hash = keccak256("test");
         bytes memory signature = new bytes(63);
         vm.prank(address(mockERC1271VerifyingContract));
-        vm.expectRevert();
-        signerAccount.isValidSignature(hash, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
+        assertEq(
+            signerAccount.isValidSignature(hash, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA)),
+            _1271_INVALID_VALUE
+        );
     }
 
     function test_isValidSignature_WebAuthnP256_invalidWrappedSignatureLength_reverts() public {
@@ -263,7 +305,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = webAuthnP256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         // Intentionally don't wrap the signature with the key hash.
         bytes memory wrappedSignature = abi.encode(typedDataSignSignature, EMPTY_HOOK_DATA);
@@ -291,7 +337,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = p256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_HASH, TEST_CONTENTS_DESCR, uint16(bytes(TEST_CONTENTS_DESCR).length)
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
         );
         bytes memory wrappedSignature = abi.encode(keyHash, typedDataSignSignature, EMPTY_HOOK_DATA);
 
@@ -305,7 +355,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         mockHook.setIsValidSignatureReturnValue(false);
         vm.prank(address(mockERC1271VerifyingContract));
-        
+
         vm.expectRevert();
         signerAccount.isValidSignature(digest, wrappedSignature);
     }

@@ -145,16 +145,17 @@ contract MinimalDelegation is
 
         Key memory key = getKey(keyHash);
 
-        // If there is enough data to validate as a typed data sign, do so per ERC-7739. 
+        // If there is enough data to validate as a typed data sign, do so per ERC-7739.
         // WebAuthn signatures go through this flow automatically since they are longer than 65 bytes,
         // and should return false if not valid for the TypedDataSign flow instead of reverting.
-        if(signature.length > 65) {
+        bool isValid;
+        if (signature.length > 65) {
             isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature);
         }
         // If TypedDataSign failed, check if the caller is marked as safe and as such the signature was not wrapped for ERC-7739
         // otherwise, validate the signature as a PersonalSign
-        if(!isValid) {
-            if(erc1271CallerIsSafe[msg.sender]) {
+        if (!isValid) {
+            if (erc1271CallerIsSafe[msg.sender]) {
                 isValid = key.verify(digest, signature);
             } else {
                 isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);

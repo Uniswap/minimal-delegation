@@ -22,7 +22,7 @@ interface IValidationHook {
         bytes calldata hookData
     ) external view returns (bytes4 selector);
 
-    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback. 
+    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback.
     /// @dev MUST revert to signal that validation should fail
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
@@ -33,7 +33,7 @@ interface IValidationHook {
         view
         returns (bytes4 selector);
 
-    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. 
+    /// @notice Hook called after verifying a signature over `SignedBatchedCall`.
     /// @dev MUST revert to signal that validation should fail
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
