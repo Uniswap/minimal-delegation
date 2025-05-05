@@ -65,8 +65,7 @@ contract MinimalDelegation is
         _processBatch(batchedCall, keyHash);
     }
 
-    /// @inheritdoc IMinimalDelegation
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
+    function execute(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _processBatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
@@ -107,8 +106,8 @@ contract MinimalDelegation is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(userOp.signature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
+            userOp.signature.decodeWrappedSignatureWithHookData();
 
         /// The userOpHash does not need to be made replay-safe, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         Key memory key = getKey(keyHash);
@@ -201,12 +200,12 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
+    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature)
         private
     {
         _useNonce(signedBatchedCall.nonce);
 
-        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
+        (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeSignatureWithHookData();
 
         bytes32 digest = hashTypedData(signedBatchedCall.hash());
 

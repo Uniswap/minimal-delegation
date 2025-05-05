@@ -1,10 +1,10 @@
 {
-  "minimalDelegationEntry bytecode size": "23929",
-  "register": "184798",
+  "minimalDelegationEntry bytecode size": "23970",
+  "register": "184850",
   "revoke": "54590",
-  "validateUserOp_invalidSignature": "33696",
-  "validateUserOp_missingAccountFunds": "64391",
-  "validateUserOp_no_missingAccountFunds": "33753",
-  "validateUserOp_withHook_invalidSignature": "313825",
-  "validateUserOp_withHook_validSignature": "66015"
+  "validateUserOp_invalidSignature": "33122",
+  "validateUserOp_missingAccountFunds": "63817",
+  "validateUserOp_no_missingAccountFunds": "33179",
+  "validateUserOp_withHook_invalidSignature": "313445",
+  "validateUserOp_withHook_validSignature": "65636"
 }

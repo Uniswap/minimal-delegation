@@ -18,15 +18,43 @@ library CalldataDecoder {
 
     /// @notice Removes the selector from the calldata and returns the encoded params.
     function removeSelector(bytes calldata data) internal pure returns (bytes calldata params) {
-        assembly {
+        assembly ("memory-safe") {
+            if lt(data.length, 4) {
+                mstore(0, SLICE_ERROR_SELECTOR)
+                revert(0x1c, 4)
+            }
             params.offset := add(data.offset, 4)
             params.length := sub(data.length, 4)
         }
     }
 
+    /// @notice Decode the r and s values from a P256 signature
+    /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 r, bytes32 s)`
+    function decodeP256Signature(bytes calldata signature) internal pure returns (bytes32 r, bytes32 s) {
+        assembly ("memory-safe") {
+            if lt(signature.length, 0x40) {
+                mstore(0, SLICE_ERROR_SELECTOR)
+                revert(0x1c, 4)
+            }
+            r := calldataload(signature.offset)
+            s := calldataload(add(signature.offset, 0x20))
+        }
+    }
+
+    /// @notice Decode the signature and hook data from the calldata
+    /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes hookData)`
+    function decodeSignatureWithHookData(bytes calldata data)
+        internal
+        pure
+        returns (bytes calldata signature, bytes calldata hookData)
+    {
+        signature = toBytes(data, 0);
+        hookData = toBytes(data, 1);
+    }
+
     /// @notice Decode the wrapped signature and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 keyHash, bytes signature, bytes hookData)`
-    function decodeSignatureWithKeyHashAndHookData(bytes calldata data)
+    function decodeWrappedSignatureWithHookData(bytes calldata data)
         internal
         pure
         returns (bytes32 keyHash, bytes calldata signature, bytes calldata hookData)

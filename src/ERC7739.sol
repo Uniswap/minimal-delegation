@@ -41,19 +41,16 @@ abstract contract ERC7739 {
         bytes memory domainBytes,
         bytes calldata wrappedSignature
     ) internal view returns (bool) {
-        // uint16(contentsDescription.length) is not used since we do memory decoding right now
-        (bytes memory signature, bytes32 appSeparator, bytes32 contentsHash, string memory contentsDescr) =
+        (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr) =
             wrappedSignature.decodeTypedDataSig();
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
 
-        (string memory contentsName, string memory contentsType) = ERC7739Utils.decodeContentsDescr(contentsDescr);
-        // These returned values will be empty if the contentsDescr is invalid
-        if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return false;
+        bytes32 digest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
+        // If the digest is 0, the contentsDescr was invalid
+        if(digest == bytes32(0)) return false;
 
-        return key.verify(
-            contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType), signature
-        );
+         return key.verify(digest, signature);
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash
