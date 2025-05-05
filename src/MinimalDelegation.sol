@@ -107,7 +107,7 @@ contract MinimalDelegation is
     {
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
-            userOp.signature.decodeWrappedSignatureWithHookData();
+            userOp.signature.decodeSignatureWithKeyHashAndHookData();
 
         /// The userOpHash does not need to be made replay-safe, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         Key memory key = getKey(keyHash);
@@ -141,8 +141,6 @@ contract MinimalDelegation is
 
         (bytes32 keyHash, bytes calldata signature, bytes memory hookData) =
             wrappedSignature.decodeSignatureWithKeyHashAndHookData();
-        // TEMP
-        bytes memory mSignature = signature;
 
         Key memory key = getKey(keyHash);
 
@@ -157,9 +155,9 @@ contract MinimalDelegation is
         // otherwise, validate the signature as a PersonalSign
         if (!isValid) {
             if (erc1271CallerIsSafe[msg.sender]) {
-                isValid = key.verify(digest, mSignature);
+                isValid = key.verify(digest, signature);
             } else {
-                isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), mSignature);
+                isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
             }
         }
 

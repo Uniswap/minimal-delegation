@@ -46,15 +46,15 @@ abstract contract ERC7739 {
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
 
-        bytes32 digest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
-        // If the digest is 0, the contentsDescr was invalid
-        if(digest == bytes32(0)) return false;
+        bytes32 computed = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
+        // If the computed digest is 0, the contentsDescr was invalid
+        if(computed == bytes32(0)) return false;
 
-         return key.verify(digest, signature);
+         return key.verify(computed, signature);
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash
-    function _isValidNestedPersonalSig(Key memory key, bytes32 digest, bytes32 domainSeparator, bytes memory signature)
+    function _isValidNestedPersonalSig(Key memory key, bytes32 digest, bytes32 domainSeparator, bytes calldata signature)
         internal
         view
         returns (bool)

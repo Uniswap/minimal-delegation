@@ -52,9 +52,9 @@ library CalldataDecoder {
         hookData = toBytes(data, 1);
     }
 
-    /// @notice Decode the wrapped signature and hook data from the calldata
+    /// @notice Decode the keyHash, signature, and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 keyHash, bytes signature, bytes hookData)`
-    function decodeWrappedSignatureWithHookData(bytes calldata data)
+    function decodeSignatureWithKeyHashAndHookData(bytes calldata data)
         internal
         pure
         returns (bytes32 keyHash, bytes calldata signature, bytes calldata hookData)

@@ -23,12 +23,12 @@ contract MockCalldataDecoder {
         return data.decodeSignatureWithHookData();
     }
 
-    function decodeWrappedSignatureWithHookData(bytes calldata data)
+    function decodeSignatureWithKeyHashAndHookData(bytes calldata data)
         public
         pure
         returns (bytes32 keyHash, bytes memory signature, bytes memory hookData)
     {
-        return data.decodeWrappedSignatureWithHookData();
+        return data.decodeSignatureWithKeyHashAndHookData();
     }
 
     function decodeTypedDataSig(bytes calldata data)

@@ -251,14 +251,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
     }
 
-    function test_isValidSignature_invalidSignatureLength_invalidSigner() public {
-        bytes32 hash = keccak256("test");
-        bytes memory signature = new bytes(63);
-        vm.prank(address(mockERC1271VerifyingContract));
-        vm.expectRevert(IERC1271.InvalidSignatureLength.selector);
-        signerAccount.isValidSignature(hash, abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA));
-    }
-
     function test_isValidSignature_WebAuthnP256_invalidWrappedSignatureLength_reverts() public {
         TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
 
@@ -299,12 +291,12 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
 
-        mockHook.setIsValidSignatureReturnValue(_1271_MAGIC_VALUE);
+        mockHook.setIsValidSignatureReturnValue(true);
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
         vm.snapshotGasLastCall("isValidSignature_P256_withHook");
         assertEq(result, _1271_MAGIC_VALUE);
 
-        mockHook.setIsValidSignatureReturnValue(_1271_INVALID_VALUE);
+        mockHook.setIsValidSignatureReturnValue(false);
         vm.prank(address(mockERC1271VerifyingContract));
         result = signerAccount.isValidSignature(digest, wrappedSignature);
         assertEq(result, _1271_INVALID_VALUE);

@@ -21,7 +21,6 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
     function setUp() public {
         setUpDelegation();
         setUpTokens();
-        setUpERC1271();
     }
 
     function test_signPersonalSign_matches_signWrappedPersonalSign_ffi() public {
