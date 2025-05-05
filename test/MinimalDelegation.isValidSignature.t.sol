@@ -369,8 +369,27 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         bytes memory signature = signerTestKey.sign(wrappedPersonalSignDigest);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        // Should return the magic value when called offchain
-        vm.prank(address(0));
+
+        bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    function test_isValidSignature_WebAuthnP256_personalSign_isValid() public {
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+        
+        vm.prank(address(signerAccount));
+        signerAccount.register(webAuthnP256Key.toKey());
+
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
+        bytes32 wrappedPersonalSignDigest =
+            TypedDataSignBuilder.hashWrappedPersonalSign(messageHash, signerAccountDomainSeparator);
+
+        // Generate the webauthn signature, which is larger than 65 bytes. Ensure that the personal sign flow is used
+        bytes memory signature = webAuthnP256Key.sign(wrappedPersonalSignDigest);
+        bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+
         bytes4 result = signerAccount.isValidSignature(messageHash, wrappedSignature);
         assertEq(result, _1271_MAGIC_VALUE);
     }
@@ -381,8 +400,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         // Incorrectly do personal_sign instead of over the typed PersonalSign digest
         bytes memory signature = signerTestKey.sign(messageHash);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        // Should return the invalid value when called offchain
-        vm.prank(address(0));
+
         assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
     }
 

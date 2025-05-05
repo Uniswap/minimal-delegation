@@ -140,8 +140,10 @@ contract MinimalDelegation is
             }
         }
 
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(wrappedSignature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes calldata signature, bytes memory hookData) =
+            wrappedSignature.decodeSignatureWithKeyHashAndHookData();
+        // TEMP
+        bytes memory mSignature = signature;
 
         Key memory key = getKey(keyHash);
 
@@ -156,9 +158,9 @@ contract MinimalDelegation is
         // otherwise, validate the signature as a PersonalSign
         if (!isValid) {
             if (erc1271CallerIsSafe[msg.sender]) {
-                isValid = key.verify(digest, signature);
+                isValid = key.verify(digest, mSignature);
             } else {
-                isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
+                isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), mSignature);
             }
         }
 
