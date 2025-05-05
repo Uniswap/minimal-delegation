@@ -12,7 +12,6 @@ import {IKeyManagement} from "./IKeyManagement.sol";
 import {IMulticall} from "./IMulticall.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {BatchedCall} from "../libraries/BatchedCallLib.sol";
-import {Call} from "../libraries/CallLib.sol";
 import {SignedBatchedCall} from "../libraries/SignedBatchedCallLib.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
