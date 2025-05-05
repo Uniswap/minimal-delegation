@@ -7,9 +7,6 @@ pragma solidity ^0.8.0;
 ///      The key allows multiple independent nonce sequences
 ///      The sequence must be used in order (0, 1, 2, etc) for each key
 interface INonceManager {
-    /// @notice The event emitted when a nonce is invalidated
-    event NonceInvalidated(uint256 nonce);
-
     /// @notice The event emitted when a nonce sequence number is updated
     event NonceSequenceNumberUpdated(uint256 indexed key, uint256 seq);
 

@@ -21,7 +21,6 @@ abstract contract NonceManager is INonceManager, BaseAuthorization {
             if (delta > type(uint16).max) revert ExcessiveInvalidation();
         }
         nonceSequenceNumber[key] = targetSeq;
-        emit NonceInvalidated(newNonce);
         emit NonceSequenceNumberUpdated(key, targetSeq);
     }
 
