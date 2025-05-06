@@ -443,9 +443,9 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         bytes4 result = signerAccount.isValidSignature(digest, oldWrappedSignature);
         assertEq(result, _1271_MAGIC_VALUE);
 
-        // Update the salt, which changes the domain separator
+        // Update the salt prefix, which changes the domain separator
         vm.prank(address(signerAccount));
-        signerAccount.setSalt(keccak256(abi.encodePacked("new salt")));
+        signerAccount.setSalt(uint96(0x1));
 
         // Expect the old signature to be invalidated
         result = signerAccount.isValidSignature(digest, oldWrappedSignature);
