@@ -143,12 +143,9 @@ contract MinimalDelegation is
             wrappedSignature.decodeSignatureWithKeyHashAndHookData();
 
         Key memory key = getKey(keyHash);
-
-        bool isValid;
-
         /// Signature deduction flow as specified by ERC-7739
         // If the signature contains enough data for a TypedDataSign, try the TypedDataSign flow
-        isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature)
+        bool isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature)
         // If the signature is not valid as a TypedDataSign, try the NestedPersonalSign flow
         || (
             _isValidNestedPersonalSig(key, digest, domainSeparator(), signature)
