@@ -148,11 +148,13 @@ contract MinimalDelegation is
 
         /// Signature deduction flow as specified by ERC-7739
         // If the signature contains enough data for a TypedDataSign, try the TypedDataSign flow
-        isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature) 
-            // If the signature is not valid as a TypedDataSign, try the NestedPersonalSign flow
-            || (_isValidNestedPersonalSig(key, digest, domainSeparator(), signature) 
-                // Finally, if the ERC1271 caller is considered safe, try the raw verification flow
-                || (erc1271CallerIsSafe[msg.sender] && key.verify(digest, signature)));
+        isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature)
+        // If the signature is not valid as a TypedDataSign, try the NestedPersonalSign flow
+        || (
+            _isValidNestedPersonalSig(key, digest, domainSeparator(), signature)
+            // Finally, if the ERC1271 caller is considered safe, try the raw verification flow
+            || (erc1271CallerIsSafe[msg.sender] && key.verify(digest, signature))
+        );
 
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
