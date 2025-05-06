@@ -28,19 +28,6 @@ library CalldataDecoder {
         }
     }
 
-    /// @notice Decode the r and s values from a P256 signature
-    /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 r, bytes32 s)`
-    function decodeP256Signature(bytes calldata signature) internal pure returns (bytes32 r, bytes32 s) {
-        assembly ("memory-safe") {
-            if lt(signature.length, 0x40) {
-                mstore(0, SLICE_ERROR_SELECTOR)
-                revert(0x1c, 4)
-            }
-            r := calldataload(signature.offset)
-            s := calldataload(add(signature.offset, 0x20))
-        }
-    }
-
     /// @notice Decode the signature and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes hookData)`
     function decodeSignatureWithHookData(bytes calldata data)

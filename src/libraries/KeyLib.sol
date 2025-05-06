@@ -6,6 +6,7 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Settings, SettingsLib} from "./SettingsLib.sol";
 import {CalldataDecoder} from "./CalldataDecoder.sol";
+import {console2} from "forge-std/console2.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -66,9 +67,13 @@ library KeyLib {
             (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
             isValid = P256.verify(_hash, r, s, x, y);
         } else if (key.keyType == KeyType.WebAuthnP256) {
+            console2.log("verify WebAuthnP256");
             (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));
+            console2.log("x %s", x);
+            console2.log("y %s", y);
             WebAuthn.WebAuthnAuth memory auth = abi.decode(signature, (WebAuthn.WebAuthnAuth));
             isValid = WebAuthn.verify({challenge: abi.encode(_hash), requireUV: false, webAuthnAuth: auth, x: x, y: y});
+            console2.log("isValid %s", isValid);
         } else {
             isValid = false;
         }

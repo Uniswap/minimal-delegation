@@ -11,10 +11,6 @@ contract MockCalldataDecoder {
         return data.removeSelector();
     }
 
-    function decodeP256Signature(bytes calldata data) public pure returns (bytes32 r, bytes32 s) {
-        return data.decodeP256Signature();
-    }
-
     function decodeSignatureWithHookData(bytes calldata data)
         public
         pure

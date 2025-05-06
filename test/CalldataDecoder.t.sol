@@ -25,13 +25,6 @@ contract CalldataDecoderTest is Test {
         assertEq(two, 2);
     }
 
-    function test_decodeP256Signature_fuzz(bytes32 arg1, bytes32 arg2) public view {
-        bytes memory data = abi.encode(arg1, arg2);
-        (bytes32 _arg1, bytes32 _arg2) = decoder.decodeP256Signature(data);
-        assertEq(_arg1, arg1);
-        assertEq(_arg2, arg2);
-    }
-
     function test_decodeSignatureWithHookData_fuzz(bytes memory arg1, bytes memory arg2) public view {
         bytes memory data = abi.encode(arg1, arg2);
         (bytes memory _arg1, bytes memory _arg2) = decoder.decodeSignatureWithHookData(data);
