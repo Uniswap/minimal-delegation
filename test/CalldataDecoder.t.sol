@@ -24,4 +24,34 @@ contract CalldataDecoderTest is Test {
         assertEq(one, 1);
         assertEq(two, 2);
     }
+
+    function test_decodeSignatureWithHookData_fuzz(bytes memory arg1, bytes memory arg2) public view {
+        bytes memory data = abi.encode(arg1, arg2);
+        (bytes memory _arg1, bytes memory _arg2) = decoder.decodeSignatureWithHookData(data);
+        assertEq(_arg1, arg1);
+        assertEq(_arg2, arg2);
+    }
+
+    function test_decodeSignatureWithKeyHashAndHookData_fuzz(bytes32 arg1, bytes memory arg2, bytes memory arg3)
+        public
+        view
+    {
+        bytes memory data = abi.encode(arg1, arg2, arg3);
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeSignatureWithKeyHashAndHookData(data);
+        assertEq(_arg1, arg1);
+        assertEq(_arg2, arg2);
+        assertEq(_arg3, arg3);
+    }
+
+    function test_decodeTypedDataSig_fuzz(bytes memory arg1, bytes32 arg2, bytes32 arg3, string memory arg4)
+        public
+        view
+    {
+        bytes memory data = abi.encode(arg1, arg2, arg3, arg4);
+        (bytes memory _arg1, bytes32 _arg2, bytes32 _arg3, string memory _arg4) = decoder.decodeTypedDataSig(data);
+        assertEq(_arg1, arg1);
+        assertEq(_arg2, arg2);
+        assertEq(_arg3, arg3);
+        assertEq(_arg4, arg4);
+    }
 }
