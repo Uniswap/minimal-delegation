@@ -5,12 +5,16 @@ import {
   import {
     createWalletClient,
     http,
+    type Address,
     toHex,
     pad,
+    createPublicClient,
+    verifyMessage,
   } from 'viem'
   
 import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData} from './utils/constants';
 import { erc7739Actions } from 'viem/experimental'
+import { hashMessage } from 'viem/experimental/erc7739';
 
 // Read command line arguments
 const args = process.argv.slice(2);
@@ -28,6 +32,10 @@ const jsonInput = JSON.parse(args[0]) as WrappedPersonalSignInputData;
 const { privateKey, verifyingContract, message, prefixedSalt } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
+
+const publicClient = createPublicClient({
+    transport: http('http://127.0.0.1:8545') // Use Anvil's default URL for local development
+})
  
 const walletClient = createWalletClient({
     account,
