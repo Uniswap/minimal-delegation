@@ -87,11 +87,11 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCall.hash())));
     }
 
-    function test_setSalt() public {
+    function test_updateSalt() public {
         uint96 _prefix = uint96(0x1);
 
         vm.prank(address(signerAccount));
-        signerAccount.setSalt(_prefix);
+        signerAccount.updateSalt(_prefix);
 
         (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
             signerAccount.eip712Domain();

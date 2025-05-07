@@ -445,7 +445,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
         // Update the salt prefix, which changes the domain separator
         vm.prank(address(signerAccount));
-        signerAccount.setSalt(uint96(0x1));
+        signerAccount.updateSalt(uint96(0x1));
 
         // Expect the old signature to be invalidated
         result = signerAccount.isValidSignature(digest, oldWrappedSignature);

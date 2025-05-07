@@ -95,7 +95,7 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     }
 
     /// @inheritdoc IEIP712
-    function setSalt(uint96 prefix) external onlyThis {
+    function updateSalt(uint96 prefix) external onlyThis {
         _saltPrefix = prefix;
         // per EIP-5267, emit an event to notify that the domain separator has changed
         emit EIP712DomainChanged();
