@@ -37,6 +37,11 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
     }
 
+    function test_entrypoint_gas() public {
+        signerAccount.ENTRY_POINT();
+        vm.snapshotGasLastCall("entrypoint");
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
