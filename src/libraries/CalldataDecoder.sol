@@ -63,11 +63,7 @@ library CalldataDecoder {
             appSeparator := calldataload(add(data.offset, 0x20))
             contentsHash := calldataload(add(data.offset, 0x40))
         }
-        bytes calldata contentsDescrBytes = toBytes(data, 3);
-        assembly {
-            contentsDescr.offset := contentsDescrBytes.offset
-            contentsDescr.length := contentsDescrBytes.length
-        }
+        contentsDescr = string(toBytes(data, 3));
     }
 
     /// @notice Decode the `_arg`-th element in `_bytes` as `bytes`
