@@ -49,7 +49,7 @@ abstract contract ERC7739 {
         // If the computed digest is 0, the contentsDescr was invalid
         if (computed == bytes32(0)) return false;
 
-        return key.verify(Xcomputed, signature);
+        return key.verify(computed, signature);
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash

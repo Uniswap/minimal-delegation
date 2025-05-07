@@ -150,7 +150,7 @@ contract MinimalDelegation is
         || (
             _isValidNestedPersonalSig(key, digest, domainSeparator(), signature)
             // Finally, if the ERC1271 caller is considered safe, try the raw verification flow
-            || (erc1271CallerIsSafe[msg.sender] && key.verify(digest, signature))
+            || ((erc1271CallerIsSafe[msg.sender] || key.isRootKey()) && key.verify(digest, signature))
         );
 
         // Early return if the signature is invalid

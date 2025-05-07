@@ -342,14 +342,14 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         assertEq(result, _1271_MAGIC_VALUE);
     }
 
-    function test_isValidSignature_personalSign_notTypedDataSign_isInvalid() public {
+    function test_isValidSignature_rootKey_personalSign_notNestedPersonalSign_isValid() public {
         string memory message = "test";
         bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
-        // Incorrectly do personal_sign instead of over the typed PersonalSign digest
+        // Incorrectly do personal_sign instead of over the typed PersonalSign digest, so the 7739 flow will fail
         bytes memory signature = signerTestKey.sign(messageHash);
         bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-        // Should return the invalid value
-        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
+        // But, it should fallback to raw ECDSA recover since it is the root key
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_MAGIC_VALUE);
     }
 
     /// forge-config: default.isolate = true
