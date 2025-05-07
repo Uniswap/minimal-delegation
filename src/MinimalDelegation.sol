@@ -63,14 +63,15 @@ contract MinimalDelegation is
         _processBatch(batchedCall, keyHash);
     }
 
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature) public payable {
+    /// @inheritdoc IMinimalDelegation
+    function execute(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _processBatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
     /// @inheritdoc IERC7821
-    function execute(bytes32 mode, bytes memory executionData) external payable override {
+    function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
         BatchedCall memory batchedCall = BatchedCall({calls: calls, revertOnFailure: mode.revertOnFailure()});
@@ -137,7 +138,7 @@ contract MinimalDelegation is
             }
         }
 
-        (bytes32 keyHash, bytes calldata signature, bytes memory hookData) =
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
             wrappedSignature.decodeSignatureWithKeyHashAndHookData();
 
         Key memory key = getKey(keyHash);
