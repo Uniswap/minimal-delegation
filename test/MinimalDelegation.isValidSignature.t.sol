@@ -42,18 +42,21 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
             contentsHash.hashTypedDataSign(signerAccountDomainBytes, appDomainSeparator, contentsName, contentsType);
     }
 
-    /**********************
+    /**
+     *
      * MARK: ERC7739 sentinel value test
-     **********************/
-
+     *
+     */
     function test_isValidSignature_ERC7739_magicValue() public {
         bytes4 result = signerAccount.isValidSignature(_ERC7739_HASH, "");
         assertEq(result, _ERC7739_MAGIC_VALUE);
     }
 
-    /**********************
+    /**
+     *
      * MARK: Valid signature tests
-     **********************/
+     *
+     */
 
     /**
      * Scenario: P256 key
@@ -151,7 +154,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.snapshotGasLastCall("isValidSignature_sep256k1_typedDataSign");
         assertEq(result, _1271_MAGIC_VALUE);
     }
-    
+
     /**
      * Scenario: P256 key with hook
      * 1. Typed data sign
@@ -297,10 +300,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.snapshotGasLastCall("isValidSignature_P256_typedData_notTypedDataSign_safeERC1271Caller");
     }
 
-    /**********************
+    /**
+     *
      * MARK: Expired key tests
-     **********************/
-
+     *
+     */
     function test_isValidSignature_sep256k1_typedDataSign_expiredKey_reverts() public {
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, 0xb0b);
         bytes memory signature = key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
@@ -345,9 +349,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    /**********************
+    /**
+     *
      * MARK: Invalid signer tests
-     **********************/
+     *
+     */
 
     /**
      * Scenario: Root key
@@ -355,7 +361,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 2. Not nested personal sign
      * 3. Not safe ERC1271 caller
      * = invalid signer
-     */    
+     */
     function test_isValidSignature_rootKey_notTypedDataSign_invalidSigner() public {
         // Built by the ERC1271 contract which hashes its domain separator to the contents hash
         (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) = getERC1271Fixtures();
@@ -411,10 +417,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    /**********************
+    /**
+     *
      * MARK: Other revert tests
-     **********************/
-
+     *
+     */
     function test_isValidSignature_validSep256k1_reverts_keyDoesNotExist() public {
         // sign with an unregistered private key
         uint256 invalidPrivateKey = 0xdeadbeef;
@@ -432,10 +439,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         signerAccount.isValidSignature(digest, wrappedSignature);
     }
 
-    /**********************
+    /**
+     *
      * MARK: Invalid wrapped signature construction tests
-     **********************/
-
+     *
+     */
     function test_isValidSignature_WebAuthnP256_invalidWrappedSignatureLength_reverts() public {
         TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
 
@@ -472,5 +480,46 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.prank(address(mockERC1271VerifyingContract));
         // ensure the call returns the ERC1271 invalid magic value
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    function test_isValidSignature_newDomainSeparatorInvalidatesOldSignatures() public {
+        bytes memory signature = signerTestKey.sign(TEST_TYPED_DATA_SIGN_DIGEST);
+        (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) = getERC1271Fixtures();
+        bytes memory typedDataSignSignature =
+            TypedDataSignBuilder.buildTypedDataSignSignature(signature, appDomainSeparator, contentsHash, contentsDescr);
+        bytes memory oldWrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
+        // ensure the call returns the ERC1271 magic value
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
+        vm.prank(address(mockERC1271VerifyingContract));
+
+        // Make sure it is a valid signature before the domain separator is updated
+        bytes4 result = signerAccount.isValidSignature(digest, oldWrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+
+        // Update the salt, which changes the domain separator
+        vm.prank(address(signerAccount));
+        signerAccount.setSalt(keccak256(abi.encodePacked("new salt")));
+
+        // Expect the old signature to be invalidated
+        result = signerAccount.isValidSignature(digest, oldWrappedSignature);
+        assertEq(result, _1271_INVALID_VALUE);
+
+        // Build the new typed data sign digest
+        // Everything stays the same besides the signer account's domainBytes
+        bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
+        (string memory contentsName, string memory contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        bytes32 newTypedDataSignDigest =
+            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appDomainSeparator, contentsName, contentsType);
+
+        // Build the new wrapped signature
+        bytes memory newSignature = signerTestKey.sign(newTypedDataSignDigest);
+        bytes memory newTypedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
+            newSignature, appDomainSeparator, contentsHash, contentsDescr
+        );
+
+        // Ensure we can sign with the new domain separator
+        bytes memory newWrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, newTypedDataSignSignature, EMPTY_HOOK_DATA);
+        result = signerAccount.isValidSignature(digest, newWrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
     }
 }

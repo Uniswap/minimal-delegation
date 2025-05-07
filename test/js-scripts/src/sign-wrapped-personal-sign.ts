@@ -12,7 +12,7 @@ import {
     verifyMessage,
   } from 'viem'
   
-import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData} from './utils/constants';
+import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData, DEFAULT_DOMAIN_SALT} from './utils/constants';
 import { erc7739Actions } from 'viem/experimental'
 import { hashMessage } from 'viem/experimental/erc7739';
 
@@ -49,7 +49,7 @@ async function signWrappedPersonalSign(): Promise<void> {
             version: VERIFIER_DOMAIN_VERSION,
             verifyingContract: verifyingContract,
             chainId: 31337, // Default Anvil chain ID
-            // Salt is omitted from personal_sign
+            salt: DEFAULT_DOMAIN_SALT
         }
 
         // For some reason this is not working 

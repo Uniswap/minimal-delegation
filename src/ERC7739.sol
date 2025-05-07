@@ -5,8 +5,6 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
-import {TypedDataSignLib} from "./libraries/TypedDataSignLib.sol";
-import {PersonalSignLib} from "./libraries/PersonalSignLib.sol";
 
 /// @title ERC7739
 /// @notice An abstract contract that implements the ERC-7739 standard
@@ -49,7 +47,7 @@ abstract contract ERC7739 {
         // If the computed digest is 0, the contentsDescr was invalid
         if (computed == bytes32(0)) return false;
 
-        return key.verify(Xcomputed, signature);
+        return key.verify(computed, signature);
     }
 
     /// @notice Verifies a personal sign signature against the key over the hash

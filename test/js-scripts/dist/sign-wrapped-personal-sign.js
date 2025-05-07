@@ -15133,6 +15133,7 @@ init_pad();
 // src/utils/constants.ts
 var DOMAIN_NAME = "Uniswap Minimal Delegation";
 var DOMAIN_VERSION = "1";
+var DEFAULT_DOMAIN_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 // node_modules/viem/_esm/experimental/erc7739/actions/signMessage.js
 init_parseAccount();
@@ -15290,9 +15291,9 @@ async function signWrappedPersonalSign() {
       name: DOMAIN_NAME,
       version: DOMAIN_VERSION,
       verifyingContract,
-      chainId: 31337
+      chainId: 31337,
       // Default Anvil chain ID
-      // Salt is omitted from personal_sign
+      salt: DEFAULT_DOMAIN_SALT
     };
     const signature = await walletClient.signMessage({
       account,
