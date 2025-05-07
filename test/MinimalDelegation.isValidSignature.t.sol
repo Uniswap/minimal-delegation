@@ -410,6 +410,34 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     }
 
     /**
+     * Scenario: WebAuthn key
+     * 1. Not raw signature
+     * 2. Not typed data sign
+     * 3. Not nested personal sign
+     * 4. Safe ERC1271 caller
+     * = valid signature
+     */
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
+    function test_isValidSignature_WebAuthnP256_wrappedSignature_safeERC1271Caller_isValid_gas() public {
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(webAuthnP256Key.toKey());
+        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
+        vm.stopPrank();
+
+        (,, bytes32 contentsHash) = getERC1271Fixtures();
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
+        bytes memory signature = webAuthnP256Key.sign(digest);
+        bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
+
+        vm.prank(address(mockERC1271VerifyingContract));
+        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+        vm.snapshotGasLastCall("isValidSignature_WebAuthnP256_wrappedSignature_safeERC1271Caller");
+    }
+
+    /**
      *
      * MARK: Expired key tests
      *
@@ -450,6 +478,28 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.startPrank(address(signerAccount));
         signerAccount.register(p256Key.toKey());
         signerAccount.update(p256Key.toKeyHash(), keySettings);
+        vm.stopPrank();
+
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
+        vm.expectRevert(abi.encodeWithSelector(IKeyManagement.KeyExpired.selector, uint40(block.timestamp - 1)));
+        vm.prank(address(mockERC1271VerifyingContract));
+        signerAccount.isValidSignature(digest, wrappedSignature);
+    }
+
+    function test_isValidSignature_WebAuthnP256_wrappedSignature___typedDataSign_expiredKey_reverts() public {
+        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
+        bytes memory signature = webAuthnP256Key.sign(TEST_TYPED_DATA_SIGN_DIGEST);
+        (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) = getERC1271Fixtures();
+        bytes memory typedDataSignSignature =
+            TypedDataSignBuilder.buildTypedDataSignSignature(signature, appDomainSeparator, contentsHash, contentsDescr);
+        bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
+
+        vm.warp(100);
+        Settings keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp - 1));
+
+        vm.startPrank(address(signerAccount));
+        signerAccount.register(webAuthnP256Key.toKey());
+        signerAccount.update(webAuthnP256Key.toKeyHash(), keySettings);
         vm.stopPrank();
 
         bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
@@ -638,6 +688,26 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     }
 
     /**
+     * Scenario: Root key sent a wrapped signature, ERC1271 caller is safe, but the signature is incorrect
+     * 1. Not raw signature
+     * 2. Not typed data sign
+     * 3. Not nested personal sign
+     * 4. Safe ERC1271 caller
+     * = invalid signer
+     */
+    function test_isValidSignature_rootKey_wrappedSignature_safeERC1271Caller_invalidSigner() public {
+        vm.prank(address(signerAccount));
+        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
+
+        bytes32 digest = keccak256("test");
+        bytes memory signature = signerTestKey.sign(keccak256("incorrect"));
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+
+        vm.prank(address(mockERC1271VerifyingContract));
+        assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    /**
      * Scenario: Root key did not sign for any valid flow
      * 1. Not raw signature
      * 2. Not typed data sign
@@ -731,6 +801,29 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
         vm.prank(address(mockERC1271VerifyingContract));
         // ensure the call returns the ERC1271 invalid magic value
         assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    /**
+     * Scenario: Root key sent a nested personal sign but did not sign the correct digest
+     * @dev this would actually succeed if it was only a raw signature, 
+     *      but if a wrapped signature is passed in we enforce that it is valid for NestedPersonalSign
+     * 1. Not raw signature
+     * 2. Not typed data sign
+     * 3. Nested personal sign
+     * 4. Not safe ERC1271 caller
+     * = invalid signer
+     */
+    function test_isValidSignature_rootKey_wrappedSignature__nestedPersonalSign_invalidSigner() public view {
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+
+        // Sign the unsafe `messageHash` instead of `wrappedPersonalSignDigest` below
+        // wrappedPersonalSignDigest =
+        //     TypedDataSignBuilder.hashWrappedPersonalSign(messageHash, signerAccountDomainSeparator);
+
+        bytes memory signature = signerTestKey.sign(messageHash);
+        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
     }
 
     /**

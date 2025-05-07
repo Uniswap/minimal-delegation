@@ -5,6 +5,7 @@
   "isValidSignature_P256_wrappedSignature_notTypedDataSign_safeERC1271Caller": "287023",
   "isValidSignature_WebAuthnP256_wrappedSignature___typedDataSign": "47004",
   "isValidSignature_WebAuthnP256_wrappedSignature__nestedPersonalSign": "39399",
+  "isValidSignature_WebAuthnP256_wrappedSignature_safeERC1271Caller": "48575",
   "isValidSignature_rootKey_rawSignature": "4880",
   "isValidSignature_rootKey_wrappedSignature___typedDataSign": "15730",
   "isValidSignature_rootKey_wrappedSignature__nestedPersonalSign": "8171",
