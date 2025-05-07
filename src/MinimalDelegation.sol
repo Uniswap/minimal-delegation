@@ -136,15 +136,11 @@ contract MinimalDelegation is
             if (wrappedSignature.length == uint256(0)) {
                 // Forces the compiler to optimize for smaller bytecode size.
                 if (uint256(digest) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
-            } 
+            }
             // If the signature is 65 bytes, it is a raw ECDSA signature and MUST be verified as the root key
-            else if(wrappedSignature.length == 65) {
-                if(KeyLib.toRootKey().verify(digest, wrappedSignature)) {
+            else if (wrappedSignature.length == 65) {
+                if (KeyLib.toRootKey().verify(digest, wrappedSignature)) {
                     return _1271_MAGIC_VALUE;
-                }
-                // If the signature is not valid as the root key, we can't verify it without at least the keyHash
-                else {
-                    return _1271_INVALID_VALUE;
                 }
             }
         }
