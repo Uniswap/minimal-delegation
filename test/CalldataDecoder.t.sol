@@ -24,4 +24,9 @@ contract CalldataDecoderTest is Test {
         assertEq(one, 1);
         assertEq(two, 2);
     }
+
+    function test_removeSelector_lessThan4Bytes() public view {
+        bytes memory selector = abi.encode(0x4e);
+        decoder.removeSelector(selector);
+    }
 }
