@@ -189,7 +189,7 @@ contract MinimalDelegation is
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature)
+    function _handleVerifySignature(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature)
         private
     {
         _useNonce(signedBatchedCall.nonce);
