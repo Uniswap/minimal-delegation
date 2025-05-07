@@ -9,6 +9,8 @@ import {MockCalldataDecoder} from "./utils/MockCalldataDecoder.sol";
 contract CalldataDecoderTest is Test {
     using CalldataDecoder for bytes;
 
+    error SliceOutOfBounds();
+
     MockCalldataDecoder decoder;
 
     function setUp() public {
@@ -25,8 +27,9 @@ contract CalldataDecoderTest is Test {
         assertEq(two, 2);
     }
 
-    function test_removeSelector_lessThan4Bytes() public view {
-        bytes memory selector = abi.encode(0x4e);
+    function test_removeSelector_lessThan4Bytes_reverts() public {
+        bytes memory selector = hex"4e";
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.removeSelector(selector);
     }
 }

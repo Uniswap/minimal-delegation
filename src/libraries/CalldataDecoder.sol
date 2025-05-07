@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import "forge-std/console2.sol";
-
 /// @title CalldataDecoder
 library CalldataDecoder {
     using CalldataDecoder for bytes;
@@ -14,16 +12,19 @@ library CalldataDecoder {
     uint256 constant OFFSET_OR_LENGTH_MASK = 0xffffffff;
     uint256 constant OFFSET_OR_LENGTH_MASK_AND_WORD_ALIGN = 0xffffffe0;
 
+    /// error SliceOutOfBounds();
+    uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
+
     /// @notice Removes the selector from the calldata and returns the encoded params.
     function removeSelector(bytes calldata data) internal pure returns (bytes calldata params) {
-        uint256 length;
         assembly ("memory-safe") {
-            length := data.length
+            if lt(data.length, 4) {
+                mstore(0, SLICE_ERROR_SELECTOR)
+                revert(0x1c, 4)
+            }
             params.offset := add(data.offset, 4)
             params.length := sub(data.length, 4)
         }
-
-        console2.log("length", length);
     }
 
     /// @notice Decode the signature and hook data from the calldata

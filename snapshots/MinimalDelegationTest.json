@@ -1,0 +1,10 @@
+{
+  "minimalDelegationEntry bytecode size": "24035",
+  "register": "184762",
+  "revoke": "54590",
+  "validateUserOp_invalidSignature": "33680",
+  "validateUserOp_missingAccountFunds": "64375",
+  "validateUserOp_no_missingAccountFunds": "33737",
+  "validateUserOp_withHook_invalidSignature": "313753",
+  "validateUserOp_withHook_validSignature": "65943"
+}
