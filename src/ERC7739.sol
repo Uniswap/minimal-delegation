@@ -4,8 +4,6 @@ pragma solidity ^0.8.23;
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
-import {TypedDataSignLib} from "./libraries/TypedDataSignLib.sol";
-import {PersonalSignLib} from "./libraries/PersonalSignLib.sol";
 
 /// @title ERC7739
 /// @notice An abstract contract that implements the ERC-7739 standard
