@@ -33,8 +33,9 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         bytes32 wrappedPersonalSignDigest = messageHash.hashWrappedPersonalSign(signerAccountDomainSeparator);
 
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
-        (bytes memory signature) = ffi_signWrappedPersonalSign(signerPrivateKey, verifyingContract, message);
+        (bytes memory signature) = ffi_signWrappedPersonalSign(signerPrivateKey, verifyingContract, salt, message);
         assertEq(signature, key.sign(wrappedPersonalSignDigest));
     }
 
@@ -57,10 +58,12 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
         (bytes memory signature) = ffi_signWrappedTypedData(
             signerPrivateKey,
             verifyingContract,
+            salt,
             DOMAIN_NAME,
             DOMAIN_VERSION,
             address(mockERC1271VerifyingContract),
@@ -92,10 +95,12 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
         (bytes memory signature) = ffi_signWrappedTypedData(
             signerPrivateKey,
             verifyingContract,
+            salt,
             DOMAIN_NAME,
             DOMAIN_VERSION,
             address(mockERC1271VerifyingContract),

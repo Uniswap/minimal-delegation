@@ -4,11 +4,11 @@ import {type Address} from "viem"
 // Define the domain name and version. Note chainId and verifyingContract are not constants.
 export const DOMAIN_NAME = 'Uniswap Minimal Delegation';
 export const DOMAIN_VERSION = "1";
-export const DEFAULT_DOMAIN_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export interface InputData {
   privateKey: string;
   verifyingContract: Address;
+  prefixedSalt: `0x${string}`;
 }
 
 // Define the struct types

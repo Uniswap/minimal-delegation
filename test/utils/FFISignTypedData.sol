@@ -13,10 +13,11 @@ contract FFISignTypedData is JavascriptFfi {
     function ffi_signTypedData(
         uint256 privateKey,
         SignedBatchedCall memory signedBatchedCall,
-        address verifyingContract
+        address verifyingContract,
+        bytes32 prefixedSalt
     ) public returns (bytes memory) {
         // Create JSON object
-        string memory jsonObj = _createJsonInput(privateKey, signedBatchedCall, verifyingContract);
+        string memory jsonObj = _createJsonInput(privateKey, signedBatchedCall, verifyingContract, prefixedSalt);
 
         // Run the JavaScript script
         return runScript("sign-typed-data", jsonObj);
@@ -25,6 +26,7 @@ contract FFISignTypedData is JavascriptFfi {
     function ffi_signWrappedTypedData(
         uint256 privateKey,
         address verifyingContract,
+        bytes32 prefixedSalt,
         string memory appDomainName,
         string memory appDomainVersion,
         address appVerifyingContract,
@@ -32,19 +34,19 @@ contract FFISignTypedData is JavascriptFfi {
     ) public returns (bytes memory) {
         // Create JSON object
         string memory jsonObj = _createWrappedTypedDataJsonInput(
-            privateKey, verifyingContract, appDomainName, appDomainVersion, appVerifyingContract, contents
+            privateKey, verifyingContract, prefixedSalt, appDomainName, appDomainVersion, appVerifyingContract, contents
         );
 
         // Run the JavaScript script
         return runScript("sign-wrapped-typed-data", jsonObj);
     }
 
-    function ffi_signWrappedPersonalSign(uint256 privateKey, address verifyingContract, string memory message)
+    function ffi_signWrappedPersonalSign(uint256 privateKey, address verifyingContract, bytes32 prefixedSalt, string memory message)
         public
         returns (bytes memory)
     {
         // Create JSON object
-        string memory jsonObj = _createWrappedPersonalSignJsonInput(privateKey, verifyingContract, message);
+        string memory jsonObj = _createWrappedPersonalSignJsonInput(privateKey, verifyingContract, prefixedSalt, message);
 
         // Run the JavaScript script
         return runScript("sign-wrapped-personal-sign", jsonObj);
@@ -53,7 +55,7 @@ contract FFISignTypedData is JavascriptFfi {
     /**
      * @dev Creates a JSON input string for the JavaScript script
      */
-    function _createJsonInput(uint256 privateKey, SignedBatchedCall memory signedBatchedCall, address verifyingContract)
+    function _createJsonInput(uint256 privateKey, SignedBatchedCall memory signedBatchedCall, address verifyingContract, bytes32 prefixedSalt)
         internal
         pure
         returns (string memory)
@@ -119,6 +121,9 @@ contract FFISignTypedData is JavascriptFfi {
             '"verifyingContract":"',
             vm.toString(verifyingContract),
             '",',
+            '"prefixedSalt":"',
+            vm.toString(prefixedSalt),
+            '",',
             '"signedBatchedCall":',
             signedBatchedCallJson,
             "}"
@@ -132,6 +137,7 @@ contract FFISignTypedData is JavascriptFfi {
     function _createWrappedTypedDataJsonInput(
         uint256 privateKey,
         address verifyingContract,
+        bytes32 prefixedSalt,
         string memory appDomainName,
         string memory appDomainVersion,
         address appVerifyingContract,
@@ -176,6 +182,9 @@ contract FFISignTypedData is JavascriptFfi {
             '"verifyingContract":"',
             vm.toString(verifyingContract),
             '",',
+            '"prefixedSalt":"',
+            vm.toString(prefixedSalt),
+            '",',
             '"appDomainName":"',
             appDomainName,
             '",',
@@ -194,7 +203,7 @@ contract FFISignTypedData is JavascriptFfi {
         return jsonObj;
     }
 
-    function _createWrappedPersonalSignJsonInput(uint256 privateKey, address verifyingContract, string memory message)
+    function _createWrappedPersonalSignJsonInput(uint256 privateKey, address verifyingContract, bytes32 prefixedSalt, string memory message)
         internal
         pure
         returns (string memory)
@@ -206,6 +215,9 @@ contract FFISignTypedData is JavascriptFfi {
             '",',
             '"verifyingContract":"',
             vm.toString(verifyingContract),
+            '",',
+            '"prefixedSalt":"',
+            vm.toString(prefixedSalt),
             '",',
             '"message":"',
             message,

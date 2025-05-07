@@ -80,8 +80,9 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
-        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCall, verifyingContract);
+        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCall, verifyingContract, salt);
 
         assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCall.hash())));
     }
