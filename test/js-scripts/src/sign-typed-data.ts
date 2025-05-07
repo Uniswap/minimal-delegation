@@ -13,7 +13,7 @@ import {
   pad,
 } from 'viem'
 
-import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall, InputData} from './utils/constants';
+import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall, InputData, DEFAULT_DOMAIN_SALT} from './utils/constants';
 
 
 interface SignedBatchedCallInputData extends InputData {
@@ -38,7 +38,8 @@ const domain = {
   name: DOMAIN_NAME,
   version: DOMAIN_VERSION,
   chainId: 31337, // Default Anvil chain ID
-  verifyingContract
+  verifyingContract,
+  salt: DEFAULT_DOMAIN_SALT
 } as const;
 
 
