@@ -6,9 +6,9 @@
   "execute_BATCHED_CALL_opData_singleCall_native": "93668",
   "execute_BATCHED_CALL_opData_twoCalls": "129487",
   "execute_BATCHED_CALL_singleCall": "59723",
-  "execute_BATCHED_CALL_singleCall_native": "59786",
+  "execute_BATCHED_CALL_singleCall_native": "59742",
   "execute_BATCHED_CALL_twoCalls": "95570",
   "execute_invalidMode_reverts": "23079",
   "execute_signedBatchedCallL_executor_singleCall": "93114",
-  "multicall": "178327"
+  "multicall": "178283"
 }

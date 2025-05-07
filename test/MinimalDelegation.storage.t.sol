@@ -70,7 +70,7 @@ contract MinimalDelegationStorageTest is DelegationHandler {
 
     function test_allowance() public {
         vm.record();
-        signerAccount.allowance(address(0));
+        signerAccount.nativeAllowance(address(0));
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
         assertEq(readSlots.length, 1);
         assertEq(writeSlots.length, 0);
