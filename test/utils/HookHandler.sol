@@ -6,10 +6,13 @@ import {IHook} from "src/interfaces/IHook.sol";
 import {MockHook} from "./MockHook.sol";
 
 abstract contract HookHandler is Test {
+    MockHook internal noHooks;
     MockHook internal mockHook;
     MockHook internal mockValidationHook;
     MockHook internal mockExecutionHook;
 
+    /// 0x0000 ... 0000
+    address payable constant NO_HOOKS = payable(0x0000000000000000000000000000000000000000);
     /// 0x1111 ... 1111
     address payable constant ALL_HOOKS = payable(0xf00000000000000000000000000000000000000f);
     /// 0x1111 ... 0111
@@ -21,14 +24,17 @@ abstract contract HookHandler is Test {
 
     function setUpHooks() public {
         MockHook impl = new MockHook();
+        vm.etch(NO_HOOKS, address(impl).code);
         vm.etch(ALL_HOOKS, address(impl).code);
         vm.etch(ALL_VALIDATION_HOOKS, address(impl).code);
         vm.etch(ALL_EXECUTION_HOOKS, address(impl).code);
 
+        noHooks = MockHook(NO_HOOKS);
         mockHook = MockHook(ALL_HOOKS);
         mockValidationHook = MockHook(ALL_VALIDATION_HOOKS);
         mockExecutionHook = MockHook(ALL_EXECUTION_HOOKS);
 
+        vm.label(NO_HOOKS, "NoHooks");
         vm.label(ALL_HOOKS, "AllMockHook");
         vm.label(ALL_VALIDATION_HOOKS, "ValidationMockHook");
         vm.label(ALL_EXECUTION_HOOKS, "ExecutionMockHook");
