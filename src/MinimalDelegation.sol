@@ -119,7 +119,7 @@ contract MinimalDelegation is
         validationData =
             isValid ? uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED : SIG_VALIDATION_FAILED;
 
-        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, isValid, hookData);
+        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, validationData, hookData);
     }
 
     /// @inheritdoc ERC1271

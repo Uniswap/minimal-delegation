@@ -37,11 +37,11 @@ library HooksLib {
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
-        bool isValid,
+        uint256 validationData,
         bytes memory hookData
     ) internal view {
         if (self.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
-            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, isValid, hookData);
+            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, validationData, hookData);
             if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
         }
     }

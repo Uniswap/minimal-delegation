@@ -34,7 +34,7 @@ contract MockHook is IHook {
         _beforeExecuteRevertData = revertData;
     }
 
-    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, bool, bytes calldata)
+    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, uint256, bytes calldata)
         external
         view
         returns (bytes4 selector)
