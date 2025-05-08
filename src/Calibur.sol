@@ -197,6 +197,9 @@ contract Calibur is
     function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
         private
     {
+        uint256 deadline = signedBatchedCall.deadline;
+        if (deadline != 0 && block.timestamp > deadline) revert SignatureExpired();
+
         _useNonce(signedBatchedCall.nonce);
 
         (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));

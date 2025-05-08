@@ -424,4 +424,53 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         assertEq(result, _1271_MAGIC_VALUE);
         vm.snapshotGasLastCall("isValidSignature_P256_typedData_notNested_safeERC1271Caller");
     }
+
+    function test_isValidSignature_newDomainSeparatorInvalidatesOldSignatures() public {
+        bytes memory signature = signerTestKey.sign(TEST_TYPED_DATA_SIGN_DIGEST);
+        bytes memory typedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
+            signature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
+        );
+        bytes memory oldWrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, typedDataSignSignature, EMPTY_HOOK_DATA);
+        // ensure the call returns the ERC1271 magic value
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(TEST_CONTENTS_HASH);
+        vm.prank(address(mockERC1271VerifyingContract));
+
+        // Make sure it is a valid signature before the domain separator is updated
+        bytes4 result = signerAccount.isValidSignature(digest, oldWrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+
+        // Update the salt, which changes the domain separator
+        vm.prank(address(signerAccount));
+        signerAccount.setSalt(keccak256(abi.encodePacked("new salt")));
+
+        // Expect the old signature to be invalidated
+        result = signerAccount.isValidSignature(digest, oldWrappedSignature);
+        assertEq(result, _1271_INVALID_VALUE);
+
+        // Build the new typed data sign digest
+        // Everything stays the same besides the signer account's domainBytes
+        bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
+        bytes32 newTypedDataSignDigest = TEST_CONTENTS_HASH.hashTypedDataSign(
+            signerAccountDomainBytes, TEST_APP_DOMAIN_SEPARATOR, TEST_CONTENTS_DESCR
+        );
+
+        // Build the new wrapped signature
+        bytes memory newSignature = signerTestKey.sign(newTypedDataSignDigest);
+        bytes memory newTypedDataSignSignature = TypedDataSignBuilder.buildTypedDataSignSignature(
+            newSignature,
+            TEST_APP_DOMAIN_SEPARATOR,
+            TEST_CONTENTS_HASH,
+            TEST_CONTENTS_DESCR,
+            uint16(bytes(TEST_CONTENTS_DESCR).length)
+        );
+
+        // Ensure we can sign with the new domain separator
+        bytes memory newWrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, newTypedDataSignSignature, EMPTY_HOOK_DATA);
+        result = signerAccount.isValidSignature(digest, newWrappedSignature);
+        assertEq(result, _1271_MAGIC_VALUE);
+    }
 }
