@@ -28,8 +28,15 @@ contract CalldataDecoderTest is Test {
     }
 
     function test_removeSelector_lessThan4Bytes_reverts() public {
-        bytes memory selector = hex"4e";
+        bytes memory selector = hex"4e4e4e";
         vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.removeSelector(selector);
+    }
+
+    function test_removeSelector_exactly4Bytes_doesNotRevert() public view {
+        bytes memory selector = hex"4e4e4e4e";
+        bytes memory dataWithoutSelector = decoder.removeSelector(selector);
+
+        assertEq(dataWithoutSelector, "");
     }
 }
