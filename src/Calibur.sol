@@ -10,7 +10,7 @@ import {IERC1271} from "./interfaces/IERC1271.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "./interfaces/ICalibur.sol";
 import {EIP712} from "./EIP712.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
@@ -31,8 +31,8 @@ import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
 
-contract MinimalDelegation is
-    IMinimalDelegation,
+contract Calibur is
+    ICalibur,
     ERC7821,
     ERC1271,
     ERC4337Account,
@@ -56,14 +56,14 @@ contract MinimalDelegation is
     using SettingsLib for Settings;
     using ERC7739Utils for bytes;
 
-    /// @inheritdoc IMinimalDelegation
+    /// @inheritdoc ICalibur
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
         if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
         _processBatch(batchedCall, keyHash);
     }
 
-    /// @inheritdoc IMinimalDelegation
+    /// @inheritdoc ICalibur
     function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
@@ -174,7 +174,7 @@ contract MinimalDelegation is
         for (uint256 i = 0; i < batchedCall.calls.length; i++) {
             (bool success, bytes memory output) = _process(batchedCall.calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && batchedCall.revertOnFailure) revert IMinimalDelegation.CallFailed(output);
+            if (!success && batchedCall.revertOnFailure) revert ICalibur.CallFailed(output);
         }
     }
 
@@ -209,7 +209,7 @@ contract MinimalDelegation is
 
         Key memory key = getKey(signedBatchedCall.keyHash);
         bool isValid = key.verify(digest, signature);
-        if (!isValid) revert IMinimalDelegation.InvalidSignature();
+        if (!isValid) revert ICalibur.InvalidSignature();
 
         Settings settings = getKeySettings(signedBatchedCall.keyHash);
         _checkExpiry(settings);
