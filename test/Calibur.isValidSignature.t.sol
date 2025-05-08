@@ -267,8 +267,8 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
 
         vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_MAGIC_VALUE);
         vm.snapshotGasLastCall("isValidSignature_rootKey_typedData_notTypedDataSign_safeERC1271Caller");
+        assertEq(result, _1271_MAGIC_VALUE);
     }
 
     /**
@@ -296,8 +296,8 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
 
         vm.prank(address(mockERC1271VerifyingContract));
         bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_MAGIC_VALUE);
         vm.snapshotGasLastCall("isValidSignature_P256_typedData_notTypedDataSign_safeERC1271Caller");
+        assertEq(result, _1271_MAGIC_VALUE);
     }
 
     /**
