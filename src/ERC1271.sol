@@ -19,6 +19,7 @@ abstract contract ERC1271 is IERC1271, BaseAuthorization {
     /// @dev Sets whether the caller is considered safe to skip the nested EIP-712 workflow
     function setERC1271CallerIsSafe(address caller, bool isSafe) external onlyThis {
         erc1271CallerIsSafe[caller] = isSafe;
+        emit ERC1271CallerIsSafeSet(caller, isSafe);
     }
 
     /// @inheritdoc IERC1271

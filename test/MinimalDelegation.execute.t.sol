@@ -35,6 +35,8 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
     using SettingsLib for Settings;
     using SettingsBuilder for Settings;
 
+    event NonceSequenceNumberUpdated(uint256 indexed key, uint256 seq);
+
     address receiver = makeAddr("receiver");
 
     function setUp() public {
@@ -173,6 +175,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        (, uint256 newSeq) = _buildNextValidNonce(nonceKey);
+        vm.expectEmit(true, false, false, true);
+        emit NonceSequenceNumberUpdated(nonceKey, newSeq);
+
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
@@ -243,6 +250,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory signature = signerTestKey.sign(digest);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        (, uint256 newSeq) = _buildNextValidNonce(nonceKey);
+        vm.expectEmit(true, false, false, true);
+        emit NonceSequenceNumberUpdated(nonceKey, newSeq);
+
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
@@ -262,6 +274,11 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        (, uint256 newSeq) = _buildNextValidNonce(nonceKey);
+        vm.expectEmit(true, false, false, true);
+        emit NonceSequenceNumberUpdated(nonceKey, newSeq);
+
         signerAccount.execute(signedBatchedCall, wrappedSignature);
 
         // Verify the transfers succeeded

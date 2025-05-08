@@ -68,6 +68,7 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
                 TransientAllowance.set(msg.sender, newAllowance);
             } else {
                 allowance[msg.sender] = newAllowance;
+                emit AllowanceUpdated(msg.sender, newAllowance);
             }
         }
 
