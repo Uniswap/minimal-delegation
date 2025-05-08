@@ -1,5 +1,5 @@
 {
-  "minimalDelegationEntry bytecode size": "24136",
+  "caliburEntry bytecode size": "24136",
   "register": "184828",
   "revoke": "54590",
   "validateUserOp_invalidSignature": "33463",
