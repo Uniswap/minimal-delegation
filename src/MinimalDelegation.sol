@@ -192,6 +192,9 @@ contract MinimalDelegation is
     function _handleVerifySignature(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature)
         private
     {
+        uint256 deadline = signedBatchedCall.deadline;
+        if (deadline != 0 && block.timestamp > deadline) revert SignatureExpired();
+
         _useNonce(signedBatchedCall.nonce);
 
         (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeSignatureWithHookData();
