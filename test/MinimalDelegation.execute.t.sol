@@ -537,6 +537,62 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         vm.stopPrank();
     }
 
+    function test_execute_withAnyDeadline_succeeds() public {
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(address(0)).withDeadline(0);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.warp(block.timestamp + 31536000);
+        signerAccount.execute(signedCall, wrappedSignature);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_withDeadlineExact_succeeds() public {
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withExecutor(address(0)).withDeadline(block.timestamp + 31536000);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.warp(block.timestamp + 31536000);
+        signerAccount.execute(signedCall, wrappedSignature);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_withDeadline_reverts() public {
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withExecutor(address(0)).withDeadline(block.timestamp + 31535999);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.warp(block.timestamp + 31536000);
+        vm.expectRevert(IMinimalDelegation.SignatureExpired.selector);
+        signerAccount.execute(signedCall, wrappedSignature);
+    }
+
     /// GAS TESTS
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true

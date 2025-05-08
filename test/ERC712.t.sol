@@ -47,17 +47,19 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(version, "1");
         bytes32 expected = keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"
+                ),
                 keccak256(bytes(name)),
                 keccak256(bytes(version)),
                 chainId,
-                verifyingContract
+                verifyingContract,
+                salt
             )
         );
         assertEq(expected, signerAccount.domainSeparator());
     }
 
-    /// TODO: We can replace this with ffi test to be more resilient to solidity implementation changes.
     function test_hashTypedData() public view {
         SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall();
         bytes32 hashTypedData = signerAccount.hashTypedData(signedBatchedCall.hash());
@@ -72,8 +74,8 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
-        SignedBatchedCall memory signedBatchedCall =
-            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withNonce(nonce);
+        SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withNonce(nonce).withExecutor(address(1)).withDeadline(block.timestamp + 300000);
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
@@ -81,5 +83,30 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCall, verifyingContract);
 
         assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCall.hash())));
+    }
+
+    function test_setSalt() public {
+        bytes32 _salt = keccak256(abi.encodePacked("new salt"));
+
+        vm.prank(address(signerAccount));
+        signerAccount.setSalt(_salt);
+
+        (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
+            signerAccount.eip712Domain();
+        assertEq(salt, _salt);
+
+        bytes32 expected = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"
+                ),
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
+                chainId,
+                verifyingContract,
+                _salt
+            )
+        );
+        assertEq(expected, signerAccount.domainSeparator());
     }
 }

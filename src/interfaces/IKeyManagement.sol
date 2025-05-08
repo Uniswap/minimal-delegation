@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IHook} from "./IHook.sol";
 import {Key} from "../libraries/KeyLib.sol";
 import {Settings} from "../libraries/SettingsLib.sol";
 

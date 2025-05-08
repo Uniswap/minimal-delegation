@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
 /// @dev A base contract for managing keys

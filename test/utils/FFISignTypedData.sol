@@ -107,6 +107,9 @@ contract FFISignTypedData is JavascriptFfi {
             '",',
             '"executor":"',
             vm.toString(signedBatchedCall.executor),
+            '",',
+            '"deadline":"',
+            vm.toString(signedBatchedCall.deadline),
             '"',
             "}"
         );
