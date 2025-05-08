@@ -24,6 +24,9 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     /// @dev Any prefix to be added to the salt. This can be updated by the owner but it defaults to 0.
     uint96 private _saltPrefix;
 
+    /// @dev The salt for the EIP-712 domain which is updateable by the owner. Default to bytes32(0).
+    bytes32 private _salt;
+
     constructor() {
         string memory name;
         string memory version;

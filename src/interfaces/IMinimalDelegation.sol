@@ -12,7 +12,6 @@ import {IKeyManagement} from "./IKeyManagement.sol";
 import {IMulticall} from "./IMulticall.sol";
 import {INonceManager} from "./INonceManager.sol";
 import {BatchedCall} from "../libraries/BatchedCallLib.sol";
-import {Call} from "../libraries/CallLib.sol";
 import {SignedBatchedCall} from "../libraries/SignedBatchedCallLib.sol";
 
 /// A non-upgradeable contract that can be delegated to with a 7702 delegation transaction.
@@ -43,6 +42,9 @@ interface IMinimalDelegation is
 
     /// @dev Used when internally verifying signatures over batched calls
     error InvalidSignature();
+
+    /// @dev Thrown when the signature has expired
+    error SignatureExpired();
 
     /// @notice Execute entrypoint for trusted callers
     /// @dev This function is only callable by this account or an admin key

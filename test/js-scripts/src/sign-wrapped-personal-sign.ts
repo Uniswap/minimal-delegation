@@ -12,7 +12,7 @@ import {
     verifyMessage,
   } from 'viem'
   
-import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData} from './utils/constants';
+import { DOMAIN_NAME as VERIFIER_DOMAIN_NAME, DOMAIN_VERSION as VERIFIER_DOMAIN_VERSION, InputData, DEFAULT_DOMAIN_SALT} from './utils/constants';
 import { erc7739Actions } from 'viem/experimental'
 import { hashMessage } from 'viem/experimental/erc7739';
 

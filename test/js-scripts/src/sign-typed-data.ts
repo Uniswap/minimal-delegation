@@ -12,7 +12,7 @@ import {
   pad,
 } from 'viem'
 
-import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall, InputData} from './utils/constants';
+import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall, InputData, DEFAULT_DOMAIN_SALT} from './utils/constants';
 
 
 interface SignedBatchedCallInputData extends InputData {

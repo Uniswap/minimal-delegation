@@ -7,7 +7,6 @@ import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC1271} from "./interfaces/IERC1271.sol";
-import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
@@ -27,11 +26,10 @@ import {Call, CallLib} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
-import {Static} from "./libraries/Static.sol";
 
 contract MinimalDelegation is
     IMinimalDelegation,
@@ -199,6 +197,9 @@ contract MinimalDelegation is
     function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
         private
     {
+        uint256 deadline = signedBatchedCall.deadline;
+        if (deadline != 0 && block.timestamp > deadline) revert SignatureExpired();
+
         _useNonce(signedBatchedCall.nonce);
 
         (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
