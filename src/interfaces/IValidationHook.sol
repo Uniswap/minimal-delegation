@@ -12,6 +12,7 @@ interface IValidationHook {
     /// @param keyHash the key which signed over userOpHash
     /// @param userOp UserOperation
     /// @param userOpHash hash of the UserOperation
+    /// @param isValid whether the signature is valid or not
     /// @param hookData any data to be passed to the hook. This has NOT been validated by the user signature
     /// @return selector Must be afterValidateUserOp.selector
     /// @dev The hook can revert to prevent the UserOperation from being validated.
@@ -19,6 +20,7 @@ interface IValidationHook {
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
+        bool isValid,
         bytes calldata hookData
     ) external view returns (bytes4 selector);
 
