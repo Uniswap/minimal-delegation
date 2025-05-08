@@ -19,9 +19,6 @@ library TestKeyManager {
 
     error KeyNotSupported();
 
-    // vm.addr(0xa11ce)
-    address constant signerTestKeyAddress = 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7;
-
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     // 0 = never expires
