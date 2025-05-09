@@ -10,22 +10,21 @@ contract CaliburStorageTest is DelegationHandler {
      *
      * Calibur is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7914, ERC7201 layout at 0x3b86514c5c56b21f08d8e56ab090292e07c2483b3e667a2a45849dcb71368600
      *
-     * 0: mapping(address => bool) erc1271CallerIsSafe;
-     * 1: uint256 _CACHED_ENTRYPOINT
-     * 2: mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
-     * 3: mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-     * 4: EnumerableSetLib.Bytes32Set keyHashes;
-     * 5: mapping(uint256 key => uint256 seq) nonceSequenceNumber
-     * 6: mapping(address => uint256) allowance;
+     * 0: uint256 _CACHED_ENTRYPOINT
+     * 1: mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
+     * 2: mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
+     * 3: EnumerableSetLib.Bytes32Set keyHashes;
+     * 4: mapping(uint256 key => uint256 seq) nonceSequenceNumber
+     * 5: mapping(address => uint256) allowance;
+     * 6: bytes32 _saltPrefix;
      */
-    uint256 private constant ERC1271_CALLER_IS_SAFE_SLOT = 0;
-    uint256 private constant ENTRY_POINT_SLOT = 1;
-    uint256 private constant KEY_EXTRA_STORAGE_SLOT = 2;
-    uint256 private constant KEY_STORAGE_SLOT = 3;
-    uint256 private constant KEY_HASHES_SLOT = 4;
-    uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 5;
-    uint256 private constant ALLOWANCE_SLOT = 6;
-    uint256 private constant SALT_PREFIX_SLOT = 7;
+    uint256 private constant ENTRY_POINT_SLOT = 0;
+    uint256 private constant KEY_EXTRA_STORAGE_SLOT = 1;
+    uint256 private constant KEY_STORAGE_SLOT = 2;
+    uint256 private constant KEY_HASHES_SLOT = 3;
+    uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 4;
+    uint256 private constant ALLOWANCE_SLOT = 5;
+    uint256 private constant SALT_PREFIX_SLOT = 6;
 
     function setUp() public {
         setUpDelegation();

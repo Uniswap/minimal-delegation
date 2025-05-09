@@ -2,16 +2,16 @@
 pragma solidity ^0.8.23;
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
+import {WrappedSignatureLib} from "./libraries/WrappedSignatureLib.sol";
 
 /// @title ERC7739
 /// @notice An abstract contract that implements the ERC-7739 standard
 /// @notice This contract assumes that all data verified through ERC-1271 `isValidSignature` implements the defensive nested hashing scheme defined in EIP-7739
 /// @dev See https://eips.ethereum.org/EIPS/eip-7739
 abstract contract ERC7739 {
-    using CalldataDecoder for bytes;
+    using WrappedSignatureLib for bytes;
     using ERC7739Utils for *;
     using KeyLib for Key;
 
@@ -39,7 +39,7 @@ abstract contract ERC7739 {
         bytes calldata wrappedSignature
     ) internal view returns (bool) {
         (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr) =
-            wrappedSignature.decodeTypedDataSig();
+            wrappedSignature.decodeAsTypedDataSig();
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
 

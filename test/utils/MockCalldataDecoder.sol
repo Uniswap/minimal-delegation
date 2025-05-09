@@ -10,28 +10,4 @@ contract MockCalldataDecoder {
     function removeSelector(bytes calldata data) public pure returns (bytes memory _data) {
         return data.removeSelector();
     }
-
-    function decodeSignatureWithHookData(bytes calldata data)
-        public
-        pure
-        returns (bytes memory signature, bytes memory hookData)
-    {
-        return data.decodeSignatureWithHookData();
-    }
-
-    function decodeSignatureWithKeyHashAndHookData(bytes calldata data)
-        public
-        pure
-        returns (bytes32 keyHash, bytes memory signature, bytes memory hookData)
-    {
-        return data.decodeSignatureWithKeyHashAndHookData();
-    }
-
-    function decodeTypedDataSig(bytes calldata data)
-        public
-        pure
-        returns (bytes memory signature, bytes32 appSeparator, bytes32 contentsHash, string memory contentsDescr)
-    {
-        return data.decodeTypedDataSig();
-    }
 }

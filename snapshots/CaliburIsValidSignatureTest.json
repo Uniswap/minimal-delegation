@@ -1,11 +1,12 @@
 {
-  "isValidSignature_P256_personalSign": "35089",
-  "isValidSignature_P256_typedDataSign": "42456",
-  "isValidSignature_P256_typedData_notTypedDataSign_safeERC1271Caller": "298457",
-  "isValidSignature_P256_withHook": "48465",
-  "isValidSignature_WebAuthnP256_typedDataSign": "49047",
-  "isValidSignature_rootKey_personalSign": "10356",
-  "isValidSignature_rootKey_typedDataSign": "17721",
-  "isValidSignature_rootKey_typedData_notTypedDataSign_safeERC1271Caller": "16634",
-  "isValidSignature_sep256k1_typedDataSign": "38576"
+  "isValidSignature_P256_wrappedSignature___typedDataSign": "42528",
+  "isValidSignature_P256_wrappedSignature___typedDataSign_withHook": "48537",
+  "isValidSignature_P256_wrappedSignature__nestedPersonalSign": "35115",
+  "isValidSignature_WebAuthnP256_wrappedSignature___typedDataSign": "49119",
+  "isValidSignature_WebAuthnP256_wrappedSignature__nestedPersonalSign": "41674",
+  "isValidSignature_rootKey_rawSignature": "4980",
+  "isValidSignature_rootKey_wrappedSignature___typedDataSign": "17845",
+  "isValidSignature_rootKey_wrappedSignature__nestedPersonalSign": "10434",
+  "isValidSignature_secp256k1_wrappedSignature___typedDataSign": "38648",
+  "isValidSignature_secp256k1_wrappedSignature__nestedPersonalSign": "13236"
 }
