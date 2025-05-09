@@ -14,8 +14,8 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using SettingsLib for Settings;
 
     EnumerableSetLib.Bytes32Set public keyHashes;
-    mapping(bytes32 keyHash => bytes encodedKey) public keyStorage;
-    mapping(bytes32 keyHash => Settings settings) public keySettings;
+    mapping(bytes32 keyHash => bytes encodedKey) private keyStorage;
+    mapping(bytes32 keyHash => Settings settings) private keySettings;
 
     /// @inheritdoc IKeyManagement
     function register(Key memory key) external onlyThis {
