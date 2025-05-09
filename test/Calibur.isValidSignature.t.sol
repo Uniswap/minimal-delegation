@@ -18,7 +18,7 @@ import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271Handler {
+contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271Handler {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
     using TypedDataSignBuilder for *;

@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
-import {Settings, SettingsLib} from "./SettingsLib.sol";
 
 /// @dev The type of key.
 enum KeyType {

@@ -22,11 +22,11 @@ import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "../src/libraries/SignedBatchedCallLib.sol";
 import {Settings, SettingsLib} from "../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
-import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "../src/interfaces/ICalibur.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
-contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, DelegationHandler {
+contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, DelegationHandler {
     using TestKeyManager for TestKey;
     using KeyLib for Key;
     using CallUtils for *;
@@ -133,7 +133,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         bytes memory balanceError = abi.encodeWithSelector(
             IERC20Errors.ERC20InsufficientBalance.selector, address(signerAccount), 100e18, 101e18
         );
-        vm.expectRevert(abi.encodeWithSelector(IMinimalDelegation.CallFailed.selector, balanceError));
+        vm.expectRevert(abi.encodeWithSelector(ICalibur.CallFailed.selector, balanceError));
         signerAccount.execute(BATCHED_CALL, executionData);
     }
 
@@ -291,7 +291,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         // Expect the signature to be invalid (because it is)
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
-        vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
+        vm.expectRevert(ICalibur.InvalidSignature.selector);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
 
         vm.prank(address(signerAccount));
@@ -301,7 +301,7 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
 
         // Even if the hook would successful verify the signature, it should still revert
         // because we never call hooks unless the signature is valid
-        vm.expectRevert(IMinimalDelegation.InvalidSignature.selector);
+        vm.expectRevert(ICalibur.InvalidSignature.selector);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
     }
 
@@ -518,6 +518,62 @@ contract MinimalDelegationExecuteTest is TokenHandler, HookHandler, ExecuteFixtu
         vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.execute(signedCall, wrappedSignature);
         vm.stopPrank();
+    }
+
+    function test_execute_withAnyDeadline_succeeds() public {
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall =
+            CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withExecutor(address(0)).withDeadline(0);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.warp(block.timestamp + 31536000);
+        signerAccount.execute(signedCall, wrappedSignature);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_withDeadlineExact_succeeds() public {
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withExecutor(address(0)).withDeadline(block.timestamp + 31536000);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.warp(block.timestamp + 31536000);
+        signerAccount.execute(signedCall, wrappedSignature);
+
+        assertEq(tokenA.balanceOf(address(receiver)), 1e18);
+    }
+
+    function test_execute_withDeadline_reverts() public {
+        Call memory call = buildTransferCall(address(tokenA), address(receiver), 1e18);
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(call);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withExecutor(address(0)).withDeadline(block.timestamp + 31535999);
+
+        bytes32 hashToSign = signerAccount.hashTypedData(signedCall.hash());
+        bytes memory signature = signerTestKey.sign(hashToSign);
+
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.warp(block.timestamp + 31536000);
+        vm.expectRevert(ICalibur.SignatureExpired.selector);
+        signerAccount.execute(signedCall, wrappedSignature);
     }
 
     /// GAS TESTS

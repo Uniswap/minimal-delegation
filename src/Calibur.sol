@@ -7,11 +7,10 @@ import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {IERC1271} from "./interfaces/IERC1271.sol";
-import {IERC4337Account} from "./interfaces/IERC4337Account.sol";
 import {IERC7821} from "./interfaces/IERC7821.sol";
 import {IHook} from "./interfaces/IHook.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {IMinimalDelegation} from "./interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "./interfaces/ICalibur.sol";
 import {EIP712} from "./EIP712.sol";
 import {ERC1271} from "./ERC1271.sol";
 import {ERC4337Account} from "./ERC4337Account.sol";
@@ -27,14 +26,13 @@ import {Call, CallLib} from "./libraries/CallLib.sol";
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {HooksLib} from "./libraries/HooksLib.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
-import {Static} from "./libraries/Static.sol";
 
-contract MinimalDelegation is
-    IMinimalDelegation,
+contract Calibur is
+    ICalibur,
     ERC7821,
     ERC1271,
     ERC4337Account,
@@ -58,21 +56,22 @@ contract MinimalDelegation is
     using SettingsLib for Settings;
     using ERC7739Utils for bytes;
 
-    /// @inheritdoc IMinimalDelegation
+    /// @inheritdoc ICalibur
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
         if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
         _processBatch(batchedCall, keyHash);
     }
 
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature) public payable {
+    /// @inheritdoc ICalibur
+    function execute(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _processBatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
     /// @inheritdoc IERC7821
-    function execute(bytes32 mode, bytes memory executionData) external payable override {
+    function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
         BatchedCall memory batchedCall = BatchedCall({calls: calls, revertOnFailure: mode.revertOnFailure()});
@@ -114,12 +113,13 @@ contract MinimalDelegation is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
 
         /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
         /// `validAfter` is always 0.
         validationData =
             isValid ? uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED : SIG_VALIDATION_FAILED;
+
+        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, validationData, hookData);
     }
 
     /// @inheritdoc ERC1271
@@ -145,7 +145,7 @@ contract MinimalDelegation is
             }
         }
 
-        (bytes32 keyHash, bytes calldata signature, bytes memory hookData) =
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
             wrappedSignature.decodeSignatureWithKeyHashAndHookData();
 
         Key memory key = getKey(keyHash);
@@ -171,7 +171,7 @@ contract MinimalDelegation is
         for (uint256 i = 0; i < batchedCall.calls.length; i++) {
             (bool success, bytes memory output) = _process(batchedCall.calls[i], keyHash);
             // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
-            if (!success && batchedCall.revertOnFailure) revert IMinimalDelegation.CallFailed(output);
+            if (!success && batchedCall.revertOnFailure) revert ICalibur.CallFailed(output);
         }
     }
 
@@ -188,13 +188,16 @@ contract MinimalDelegation is
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        hook.handleAfterExecute(keyHash, beforeExecuteData);
+        hook.handleAfterExecute(keyHash, success, output, beforeExecuteData);
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes calldata wrappedSignature)
+    function _handleVerifySignature(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature)
         private
     {
+        uint256 deadline = signedBatchedCall.deadline;
+        if (deadline != 0 && block.timestamp > deadline) revert SignatureExpired();
+
         _useNonce(signedBatchedCall.nonce);
 
         (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeSignatureWithHookData();
@@ -203,7 +206,7 @@ contract MinimalDelegation is
 
         Key memory key = getKey(signedBatchedCall.keyHash);
         bool isValid = key.verify(digest, signature);
-        if (!isValid) revert IMinimalDelegation.InvalidSignature();
+        if (!isValid) revert ICalibur.InvalidSignature();
 
         Settings settings = getKeySettings(signedBatchedCall.keyHash);
         _checkExpiry(settings);

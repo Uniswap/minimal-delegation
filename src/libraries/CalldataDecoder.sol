@@ -13,16 +13,9 @@ library CalldataDecoder {
     uint256 constant OFFSET_OR_LENGTH_MASK = 0xffffffff;
     uint256 constant OFFSET_OR_LENGTH_MASK_AND_WORD_ALIGN = 0xffffffe0;
 
-    /// error SliceOutOfBounds();
-    uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
-
     /// @notice Removes the selector from the calldata and returns the encoded params.
     function removeSelector(bytes calldata data) internal pure returns (bytes calldata params) {
         assembly ("memory-safe") {
-            if lt(data.length, 4) {
-                mstore(0, SLICE_ERROR_SELECTOR)
-                revert(0x1c, 4)
-            }
             params.offset := add(data.offset, 4)
             params.length := sub(data.length, 4)
         }
@@ -67,11 +60,7 @@ library CalldataDecoder {
             appSeparator := calldataload(add(data.offset, 0x20))
             contentsHash := calldataload(add(data.offset, 0x40))
         }
-        bytes calldata contentsDescrBytes = toBytes(data, 3);
-        assembly {
-            contentsDescr.offset := contentsDescrBytes.offset
-            contentsDescr.length := contentsDescrBytes.length
-        }
+        contentsDescr = string(toBytes(data, 3));
     }
 
     /// @notice Decode the `_arg`-th element in `_bytes` as `bytes`

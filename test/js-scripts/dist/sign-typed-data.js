@@ -8941,14 +8941,16 @@ init_toHex();
 init_pad();
 
 // src/utils/constants.ts
-var DOMAIN_NAME = "Uniswap Minimal Delegation";
+var DOMAIN_NAME = "Calibur";
 var DOMAIN_VERSION = "1";
+var DEFAULT_DOMAIN_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
 var types = {
   SignedBatchedCall: [
     { name: "batchedCall", type: "BatchedCall" },
     { name: "nonce", type: "uint256" },
     { name: "keyHash", type: "bytes32" },
-    { name: "executor", type: "address" }
+    { name: "executor", type: "address" },
+    { name: "deadline", type: "uint256" }
   ],
   BatchedCall: [
     { name: "calls", type: "Call[]" },
@@ -8975,7 +8977,8 @@ var domain = {
   version: DOMAIN_VERSION,
   chainId: 31337,
   // Default Anvil chain ID
-  verifyingContract
+  verifyingContract,
+  salt: DEFAULT_DOMAIN_SALT
 };
 var walletClient = createWalletClient({
   account,

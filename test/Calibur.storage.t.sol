@@ -3,12 +3,12 @@ pragma solidity ^0.8.29;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 
-contract MinimalDelegationStorageTest is DelegationHandler {
+contract CaliburStorageTest is DelegationHandler {
     /**
-     * MinimalDelegation storage layout
+     * Calibur storage layout
      * slots are assigned starting from the custom layout slot and in order of declaration, from left to right
      *
-     * MinimalDelegation is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7914, ERC7201 layout at 0xc807f46cbe2302f9a007e47db23c8af6a94680c1d26280fb9582873dbe5c9200
+     * Calibur is IERC7821, ERC1271, EIP712, ERC4337Account, Receiver, KeyManagement, NonceManager, ERC7914, ERC7201 layout at 0x3b86514c5c56b21f08d8e56ab090292e07c2483b3e667a2a45849dcb71368600
      *
      * 0: uint256 _CACHED_ENTRYPOINT
      * 1: mapping(bytes32 keyHash => KeyExtraStorage) keyExtraStorage;
@@ -42,13 +42,13 @@ contract MinimalDelegationStorageTest is DelegationHandler {
 
     /// @dev Sanity check tests for changes in namespace and version
     function test_erc7201_namespaceAndVersion() public view {
-        assertEq(signerAccount.namespaceAndVersion(), "Uniswap.MinimalDelegation.1.0.0");
+        assertEq(signerAccount.namespaceAndVersion(), "Uniswap.Calibur.1.0.0");
     }
 
     /// @dev Sanity check tests for changes in the calculated custom storage root
     function test_erc7201_customStorageRoot() public view {
         bytes32 customStorageRoot =
-            keccak256(abi.encode(uint256(keccak256("Uniswap.MinimalDelegation.1.0.0")) - 1)) & ~bytes32(uint256(0xff));
+            keccak256(abi.encode(uint256(keccak256("Uniswap.Calibur.1.0.0")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(signerAccount.CUSTOM_STORAGE_ROOT(), customStorageRoot);
     }
 

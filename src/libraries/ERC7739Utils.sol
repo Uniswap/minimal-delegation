@@ -25,15 +25,15 @@ library ERC7739Utils {
     /// @param contentsHash The hash of the contents, per EIP-712
     /// @param domainBytes The encoded domain bytes from EIP-5267
     /// @param appSeparator The app's domain separator
-    /// @param contentsDescr The full type string of the contents, per EIP-712
+    /// @param contentsName The type name of the contents
+    /// @param contentsType The type description of the contents
     function toNestedTypedDataSignHash(
         bytes32 contentsHash,
         bytes memory domainBytes,
         bytes32 appSeparator,
-        string calldata contentsDescr
+        string calldata contentsName,
+        string calldata contentsType
     ) internal pure returns (bytes32) {
-        (string calldata contentsName, string calldata contentsType) = decodeContentsDescr(contentsDescr);
-        if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return bytes32(0);
         return MessageHashUtils.toTypedDataHash(
             appSeparator, TypedDataSignLib.hash(contentsName, contentsType, contentsHash, domainBytes)
         );

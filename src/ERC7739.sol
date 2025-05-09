@@ -5,8 +5,6 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {CalldataDecoder} from "./libraries/CalldataDecoder.sol";
 import {ERC7739Utils} from "./libraries/ERC7739Utils.sol";
 import {Key, KeyLib} from "./libraries/KeyLib.sol";
-import {TypedDataSignLib} from "./libraries/TypedDataSignLib.sol";
-import {PersonalSignLib} from "./libraries/PersonalSignLib.sol";
 
 /// @title ERC7739
 /// @notice An abstract contract that implements the ERC-7739 standard
@@ -45,9 +43,11 @@ abstract contract ERC7739 {
 
         if (!_callerHashMatchesReconstructedHash(appSeparator, digest, contentsHash)) return false;
 
-        bytes32 computed = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsDescr);
-        // If the computed digest is 0, the contentsDescr was invalid
-        if (computed == bytes32(0)) return false;
+        (string calldata contentsName, string calldata contentsType) = contentsDescr.decodeContentsDescr();
+        // For safety, ERC-7739 recommends to treat the signature as invalid if either the contentsName or contentsType are empty
+        if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return false;
+
+        bytes32 computed = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType);
 
         return key.verify(computed, signature);
     }

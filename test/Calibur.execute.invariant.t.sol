@@ -10,7 +10,7 @@ import {TokenHandler} from "./utils/TokenHandler.sol";
 import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
-import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "../src/interfaces/ICalibur.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
@@ -28,13 +28,13 @@ import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
 // To avoid stack to deep
 struct SetupParams {
-    IMinimalDelegation _signerAccount;
+    ICalibur _signerAccount;
     TestKey[] _signingKeys;
     address _tokenA;
     address _tokenB;
 }
 
-contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerator {
+contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerator {
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
@@ -192,14 +192,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     }
 }
 
-/// @title MinimalDelegationExecuteInvariantTest
-contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandler {
+/// @title CaliburExecuteInvariantTest
+contract CaliburExecuteInvariantTest is TokenHandler, DelegationHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using CallUtils for Call;
     using CallUtils for Call[];
 
-    MinimalDelegationExecuteInvariantHandler internal invariantHandler;
+    CaliburExecuteInvariantHandler internal invariantHandler;
 
     address public untrustedCaller = makeAddr("untrustedCaller");
     uint256 public untrustedPrivateKey = 0xdead;
@@ -226,12 +226,12 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
             _tokenA: address(tokenA),
             _tokenB: address(tokenB)
         });
-        invariantHandler = new MinimalDelegationExecuteInvariantHandler(params);
+        invariantHandler = new CaliburExecuteInvariantHandler(params);
 
         // Explicitly target the wrapped execute functions in the handler
         bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = MinimalDelegationExecuteInvariantHandler.executeBatchedCall.selector;
-        selectors[1] = MinimalDelegationExecuteInvariantHandler.executeWithOpData.selector;
+        selectors[0] = CaliburExecuteInvariantHandler.executeBatchedCall.selector;
+        selectors[1] = CaliburExecuteInvariantHandler.executeWithOpData.selector;
         FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
 
         targetSelector(selector);
