@@ -41,12 +41,15 @@ contract FFISignTypedData is JavascriptFfi {
         return runScript("sign-wrapped-typed-data", jsonObj);
     }
 
-    function ffi_signWrappedPersonalSign(uint256 privateKey, address verifyingContract, bytes32 prefixedSalt, string memory message)
-        public
-        returns (bytes memory)
-    {
+    function ffi_signWrappedPersonalSign(
+        uint256 privateKey,
+        address verifyingContract,
+        bytes32 prefixedSalt,
+        string memory message
+    ) public returns (bytes memory) {
         // Create JSON object
-        string memory jsonObj = _createWrappedPersonalSignJsonInput(privateKey, verifyingContract, prefixedSalt, message);
+        string memory jsonObj =
+            _createWrappedPersonalSignJsonInput(privateKey, verifyingContract, prefixedSalt, message);
 
         // Run the JavaScript script
         return runScript("sign-wrapped-personal-sign", jsonObj);
@@ -55,11 +58,12 @@ contract FFISignTypedData is JavascriptFfi {
     /**
      * @dev Creates a JSON input string for the JavaScript script
      */
-    function _createJsonInput(uint256 privateKey, SignedBatchedCall memory signedBatchedCall, address verifyingContract, bytes32 prefixedSalt)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _createJsonInput(
+        uint256 privateKey,
+        SignedBatchedCall memory signedBatchedCall,
+        address verifyingContract,
+        bytes32 prefixedSalt
+    ) internal pure returns (string memory) {
         string memory callsJson = "[";
 
         for (uint256 i = 0; i < signedBatchedCall.batchedCall.calls.length; i++) {
@@ -206,11 +210,12 @@ contract FFISignTypedData is JavascriptFfi {
         return jsonObj;
     }
 
-    function _createWrappedPersonalSignJsonInput(uint256 privateKey, address verifyingContract, bytes32 prefixedSalt, string memory message)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _createWrappedPersonalSignJsonInput(
+        uint256 privateKey,
+        address verifyingContract,
+        bytes32 prefixedSalt,
+        string memory message
+    ) internal pure returns (string memory) {
         string memory jsonObj = string.concat(
             "{",
             '"privateKey":"',

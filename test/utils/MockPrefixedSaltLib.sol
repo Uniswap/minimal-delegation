@@ -16,8 +16,4 @@ contract MockPrefixedSaltLib {
         prefix = uint96(value >> 160);
         implementation = address(uint160(value));
     }
-
-    function update(bytes32 salt, uint96 prefix) public pure returns (bytes32) {
-        return PrefixedSaltLib.update(salt, prefix);
-    }
 }

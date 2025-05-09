@@ -11,9 +11,4 @@ library PrefixedSaltLib {
     function pack(uint96 prefix, address implementation) internal pure returns (bytes32) {
         return bytes32((uint256(prefix) << 160) | uint160(implementation));
     }
-
-    /// @notice Update the salt with a new prefix
-    function update(bytes32 salt, uint96 prefix) internal pure returns (bytes32) {
-        return bytes32((uint256(prefix) << 160) | (uint256(salt) & MASK_160_BITS));
-    }
 }

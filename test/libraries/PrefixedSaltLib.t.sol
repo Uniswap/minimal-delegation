@@ -20,11 +20,4 @@ contract PrefixedSaltLibTest is Test {
         assertEq(prefix, _prefix);
         assertEq(implementation, _implementation);
     }
-
-    function test_update_fuzz(bytes32 _salt, uint96 _prefix) public {
-        bytes32 newSalt = mockPrefixedSaltLib.update(_salt, _prefix);
-        (uint96 prefix, address implementation) = mockPrefixedSaltLib.unpack(newSalt);
-        assertEq(prefix, _prefix);
-        assertEq(implementation, address(uint160(uint256(_salt) & MASK_20_BYTES)));
-    }
 }
