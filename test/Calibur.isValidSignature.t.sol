@@ -771,7 +771,6 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
      * MARK: Other revert tests
      *
      */
-
     function test_isValidSignature_newDomainSeparatorInvalidatesOldSignatures() public {
         bytes memory signature = signerTestKey.sign(TEST_TYPED_DATA_SIGN_DIGEST);
         (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) = getERC1271Fixtures();
