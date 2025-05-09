@@ -25,7 +25,7 @@ contract CalldataDecoderTest is Test {
         assertEq(one, 1);
         assertEq(two, 2);
     }
-    
+
     function test_removeSelector_lessThan4Bytes_reverts() public {
         bytes memory selector = hex"4e4e4e";
         vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));

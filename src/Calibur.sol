@@ -141,7 +141,7 @@ contract Calibur is
             }
             // If the signature is 64 or 65 bytes, it must be validated as an ECDSA signature from the root key
             // We skip any checks against expiry or hooks because settings are not supported on the root key
-            else if (wrappedSignature.isUnwrapped()) {
+            else if (wrappedSignature.isRawSignature()) {
                 if (KeyLib.toRootKey().verify(digest, wrappedSignature)) {
                     return _1271_MAGIC_VALUE;
                 } else {

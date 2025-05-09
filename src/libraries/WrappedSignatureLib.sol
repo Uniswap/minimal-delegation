@@ -14,9 +14,9 @@ library WrappedSignatureLib {
         return data.length == 0;
     }
 
-    /// @notice Returns true if the signature does not contain any extra data (keyHash or hookData)
-    /// @dev Technically it will return false for WebAuthn signatures but they can't be verified without a keyHash
-    function isUnwrapped(bytes calldata data) internal pure returns (bool) {
+    /// @notice Returns true for standard or compact length ECDSA signatures
+    /// @dev will also return true for standard p256 signatures however those MUST be wrapped with extra information in the verify sig flow
+    function isRawSignature(bytes calldata data) internal pure returns (bool) {
         return data.length == 64 || data.length == 65;
     }
 
