@@ -98,6 +98,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
     function executeBatchedCall(uint256 generatorSeed) public useKey setBlock {
         address caller = vm.addr(currentSigningKey.privateKey);
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
+
         bytes32 callerKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
         vm.startPrank(caller);
@@ -123,6 +124,9 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
             (bool isExpired,) = callerSettings.isExpired();
             if (!isRegisteredCaller || (caller != address(signerAccount) && isExpired)) {
                 assertEq(bytes4(revertData), BaseAuthorization.Unauthorized.selector);
+            } else if (!callerSettings.isAdmin() && batchedCall.calls.containsSelfCall()) {
+                // TODO: Handler may only be generating self calls, so we should update that.
+                assertEq(bytes4(revertData), IKeyManagement.OnlyAdminCanSelfCall.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {
