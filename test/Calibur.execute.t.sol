@@ -53,6 +53,12 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         nonce = key << 64 | seq;
     }
 
+    function test_supportsExecutionMode() public {
+        // Test ERC-7821 supportsExecutionMode
+        assertEq(signerAccount.supportsExecutionMode(BATCHED_CALL), true);
+        assertEq(signerAccount.supportsExecutionMode(BATCHED_CAN_REVERT_CALL), true);
+    }
+
     function test_execute_reverts_withUnsupportedExecutionMode() public {
         // Test specific modes since the fuzz is just over the first 2 bytes.
         bytes32[] memory modes = new bytes32[](3);
