@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 /// @title CalldataDecoder
 library CalldataDecoder {
     using CalldataDecoder for bytes;
-    /// @notice equivalent to SliceOutOfBounds.selector, stored in least-significant bits
 
     /// @notice mask used for offsets and lengths to ensure no overflow
     /// @dev no sane abi encoding will pass in an offset or length greater than type(uint32).max
