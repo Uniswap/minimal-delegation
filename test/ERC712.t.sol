@@ -44,7 +44,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
         assertEq(salt, bytes32(0));
         assertEq(name, "Calibur");
-        assertEq(version, "1");
+        assertEq(version, "1.0.0");
         bytes32 expected = keccak256(
             abi.encode(
                 keccak256(
