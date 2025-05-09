@@ -37,6 +37,11 @@ contract CaliburTest is DelegationHandler, HookHandler {
         vm.snapshotValue("caliburEntry bytecode size", address(calibur).code.length);
     }
 
+    function test_entrypoint_gas() public {
+        signerAccount.ENTRY_POINT();
+        vm.snapshotGasLastCall("entrypoint");
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
