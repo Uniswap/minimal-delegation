@@ -8,6 +8,8 @@ import {MockCalldataDecoder} from "../utils/MockCalldataDecoder.sol";
 contract CalldataDecoderTest is Test {
     using CalldataDecoder for bytes;
 
+    error SliceOutOfBounds();
+
     MockCalldataDecoder decoder;
 
     function setUp() public {
@@ -22,6 +24,19 @@ contract CalldataDecoderTest is Test {
         (uint256 one, uint256 two) = abi.decode(dataWithoutSelector, (uint256, uint256));
         assertEq(one, 1);
         assertEq(two, 2);
+    }
+
+    function test_removeSelector_lessThan4Bytes_reverts() public {
+        bytes memory selector = hex"4e4e4e";
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
+        decoder.removeSelector(selector);
+    }
+
+    function test_removeSelector_exactly4Bytes_doesNotRevert() public view {
+        bytes memory selector = hex"4e4e4e4e";
+        bytes memory dataWithoutSelector = decoder.removeSelector(selector);
+
+        assertEq(dataWithoutSelector, "");
     }
 
     function test_decodeSignatureWithHookData_fuzz(bytes memory arg1, bytes memory arg2) public view {
@@ -56,10 +71,13 @@ contract CalldataDecoderTest is Test {
 
     /// Offchain implementations may also encode the length of the contentsDescr in the calldata
     /// We do not use it in our implementation, but we should test that it does not affect the decoding of the other values
-    function test_decodeTypedDataSig_withContentsDescrLength_fuzz(bytes memory arg1, bytes32 arg2, bytes32 arg3, string memory arg4, uint16 arg5)
-        public
-        view
-    {
+    function test_decodeTypedDataSig_withContentsDescrLength_fuzz(
+        bytes memory arg1,
+        bytes32 arg2,
+        bytes32 arg3,
+        string memory arg4,
+        uint16 arg5
+    ) public view {
         bytes memory data = abi.encode(arg1, arg2, arg3, arg4, arg5);
         (bytes memory _arg1, bytes32 _arg2, bytes32 _arg3, string memory _arg4) = decoder.decodeTypedDataSig(data);
         assertEq(_arg1, arg1);
