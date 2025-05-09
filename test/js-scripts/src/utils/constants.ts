@@ -9,6 +9,7 @@ export const DEFAULT_DOMAIN_SALT = "0x000000000000000000000000000000000000000000
 export interface InputData {
   privateKey: string;
   verifyingContract: Address;
+  prefixedSalt: `0x${string}`;
 }
 
 // Define the struct types

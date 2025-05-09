@@ -57,7 +57,7 @@ interface SignWrappedTypedDataInputData extends InputData {
 
 // Parse the JSON input
 const jsonInput = JSON.parse(args[0]) as SignWrappedTypedDataInputData;
-const { privateKey, verifyingContract, appDomainName, appDomainVersion, appVerifyingContract, contents } = jsonInput;
+const { privateKey, verifyingContract, prefixedSalt, appDomainName, appDomainVersion, appVerifyingContract, contents } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
  
@@ -80,7 +80,7 @@ async function signWrappedTypedData(): Promise<void> {
             version: VERIFIER_DOMAIN_VERSION,
             verifyingContract: verifyingContract,
             chainId: 31337, // Default Anvil chain ID
-            salt: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+            salt: prefixedSalt
         }
 
         const wrappedSignature = await walletClient.signTypedData({

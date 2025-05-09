@@ -16,6 +16,7 @@ contract CaliburStorageTest is DelegationHandler {
      * 3: EnumerableSetLib.Bytes32Set keyHashes;
      * 4: mapping(uint256 key => uint256 seq) nonceSequenceNumber
      * 5: mapping(address => uint256) allowance;
+     * 6: bytes32 _saltPrefix;
      */
     uint256 private constant ENTRY_POINT_SLOT = 0;
     uint256 private constant KEY_EXTRA_STORAGE_SLOT = 1;
@@ -23,6 +24,7 @@ contract CaliburStorageTest is DelegationHandler {
     uint256 private constant KEY_HASHES_SLOT = 3;
     uint256 private constant NONCE_SEQUENCE_NUMBER_SLOT = 4;
     uint256 private constant ALLOWANCE_SLOT = 5;
+    uint256 private constant SALT_PREFIX_SLOT = 6;
 
     function setUp() public {
         setUpDelegation();
@@ -52,7 +54,7 @@ contract CaliburStorageTest is DelegationHandler {
         assertEq(signerAccount.CUSTOM_STORAGE_ROOT(), customStorageRoot);
     }
 
-    function test_nonceSequenceNumber_nested_key() public {
+    function test_nonceSequenceNumber_nestedKey_slot() public {
         uint256 nonceKey = 1;
 
         vm.record();
@@ -66,7 +68,7 @@ contract CaliburStorageTest is DelegationHandler {
         assertEq(readSlots[0], nestedSlot);
     }
 
-    function test_allowance() public {
+    function test_allowance_nestedKey_slot() public {
         vm.record();
         signerAccount.allowance(address(0));
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
@@ -78,12 +80,21 @@ contract CaliburStorageTest is DelegationHandler {
         assertEq(readSlots[0], nestedSlot);
     }
 
-    function test_entrypoint() public {
+    function test_entrypoint_slot() public {
         vm.record();
         signerAccount.ENTRY_POINT();
         (bytes32[] memory readSlots, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
         assertEq(readSlots.length, 1);
         assertEq(writeSlots.length, 0);
         assertEq(readSlots[0], _addOffset(signerAccount.CUSTOM_STORAGE_ROOT(), ENTRY_POINT_SLOT));
+    }
+
+    function test_saltPrefix_slot() public {
+        vm.record();
+        vm.prank(address(signerAccount));
+        signerAccount.updateSalt(uint96(1));
+        (, bytes32[] memory writeSlots) = vm.accesses(address(signerAccount));
+        assertEq(writeSlots.length, 1);
+        assertEq(writeSlots[0], _addOffset(signerAccount.CUSTOM_STORAGE_ROOT(), SALT_PREFIX_SLOT));
     }
 }
