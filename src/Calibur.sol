@@ -113,12 +113,13 @@ contract Calibur is
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
 
         /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
         /// `validAfter` is always 0.
         validationData =
             isValid ? uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED : SIG_VALIDATION_FAILED;
+
+        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, validationData, hookData);
     }
 
     /// @inheritdoc ERC1271
@@ -190,7 +191,7 @@ contract Calibur is
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        hook.handleAfterExecute(keyHash, beforeExecuteData);
+        hook.handleAfterExecute(keyHash, success, output, beforeExecuteData);
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
