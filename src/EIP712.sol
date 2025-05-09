@@ -73,9 +73,8 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     /// @dev for use in ERC-7739
     function domainBytes() public view returns (bytes memory) {
         // _eip712Domain().fields and _eip712Domain().extensions are not used
-        (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
-            eip712Domain();
-        return abi.encode(keccak256(bytes(name)), keccak256(bytes(version)), chainId, verifyingContract, salt);
+        (,,, uint256 chainId, address verifyingContract, bytes32 salt,) = eip712Domain();
+        return abi.encode(_cachedNameHash, _cachedVersionHash, chainId, verifyingContract, salt);
     }
 
     /// @inheritdoc IEIP712
@@ -108,6 +107,6 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     /// @return name    The user readable name of signing domain.
     /// @return version The current major version of the signing domain.
     function _domainNameAndVersion() internal pure returns (string memory name, string memory version) {
-        return ("Uniswap Minimal Delegation", "1");
+        return ("Calibur", "1");
     }
 }
