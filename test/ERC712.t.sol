@@ -96,7 +96,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
             signerAccount.eip712Domain();
 
-        bytes32 expectedSalt = PrefixedSaltLib.pack(_prefix, address(minimalDelegation));
+        bytes32 expectedSalt = PrefixedSaltLib.pack(_prefix, address(calibur));
         assertEq(salt, expectedSalt);
 
         bytes32 expected = keccak256(
