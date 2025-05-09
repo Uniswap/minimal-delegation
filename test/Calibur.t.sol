@@ -14,7 +14,7 @@ import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
-contract MinimalDelegationTest is DelegationHandler, HookHandler {
+contract CaliburTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using SettingsLib for Settings;
@@ -33,8 +33,8 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(address(signerAccount).code.length, 0x17);
     }
 
-    function test_minimalDelegationEntry_codeSize() public {
-        vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
+    function test_caliburEntry_codeSize() public {
+        vm.snapshotValue("caliburEntry bytecode size", address(calibur).code.length);
     }
 
     function test_entrypoint_gas() public {
