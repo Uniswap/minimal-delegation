@@ -37,7 +37,10 @@ contract KeyLibTest is Test {
         if (caller == address(mockKeyLib)) {
             assertEq(mockKeyLib.toKeyHash(caller), KeyLib.ROOT_KEY_HASH);
         } else {
-            assertEq(mockKeyLib.toKeyHash(caller), KeyLib.hash(Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(caller)})));
+            assertEq(
+                mockKeyLib.toKeyHash(caller),
+                KeyLib.hash(Key({keyType: KeyType.Secp256k1, publicKey: abi.encode(caller)}))
+            );
         }
     }
 }

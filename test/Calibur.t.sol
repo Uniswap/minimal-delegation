@@ -37,6 +37,10 @@ contract CaliburTest is DelegationHandler, HookHandler {
         vm.snapshotValue("caliburEntry bytecode size", address(calibur).code.length);
     }
 
+    function test_namespaceAndVersion() public view {
+        assertEq(signerAccount.namespaceAndVersion(), "Uniswap.Calibur.1.0.0");
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 

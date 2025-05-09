@@ -13,6 +13,8 @@ contract MockHook is IHook {
     bool internal _validateUserOpReturnValue;
     bytes internal _beforeExecuteReturnValue;
     bytes internal _beforeExecuteRevertData;
+    bytes internal _afterExecuteReturnValue;
+    bytes internal _afterExecuteRevertData;
 
     function setVerifySignatureReturnValue(bool returnValue) external {
         _verifySignatureReturnValue = returnValue;
@@ -32,6 +34,10 @@ contract MockHook is IHook {
 
     function setBeforeExecuteRevertData(bytes memory revertData) external {
         _beforeExecuteRevertData = revertData;
+    }
+
+    function setAfterExecuteRevertData(bytes memory revertData) external {
+        _afterExecuteRevertData = revertData;
     }
 
     function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, uint256, bytes calldata)
@@ -72,7 +78,13 @@ contract MockHook is IHook {
         return (IExecutionHook.beforeExecute.selector, _beforeExecuteReturnValue);
     }
 
-    function afterExecute(bytes32, bool, bytes calldata, bytes calldata) external pure returns (bytes4) {
+    function afterExecute(bytes32, bool, bytes calldata, bytes calldata) external view returns (bytes4) {
+        if (_afterExecuteRevertData.length > 0) {
+            bytes memory revertData = abi.encode(_afterExecuteRevertData);
+            assembly {
+                revert(add(revertData, 32), mload(revertData))
+            }
+        }
         return (IExecutionHook.afterExecute.selector);
     }
 }

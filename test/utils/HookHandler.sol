@@ -11,14 +11,15 @@ abstract contract HookHandler is Test {
     MockHook internal mockValidationHook;
     MockHook internal mockExecutionHook;
 
-    /// 0x0000 ... 0000
-    address payable constant NO_HOOKS = payable(0x0000000000000000000000000000000000000000);
-    /// 0x1111 ... 1111
-    address payable constant ALL_HOOKS = payable(0xf00000000000000000000000000000000000000f);
-    /// 0x1111 ... 0111
-    address payable constant ALL_VALIDATION_HOOKS = payable(0xF000000000000000000000000000000000000007);
-    /// 0x1111 ...11000
-    address payable constant ALL_EXECUTION_HOOKS = payable(0xF000000000000000000000000000000000000018);
+    /// These addresses are prefixed with 0xC to not conflict with precompile addresses
+    /// 0xC000 ...  0000
+    address payable constant NO_HOOKS = payable(0xC000000000000000000000000000000000000000);
+    /// 0xC000 ... 11111
+    address payable constant ALL_HOOKS = payable(0xc00000000000000000000000000000000000001f);
+    /// 0xC000 ...  0111
+    address payable constant ALL_VALIDATION_HOOKS = payable(0xC000000000000000000000000000000000000007);
+    /// 0xC000 ... 11000
+    address payable constant ALL_EXECUTION_HOOKS = payable(0xc000000000000000000000000000000000000018);
 
     bytes constant EMPTY_HOOK_DATA = "";
 
