@@ -6,7 +6,7 @@ import {MockERC7739Utils} from "./MockERC7739Utils.sol";
 
 contract ERC1271Handler {
     string internal DOMAIN_NAME = "MockERC1271VerifyingContract";
-    string internal DOMAIN_VERSION = "1";
+    string internal DOMAIN_VERSION = "1.0.0";
 
     MockERC1271VerifyingContract internal mockERC1271VerifyingContract =
         new MockERC1271VerifyingContract(DOMAIN_NAME, DOMAIN_VERSION);

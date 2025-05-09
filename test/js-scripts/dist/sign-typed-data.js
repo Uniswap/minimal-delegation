@@ -8942,7 +8942,7 @@ init_pad();
 
 // src/utils/constants.ts
 var DOMAIN_NAME = "Calibur";
-var DOMAIN_VERSION = "1";
+var DOMAIN_VERSION = "1.0.0";
 var types = {
   SignedBatchedCall: [
     { name: "batchedCall", type: "BatchedCall" },
