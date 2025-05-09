@@ -184,14 +184,14 @@ contract CaliburTest is DelegationHandler, HookHandler {
     /// forge-config: default.fuzz.runs = 100
     /// forge-config: ci.fuzz.runs = 500
     function test_fuzz_keyCount(uint8 numKeys) public {
-        Key memory mockSecp256k1Key;
-        string memory publicKey = "";
-        address mockSecp256k1PublicKey;
+        Key memory _mockKey;
+        string memory _publicKey = "";
+        address _mockPublicKey;
         for (uint256 i = 0; i < numKeys; i++) {
-            mockSecp256k1PublicKey = makeAddr(string(abi.encodePacked(publicKey, i)));
-            mockSecp256k1Key = Key(KeyType.Secp256k1, abi.encode(mockSecp256k1PublicKey));
+            _mockPublicKey = makeAddr(string(abi.encodePacked(_publicKey, i)));
+            _mockKey = Key(KeyType.Secp256k1, abi.encode(_mockPublicKey));
             vm.prank(address(signerAccount));
-            signerAccount.register(mockSecp256k1Key);
+            signerAccount.register(_mockKey);
         }
 
         assertEq(signerAccount.keyCount(), numKeys);
@@ -238,12 +238,62 @@ contract CaliburTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.keyCount(), 1);
     }
 
+    function test_getKey_returnsRootKey() public view {
+        Key memory key = signerAccount.getKey(KeyLib.ROOT_KEY_HASH);
+        assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
+        assertEq(key.publicKey, abi.encode(address(signerAccount)));
+    }
+
+    function test_getKey_returnsRegisteredKey() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        Key memory key = signerAccount.getKey(p256Key.toKeyHash());
+        assertEq(uint256(key.keyType), uint256(KeyType.P256));
+        assertEq(key.publicKey, p256Key.publicKey);
+    }
+
+    function test_getKey_reverts_withKeyDoesNotExist() public {
+        bytes32 keyHash = keccak256("does not exist");
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.getKey(keyHash);
+    }
+
     function test_getKeySettings_returnsRootSettings() public view {
         Settings keySettings = signerAccount.getKeySettings(KeyLib.ROOT_KEY_HASH);
         assertEq(Settings.unwrap(keySettings), Settings.unwrap(SettingsLib.ROOT_KEY_SETTINGS));
         assertEq(keySettings.isAdmin(), true);
         assertEq(keySettings.expiration(), 0);
         assertEq(address(keySettings.hook()), address(0));
+    }
+
+    function test_getKeySettings_returnsRegisteredKeySettings() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        Settings keySettings = signerAccount.getKeySettings(p256Key.toKeyHash());
+        // Expect default settings
+        assertEq(keySettings.expiration(), 0);
+        assertEq(keySettings.isAdmin(), false);
+        assertEq(address(keySettings.hook()), address(0));
+
+        // Update settings
+        keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        vm.prank(address(signerAccount));
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+
+        keySettings = signerAccount.getKeySettings(p256Key.toKeyHash());
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        assertEq(keySettings.isAdmin(), false);
+        assertEq(address(keySettings.hook()), address(0));
+    }
+
+    function test_getKeySettings_reverts_withKeyDoesNotExist() public {
+        bytes32 keyHash = keccak256("does not exist");
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.getKeySettings(keyHash);
     }
 
     function test_setERC1271CallerIsSafe() public {
