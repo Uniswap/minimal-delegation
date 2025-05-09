@@ -47,7 +47,8 @@ abstract contract ERC7739 {
         // For safety, ERC-7739 recommends to treat the signature as invalid if either the contentsName or contentsType are empty
         if (bytes(contentsName).length == 0 || bytes(contentsType).length == 0) return false;
 
-        bytes32 nestedDigest = contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType);
+        bytes32 nestedDigest =
+            contentsHash.toNestedTypedDataSignHash(domainBytes, appSeparator, contentsName, contentsType);
 
         return key.verify(nestedDigest, signature);
     }

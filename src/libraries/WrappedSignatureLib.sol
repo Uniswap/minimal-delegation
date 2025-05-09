@@ -60,5 +60,5 @@ library WrappedSignatureLib {
             contentsHash := calldataload(add(data.offset, 0x40))
         }
         contentsDescr = string(data.toBytes(3));
-    }    
+    }
 }

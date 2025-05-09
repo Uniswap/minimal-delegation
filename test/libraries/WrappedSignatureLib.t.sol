@@ -46,10 +46,13 @@ contract WrappedSignatureLibTest is Test {
 
     /// Offchain implementations may also encode the length of the contentsDescr in the calldata
     /// We do not use it in our implementation, but we should test that it does not affect the decoding of the other values
-    function test_decodeTypedDataSig_withContentsDescrLength_fuzz(bytes memory arg1, bytes32 arg2, bytes32 arg3, string memory arg4, uint16 arg5)
-        public
-        view
-    {
+    function test_decodeTypedDataSig_withContentsDescrLength_fuzz(
+        bytes memory arg1,
+        bytes32 arg2,
+        bytes32 arg3,
+        string memory arg4,
+        uint16 arg5
+    ) public view {
         bytes memory data = abi.encode(arg1, arg2, arg3, arg4, arg5);
         (bytes memory _arg1, bytes32 _arg2, bytes32 _arg3, string memory _arg4) = decoder.decodeAsTypedDataSig(data);
         assertEq(_arg1, arg1);
