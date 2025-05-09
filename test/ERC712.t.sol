@@ -29,6 +29,35 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         setUpTokens();
     }
 
+    function test_eip712Domain() public view {
+        (
+            ,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        ) = signerAccount.eip712Domain();
+        assertEq(name, "Calibur");
+        assertEq(version, "1");
+        assertEq(chainId, block.chainid);
+        assertEq(verifyingContract, address(signerAccount));
+        assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
+        assertEq(salt, bytes32(0));
+    }
+
+    function test_domainBytes() public view {
+        bytes memory domainBytes = signerAccount.domainBytes();
+        (bytes32 hashedName, bytes32 hashedVersion, uint256 chainId, address verifyingContract, bytes32 salt) =
+            abi.decode(domainBytes, (bytes32, bytes32, uint256, address, bytes32));
+        assertEq(hashedName, keccak256(bytes("Calibur")));
+        assertEq(hashedVersion, keccak256(bytes("1")));
+        assertEq(chainId, block.chainid);
+        assertEq(verifyingContract, address(signerAccount));
+        assertEq(salt, bytes32(0));
+    }
+
     function test_domainSeparator() public view {
         (
             ,
