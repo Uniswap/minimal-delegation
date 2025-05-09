@@ -10619,8 +10619,8 @@ init_toHex();
 init_pad();
 
 // src/utils/constants.ts
-var DOMAIN_NAME = "Uniswap Minimal Delegation";
-var DOMAIN_VERSION = "1";
+var DOMAIN_NAME = "Calibur";
+var DOMAIN_VERSION = "1.0.0";
 
 // node_modules/viem/_esm/experimental/erc7739/actions/signMessage.js
 init_parseAccount();
