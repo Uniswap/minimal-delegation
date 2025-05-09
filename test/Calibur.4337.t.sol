@@ -20,7 +20,7 @@ import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
-contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, HookHandler {
+contract Calibur4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, HookHandler {
     using CallUtils for *;
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;

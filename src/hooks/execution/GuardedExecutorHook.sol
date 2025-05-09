@@ -90,7 +90,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
     }
 
     /// @dev This hook is a no-op.
-    function afterExecute(bytes32, bytes calldata) external pure override returns (bytes4) {
+    function afterExecute(bytes32, bool, bytes calldata, bytes calldata) external pure override returns (bytes4) {
         return IExecutionHook.afterExecute.selector;
     }
 

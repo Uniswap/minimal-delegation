@@ -43,7 +43,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         assertEq(verifyingContract, address(signerAccount));
         assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
         assertEq(salt, bytes32(0));
-        assertEq(name, "Uniswap Minimal Delegation");
+        assertEq(name, "Calibur");
         assertEq(version, "1");
         bytes32 expected = keccak256(
             abi.encode(

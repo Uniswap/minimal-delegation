@@ -15131,7 +15131,7 @@ init_toHex();
 init_pad();
 
 // src/utils/constants.ts
-var DOMAIN_NAME = "Uniswap Minimal Delegation";
+var DOMAIN_NAME = "Calibur";
 var DOMAIN_VERSION = "1";
 var DEFAULT_DOMAIN_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
