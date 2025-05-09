@@ -8,7 +8,6 @@ library CalldataDecoder {
     ///      (note that this does deviate from standard solidity behavior and offsets/lengths will
     ///      be interpreted as mod type(uint32).max which will only impact malicious/buggy callers)
     uint256 constant OFFSET_OR_LENGTH_MASK = 0xffffffff;
-    uint256 constant OFFSET_OR_LENGTH_MASK_AND_WORD_ALIGN = 0xffffffe0;
 
     /// error SliceOutOfBounds();
     uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
