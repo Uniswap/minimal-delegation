@@ -1,7 +1,7 @@
 {
   "isValidSignature_P256_personalSign": "35029",
   "isValidSignature_P256_typedDataSign": "42420",
-  "isValidSignature_P256_typedData_notTypedDataSign_safeERC1271Caller": "295889",
+  "isValidSignature_P256_typedData_notTypedDataSign_safeERC1271Caller": "294290",
   "isValidSignature_P256_withHook": "48429",
   "isValidSignature_WebAuthnP256_typedDataSign": "49011",
   "isValidSignature_rootKey_personalSign": "10296",

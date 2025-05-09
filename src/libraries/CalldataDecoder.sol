@@ -3,18 +3,22 @@ pragma solidity ^0.8.23;
 
 /// @title CalldataDecoder
 library CalldataDecoder {
-    using CalldataDecoder for bytes;
-
     /// @notice mask used for offsets and lengths to ensure no overflow
     /// @dev no sane abi encoding will pass in an offset or length greater than type(uint32).max
     ///      (note that this does deviate from standard solidity behavior and offsets/lengths will
     ///      be interpreted as mod type(uint32).max which will only impact malicious/buggy callers)
     uint256 constant OFFSET_OR_LENGTH_MASK = 0xffffffff;
-    uint256 constant OFFSET_OR_LENGTH_MASK_AND_WORD_ALIGN = 0xffffffe0;
+
+    /// error SliceOutOfBounds();
+    uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
 
     /// @notice Removes the selector from the calldata and returns the encoded params.
     function removeSelector(bytes calldata data) internal pure returns (bytes calldata params) {
         assembly ("memory-safe") {
+            if lt(data.length, 4) {
+                mstore(0, SLICE_ERROR_SELECTOR)
+                revert(0x1c, 4)
+            }
             params.offset := add(data.offset, 4)
             params.length := sub(data.length, 4)
         }

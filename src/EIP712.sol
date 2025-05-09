@@ -92,6 +92,6 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     /// @return name    The user readable name of signing domain.
     /// @return version The current major version of the signing domain.
     function _domainNameAndVersion() internal pure returns (string memory name, string memory version) {
-        return ("Calibur", "1");
+        return ("Calibur", "1.0.0");
     }
 }
