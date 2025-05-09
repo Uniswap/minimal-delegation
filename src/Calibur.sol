@@ -59,7 +59,7 @@ contract Calibur is
     /// @inheritdoc ICalibur
     function execute(BatchedCall memory batchedCall) public payable {
         bytes32 keyHash = msg.sender.toKeyHash();
-        if (!_isOwnerOrAdmin(keyHash)) revert Unauthorized();
+        if (!_isOwnerOrValidKey(keyHash)) revert Unauthorized();
         _processBatch(batchedCall, keyHash);
     }
 
