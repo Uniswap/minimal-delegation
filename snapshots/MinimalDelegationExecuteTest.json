@@ -5,10 +5,10 @@
   "execute_BATCHED_CALL_opData_singleCall": "92471",
   "execute_BATCHED_CALL_opData_singleCall_native": "93286",
   "execute_BATCHED_CALL_opData_twoCalls": "129150",
-  "execute_BATCHED_CALL_singleCall": "59759",
-  "execute_BATCHED_CALL_singleCall_native": "59822",
-  "execute_BATCHED_CALL_twoCalls": "95606",
-  "execute_invalidMode_reverts": "23115",
+  "execute_BATCHED_CALL_singleCall": "59715",
+  "execute_BATCHED_CALL_singleCall_native": "59800",
+  "execute_BATCHED_CALL_twoCalls": "95562",
+  "execute_invalidMode_reverts": "23071",
   "execute_signedBatchedCallL_executor_singleCall": "92735",
-  "multicall": "177999"
+  "multicall": "177977"
 }

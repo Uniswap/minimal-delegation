@@ -324,120 +324,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     }
 
     /**
-     * Scenario: Root key
-     * 1. Not raw signature
-     * 2. Not typed data sign
-     * 3. Not nested personal sign
-     * 4. Safe ERC1271 caller
-     * = valid signature
-     */
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_rootKey_wrappedSignature_safeERC1271Caller_isValid_gas() public {
-        // Set the caller as safe
-        vm.prank(address(signerAccount));
-        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
-
-        (,, bytes32 contentsHash) = getERC1271Fixtures();
-        // Built by the ERC1271 contract which hashes its domain separator to the contents hash
-        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
-        // This is normally an unsafe digest to sign and would result in invalid signature
-        // but we set the caller as safe so expect it to be valid
-        bytes memory signature = signerTestKey.sign(digest);
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-
-        vm.prank(address(mockERC1271VerifyingContract));
-        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_MAGIC_VALUE);
-        vm.snapshotGasLastCall("isValidSignature_rootKey_wrappedSignature_safeERC1271Caller");
-    }
-
-    /**
-     * Scenario: SECP256K1 key
-     * 1. Not raw signature
-     * 2. Not typed data sign
-     * 3. Not nested personal sign
-     * 4. Safe ERC1271 caller
-     * = valid signature
-     */
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_secp256k1_wrappedSignature_safeERC1271Caller_isValid_gas() public {
-        TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, 0xb0b);
-        vm.startPrank(address(signer));
-        signerAccount.register(key.toKey());
-        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
-        vm.stopPrank();
-
-        bytes32 digest = keccak256("test");
-        bytes memory signature = key.sign(digest);
-        bytes memory wrappedSignature = abi.encode(key.toKeyHash(), signature, EMPTY_HOOK_DATA);
-
-        vm.prank(address(mockERC1271VerifyingContract));
-        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_MAGIC_VALUE);
-        vm.snapshotGasLastCall("isValidSignature_secp256k1_wrappedSignature_safeERC1271Caller");
-    }
-
-    /**
-     * Scenario: P256 key
-     * 1. Not raw signature
-     * 2. Not typed data sign
-     * 3. Not nested personal sign
-     * 4. Safe ERC1271 caller
-     * = valid signature
-     */
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_P256_wrappedSignature_safeERC1271Caller_isValid_gas() public {
-        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
-        vm.startPrank(address(signerAccount));
-        signerAccount.register(p256Key.toKey());
-        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
-        vm.stopPrank();
-
-        (,, bytes32 contentsHash) = getERC1271Fixtures();
-        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
-        // This is normally an unsafe digest to sign and would result in invalid signature
-        // but we set the caller as safe so expect it to be valid
-        bytes memory signature = p256Key.sign(digest);
-        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
-
-        vm.prank(address(mockERC1271VerifyingContract));
-        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_MAGIC_VALUE);
-        vm.snapshotGasLastCall("isValidSignature_P256_wrappedSignature_notTypedDataSign_safeERC1271Caller");
-    }
-
-    /**
-     * Scenario: WebAuthn key
-     * 1. Not raw signature
-     * 2. Not typed data sign
-     * 3. Not nested personal sign
-     * 4. Safe ERC1271 caller
-     * = valid signature
-     */
-    /// forge-config: default.isolate = true
-    /// forge-config: ci.isolate = true
-    function test_isValidSignature_WebAuthnP256_wrappedSignature_safeERC1271Caller_isValid_gas() public {
-        TestKey memory webAuthnP256Key = TestKeyManager.initDefault(KeyType.WebAuthnP256);
-        vm.startPrank(address(signerAccount));
-        signerAccount.register(webAuthnP256Key.toKey());
-        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
-        vm.stopPrank();
-
-        (,, bytes32 contentsHash) = getERC1271Fixtures();
-        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
-        bytes memory signature = webAuthnP256Key.sign(digest);
-        bytes memory wrappedSignature = abi.encode(webAuthnP256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
-
-        vm.prank(address(mockERC1271VerifyingContract));
-        bytes4 result = signerAccount.isValidSignature(digest, wrappedSignature);
-        assertEq(result, _1271_MAGIC_VALUE);
-        vm.snapshotGasLastCall("isValidSignature_WebAuthnP256_wrappedSignature_safeERC1271Caller");
-    }
-
-    /**
      *
      * MARK: Expired key tests
      *
@@ -583,7 +469,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_rootKey_wrappedSignature___typedDataSign_incorrectSignedDigest_invalidSigner()
@@ -609,7 +494,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_secp256k1_wrappedSignature___typedDataSign_incorrectSignedDigest_invalidSigner()
@@ -639,7 +523,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_P256_wrappedSignature___typedDataSign_incorrectSignedDigest_invalidSigner() public {
@@ -688,31 +571,10 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
     }
 
     /**
-     * Scenario: Root key sent a wrapped signature, ERC1271 caller is safe, but the signature is incorrect
-     * 1. Not raw signature
-     * 2. Not typed data sign
-     * 3. Not nested personal sign
-     * 4. Safe ERC1271 caller
-     * = invalid signer
-     */
-    function test_isValidSignature_rootKey_wrappedSignature_safeERC1271Caller_invalidSigner() public {
-        vm.prank(address(signerAccount));
-        signerAccount.setERC1271CallerIsSafe(address(mockERC1271VerifyingContract), true);
-
-        bytes32 digest = keccak256("test");
-        bytes memory signature = signerTestKey.sign(keccak256("incorrect"));
-        bytes memory wrappedSignature = abi.encode(KeyLib.ROOT_KEY_HASH, signature, EMPTY_HOOK_DATA);
-
-        vm.prank(address(mockERC1271VerifyingContract));
-        assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
-    }
-
-    /**
      * Scenario: Root key did not sign for any valid flow
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_rootKey_wrappedSignature_invalidSigner() public view {
@@ -727,7 +589,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_secp256k1_wrappedSignature_invalidSigner() public {
@@ -748,7 +609,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
+     *
      * = invalid signer
      */
     function test_isValidSignature_P256_wrappedSignature_invalidSigner() public {
@@ -769,7 +630,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Not nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_WebAuthnP256_wrappedSignature_invalidSigner() public {
@@ -805,12 +665,11 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
 
     /**
      * Scenario: Root key sent a nested personal sign but did not sign the correct digest
-     * @dev this would actually succeed if it was only a raw signature, 
+     * @dev this would actually succeed if it was only a raw signature,
      *      but if a wrapped signature is passed in we enforce that it is valid for NestedPersonalSign
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_rootKey_wrappedSignature__nestedPersonalSign_invalidSigner() public view {
@@ -831,7 +690,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_secp256k1_wrappedSignature__nestedPersonalSign_invalidSigner() public {
@@ -858,7 +716,7 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Nested personal sign
-     * 4. Not safe ERC1271 caller
+     *
      * = invalid signer
      */
     function test_isValidSignature_P256_wrappedSignature__nestedPersonalSign_invalidSigner() public {
@@ -885,7 +743,6 @@ contract MinimalDelegationIsValidSignatureTest is DelegationHandler, HookHandler
      * 1. Not raw signature
      * 2. Not typed data sign
      * 3. Nested personal sign
-     * 4. Not safe ERC1271 caller
      * = invalid signer
      */
     function test_isValidSignature_WebAuthnP256_wrappedSignature__nestedPersonalSign_invalidSigner() public {
