@@ -30,6 +30,7 @@ import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
+import {WrappedSignatureLib} from "./libraries/WrappedSignatureLib.sol";
 
 contract Calibur is
     ICalibur,
@@ -55,6 +56,7 @@ contract Calibur is
     using HooksLib for IHook;
     using SettingsLib for Settings;
     using ERC7739Utils for bytes;
+    using WrappedSignatureLib for bytes;
 
     /// @inheritdoc ICalibur
     function execute(BatchedCall memory batchedCall) public payable {
@@ -106,7 +108,7 @@ contract Calibur is
     {
         _payEntryPoint(missingAccountFunds);
         (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
-            userOp.signature.decodeSignatureWithKeyHashAndHookData();
+            userOp.signature.decodeWithKeyHashAndHookData();
 
         /// The userOpHash does not need to be made replay-safe, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         Key memory key = getKey(keyHash);
@@ -133,20 +135,23 @@ contract Calibur is
     {
         // Per ERC-7739, return 0x77390001 for the sentinel hash value
         unchecked {
-            if (wrappedSignature.length == uint256(0)) {
+            if (wrappedSignature.isEmpty()) {
                 // Forces the compiler to optimize for smaller bytecode size.
                 if (uint256(digest) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
             }
-            // If the signature is 65 bytes, it is a raw ECDSA signature and MUST be verified as the root key
-            else if (wrappedSignature.length == 65) {
+            // If the signature is 64 or 65 bytes, it must be validated as an ECDSA signature from the root key
+            // We skip any checks against expiry or hooks because settings are not supported on the root key
+            else if (wrappedSignature.isUnwrapped()) {
                 if (KeyLib.toRootKey().verify(digest, wrappedSignature)) {
                     return _1271_MAGIC_VALUE;
+                } else {
+                    return _1271_INVALID_VALUE;
                 }
             }
         }
 
         (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
-            wrappedSignature.decodeSignatureWithKeyHashAndHookData();
+            wrappedSignature.decodeWithKeyHashAndHookData();
 
         Key memory key = getKey(keyHash);
         /// Signature deduction flow as specified by ERC-7739
@@ -200,7 +205,7 @@ contract Calibur is
 
         _useNonce(signedBatchedCall.nonce);
 
-        (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeSignatureWithHookData();
+        (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeWithHookData();
 
         bytes32 digest = hashTypedData(signedBatchedCall.hash());
 

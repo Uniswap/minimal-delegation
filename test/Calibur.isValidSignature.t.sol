@@ -405,7 +405,7 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
      * 1. Raw signature not from the root key
      * = invalid signer
      */
-    function test_isValidSignature_secp256k1_rawSignature_reverts_withKeyDoesNotExist() public {
+    function test_isValidSignature_secp256k1_rawSignature_invalidSigner() public {
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, 0xb0b);
         vm.prank(address(signer));
         signerAccount.register(key.toKey());
@@ -413,12 +413,15 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         bytes32 digest = keccak256("test");
         bytes memory signature = key.sign(digest);
 
-        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
-        signerAccount.isValidSignature(digest, signature);
+        assertEq(signerAccount.isValidSignature(digest, signature), _1271_INVALID_VALUE);
     }
 
-    /// P256 signatures are 64 bytes, so the first 32 bytes will be assumed to be the keyHash which will revert with KeyDoesNotExist()
-    function test_isValidSignature_P256_rawSignature_reverts_withKeyDoesNotExist() public {
+    /**
+     * Scenario: P256 key
+     * 1. 64 or 65-byte signature not from the root key
+     * = invalid signer
+     */
+    function test_isValidSignature_P256_rawSignature_invalidSigner() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         vm.prank(address(signer));
         signerAccount.register(p256Key.toKey());
@@ -426,8 +429,7 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         bytes32 digest = keccak256("test");
         bytes memory signature = p256Key.sign(digest);
 
-        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
-        signerAccount.isValidSignature(digest, signature);
+        assertEq(signerAccount.isValidSignature(digest, signature), _1271_INVALID_VALUE);
     }
 
     /// Webauthn signatures are longer than 65 bytes, so the first 32 bytes will be assumed to be the keyHash which will revert with KeyDoesNotExist()

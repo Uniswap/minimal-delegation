@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 interface IERC1271 {
     /// @notice Validates the `signature` against the given `hash`.
     /// @dev Supports the following signature workflows:
-    /// - 65-byte ECDSA signatures from address(this)
+    /// - 64 or 65-byte ECDSA signatures from address(this)
     /// - Nested typed data signatures as defined by ERC-7739
     /// - Nested personal signatures as defined by ERC-7739
     /// @return result `0x1626ba7e` if validation succeeded, else `0xffffffff`.
