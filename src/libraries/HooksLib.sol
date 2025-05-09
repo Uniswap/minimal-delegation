@@ -37,10 +37,11 @@ library HooksLib {
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
+        uint256 validationData,
         bytes memory hookData
     ) internal view {
         if (self.hasPermission(HooksLib.AFTER_VALIDATE_USER_OP_FLAG)) {
-            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, hookData);
+            (bytes4 hookSelector) = self.afterValidateUserOp(keyHash, userOp, userOpHash, validationData, hookData);
             if (hookSelector != IValidationHook.afterValidateUserOp.selector) revert InvalidHookResponse();
         }
     }
@@ -87,9 +88,15 @@ library HooksLib {
     /// @notice Handles the afterExecute hook
     /// @param beforeExecuteData data returned from the beforeExecute hook
     /// @dev Expected to revert if the execution should be reverted
-    function handleAfterExecute(IHook self, bytes32 keyHash, bytes memory beforeExecuteData) internal {
+    function handleAfterExecute(
+        IHook self,
+        bytes32 keyHash,
+        bool success,
+        bytes memory output,
+        bytes memory beforeExecuteData
+    ) internal {
         if (self.hasPermission(HooksLib.AFTER_EXECUTE_FLAG)) {
-            bytes4 hookSelector = self.afterExecute(keyHash, beforeExecuteData);
+            bytes4 hookSelector = self.afterExecute(keyHash, success, output, beforeExecuteData);
             if (hookSelector != IExecutionHook.afterExecute.selector) revert InvalidHookResponse();
         }
     }

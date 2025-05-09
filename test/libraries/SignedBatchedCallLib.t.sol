@@ -16,7 +16,7 @@ contract SignedBatchedCallLibTest is Test {
     /// @notice Test to catch accidental changes to the typehash
     function test_constant_execution_data_typehash() public pure {
         bytes32 expectedTypeHash = keccak256(
-            "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash,address executor)BatchedCall(Call[] calls,bool revertOnFailure)Call(address to,uint256 value,bytes data)"
+            "SignedBatchedCall(BatchedCall batchedCall,uint256 nonce,bytes32 keyHash,address executor,uint256 deadline)BatchedCall(Call[] calls,bool revertOnFailure)Call(address to,uint256 value,bytes data)"
         );
         assertEq(SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, expectedTypeHash);
     }
@@ -32,7 +32,12 @@ contract SignedBatchedCallLibTest is Test {
 
         bytes32 expectedHash = keccak256(
             abi.encode(
-                SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH, batchedCall.hash(), nonce, keyHash, address(0)
+                SignedBatchedCallLib.SIGNED_BATCHED_CALL_TYPEHASH,
+                batchedCall.hash(),
+                nonce,
+                keyHash,
+                address(0),
+                uint256(0)
             )
         );
         assertEq(actualHash, expectedHash);

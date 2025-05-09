@@ -20,10 +20,10 @@ interface IERC7914 {
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
 
     /// @notice Returns the allowance of a spender
-    function allowance(address spender) external returns (uint256);
+    function allowance(address spender) external view returns (uint256);
 
     /// @notice Returns the transient allowance of a spender
-    function transientAllowance(address spender) external returns (uint256);
+    function transientAllowance(address spender) external view returns (uint256);
 
     /// @notice Transfers native tokens from the caller to a recipient
     /// @dev Doesn't forward transferFrom requests - the specified `from` address must be address(this)

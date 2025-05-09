@@ -15131,8 +15131,8 @@ init_toHex();
 init_pad();
 
 // src/utils/constants.ts
-var DOMAIN_NAME = "Uniswap Minimal Delegation";
-var DOMAIN_VERSION = "1";
+var DOMAIN_NAME = "Calibur";
+var DOMAIN_VERSION = "1.0.0";
 
 // node_modules/viem/_esm/experimental/erc7739/actions/signMessage.js
 init_parseAccount();
@@ -15273,7 +15273,7 @@ if (args.length < 1) {
   process.exit(1);
 }
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, message } = jsonInput;
+var { privateKey, verifyingContract, message, prefixedSalt } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var publicClient = createPublicClient({
   transport: http("http://127.0.0.1:8545")
@@ -15290,9 +15290,9 @@ async function signWrappedPersonalSign() {
       name: DOMAIN_NAME,
       version: DOMAIN_VERSION,
       verifyingContract,
-      chainId: 31337
+      chainId: 31337,
       // Default Anvil chain ID
-      // Salt is omitted from personal_sign
+      salt: prefixedSalt
     };
     const signature = await walletClient.signMessage({
       account,

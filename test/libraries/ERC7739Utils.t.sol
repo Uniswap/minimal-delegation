@@ -3,17 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC7739Utils} from "../../src/libraries/ERC7739Utils.sol";
-
-/// Helper contract to test internal library functions
-contract MockERC7739Utils {
-    function decodeContentsDescr(string memory contentsDescr)
-        public
-        pure
-        returns (string memory contentsName, string memory contentsType)
-    {
-        return ERC7739Utils.decodeContentsDescr(contentsDescr);
-    }
-}
+import {MockERC7739Utils} from "../utils/MockERC7739Utils.sol";
 
 /// @title ERC7739UtilsTest
 /// @notice Test suite for the ERC7739Utils library
