@@ -21,7 +21,6 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
     function setUp() public {
         setUpDelegation();
         setUpTokens();
-        setUpERC1271();
     }
 
     function test_signPersonalSign_matches_signWrappedPersonalSign_ffi() public {
@@ -33,8 +32,9 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         bytes32 wrappedPersonalSignDigest = messageHash.hashWrappedPersonalSign(signerAccountDomainSeparator);
 
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
-        (bytes memory signature) = ffi_signWrappedPersonalSign(signerPrivateKey, verifyingContract, message);
+        (bytes memory signature) = ffi_signWrappedPersonalSign(signerPrivateKey, verifyingContract, salt, message);
         assertEq(signature, key.sign(wrappedPersonalSignDigest));
     }
 
@@ -50,17 +50,21 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         bytes32 contentsHash = mockERC1271VerifyingContract.hash(permitSingle);
         bytes32 appSeparator = mockERC1271VerifyingContract.domainSeparator();
         string memory contentsDescrExplicit = mockERC1271VerifyingContract.contentsDescrExplicit();
+        (string memory contentsName, string memory contentsType) =
+            mockERC7739Utils.decodeContentsDescr(contentsDescrExplicit);
 
         bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
         bytes32 typedDataSignDigest =
-            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsDescrExplicit);
+            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsName, contentsType);
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
         (bytes memory signature) = ffi_signWrappedTypedData(
             signerPrivateKey,
             verifyingContract,
+            salt,
             DOMAIN_NAME,
             DOMAIN_VERSION,
             address(mockERC1271VerifyingContract),
@@ -85,17 +89,21 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         // Incorrectly use the implicit type descriptor string, causing the top level type to be
         // TypeDataSign(...)PermitSingle(...)PermitDetails(...) which does not follow EIP-712 ordering
         string memory contentsDescrImplicit = mockERC1271VerifyingContract.contentsDescrImplicit();
+        (string memory contentsName, string memory contentsType) =
+            mockERC7739Utils.decodeContentsDescr(contentsDescrImplicit);
 
         bytes memory signerAccountDomainBytes = IERC5267(address(signerAccount)).toDomainBytes();
         bytes32 typedDataSignDigest =
-            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsDescrImplicit);
+            contentsHash.hashTypedDataSign(signerAccountDomainBytes, appSeparator, contentsName, contentsType);
 
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
         (bytes memory signature) = ffi_signWrappedTypedData(
             signerPrivateKey,
             verifyingContract,
+            salt,
             DOMAIN_NAME,
             DOMAIN_VERSION,
             address(mockERC1271VerifyingContract),

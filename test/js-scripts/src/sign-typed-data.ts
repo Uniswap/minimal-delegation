@@ -8,7 +8,6 @@ import {
   createWalletClient,
   http,
   type WalletClient,
-  type Address,
   toHex,
   pad,
 } from 'viem'
@@ -29,7 +28,7 @@ if (args.length < 1) {
 
 // Parse the JSON input
 const jsonInput = JSON.parse(args[0]) as SignedBatchedCallInputData;
-const { privateKey, verifyingContract, signedBatchedCall } = jsonInput;
+const { privateKey, verifyingContract, signedBatchedCall, prefixedSalt } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 
@@ -39,7 +38,7 @@ const domain = {
   version: DOMAIN_VERSION,
   chainId: 31337, // Default Anvil chain ID
   verifyingContract,
-  salt: DEFAULT_DOMAIN_SALT
+  salt: prefixedSalt
 } as const;
 
 

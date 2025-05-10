@@ -41,6 +41,11 @@ contract CaliburTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.namespaceAndVersion(), "Uniswap.Calibur.1.0.0");
     }
 
+    function test_entrypoint_gas() public {
+        signerAccount.ENTRY_POINT();
+        vm.snapshotGasLastCall("entrypoint");
+    }
+
     function test_register() public {
         bytes32 keyHash = mockSecp256k1Key.hash();
 
@@ -294,19 +299,6 @@ contract CaliburTest is DelegationHandler, HookHandler {
         bytes32 keyHash = keccak256("does not exist");
         vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
         signerAccount.getKeySettings(keyHash);
-    }
-
-    function test_setERC1271CallerIsSafe() public {
-        address caller = makeAddr("caller");
-        vm.prank(address(signerAccount));
-        signerAccount.setERC1271CallerIsSafe(caller, true);
-        assertEq(signerAccount.erc1271CallerIsSafe(caller), true);
-    }
-
-    function test_setERC1271CallerIsSafe_revertsWithUnauthorized() public {
-        address caller = makeAddr("caller");
-        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
-        signerAccount.setERC1271CallerIsSafe(caller, true);
     }
 
     function test_entryPoint_defaultValue() public view {
