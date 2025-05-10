@@ -32,19 +32,23 @@ import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
 import {WrappedSignatureLib} from "./libraries/WrappedSignatureLib.sol";
 
+/// @title Calibur
+/// @notice A singleton contract wallet supporting batched transactions, alternative signers, and native ETH transferFrom
+/// @dev Delegate to Calibur from an EOA using EIP-7702
+/// @custom:security-contact security@uniswap.org
 contract Calibur is
     ICalibur,
     ERC7821,
     ERC1271,
     ERC4337Account,
-    Receiver,
     KeyManagement,
     NonceManager,
     ERC7914,
     ERC7201,
     ERC7739,
     EIP712,
-    Multicall
+    Multicall,
+    Receiver
 {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using CallLib for Call[];
