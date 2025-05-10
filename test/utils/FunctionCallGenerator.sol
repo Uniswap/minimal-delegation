@@ -106,8 +106,7 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     function _generateHandlerCall(uint256 randomSeed) internal returns (HandlerCall memory) {
         TestKey memory testKey = _randKeyFromArray(fixtureKeys);
 
-        bool isRootKey = vm.addr(testKey.privateKey) == address(signerAccount);
-        bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : testKey.toKeyHash();
+        bytes32 currentKeyHash = _testKeyIsSignerAccount(testKey) ? KeyLib.ROOT_KEY_HASH : testKey.toKeyHash();
 
         bool isRegistered;
         try signerAccount.getKey(currentKeyHash) {
@@ -129,6 +128,10 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
             if (!isRegistered) {
+                revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
+            }
+            // Cannot revoke the rootKeyHash since it cannot be registered 
+            else if (currentKeyHash == KeyLib.ROOT_KEY_HASH) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
             return _revokeCall(currentKeyHash, revertData);

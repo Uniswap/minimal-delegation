@@ -141,7 +141,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
+    function executeSignedBatchedCall(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
@@ -242,7 +242,7 @@ contract CaliburExecuteInvariantTest is TokenHandler, DelegationHandler {
         // Explicitly target the wrapped execute functions in the handler
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = CaliburExecuteInvariantHandler.executeBatchedCall.selector;
-        selectors[1] = CaliburExecuteInvariantHandler.executeWithOpData.selector;
+        selectors[1] = CaliburExecuteInvariantHandler.executeSignedBatchedCall.selector;
         FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
 
         targetSelector(selector);
@@ -276,7 +276,7 @@ contract CaliburExecuteInvariantTest is TokenHandler, DelegationHandler {
             Key memory key = signerAccount.keyAt(i);
             bytes32 keyHash = key.hash();
             // Will be false if the stored encoded data is wrong
-            // assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
+            assertEq(signerAccount.getKey(keyHash).hash(), keyHash);
         }
     }
 }
