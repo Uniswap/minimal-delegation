@@ -30,7 +30,7 @@ contract ERC7914Test is DelegationHandler {
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, 1 ether);
         assertTrue(success);
-        assertEq(signerAccount.allowance(bob), 1 ether);
+        assertEq(signerAccount.nativeAllowance(bob), 1 ether);
     }
 
     /// forge-config: default.isolate = true
@@ -78,7 +78,7 @@ contract ERC7914Test is DelegationHandler {
         vm.prank(bob);
         success = signerAccount.transferFromNative(address(signerAccount), bob, 1 ether);
         assertTrue(success);
-        assertEq(signerAccount.allowance(bob), 0);
+        assertEq(signerAccount.nativeAllowance(bob), 0);
         assertEq(bob.balance, bobBalanceBefore + 1 ether);
         assertEq(address(signerAccount).balance, signerAccountBalanceBefore - 1 ether);
     }
@@ -102,7 +102,7 @@ contract ERC7914Test is DelegationHandler {
         vm.deal(address(signerAccount), balance);
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, approvedAmount);
-        assertEq(signerAccount.allowance(bob), approvedAmount);
+        assertEq(signerAccount.nativeAllowance(bob), approvedAmount);
         assertTrue(success);
 
         uint256 bobBalanceBefore = bob.balance;
@@ -121,14 +121,14 @@ contract ERC7914Test is DelegationHandler {
         // otherwise check the balances have not changed
         if (success) {
             if (approvedAmount < type(uint256).max) {
-                assertEq(signerAccount.allowance(bob), approvedAmount - transferAmount);
+                assertEq(signerAccount.nativeAllowance(bob), approvedAmount - transferAmount);
             } else {
-                assertEq(signerAccount.allowance(bob), approvedAmount);
+                assertEq(signerAccount.nativeAllowance(bob), approvedAmount);
             }
             assertEq(bob.balance, bobBalanceBefore + transferAmount);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore - transferAmount);
         } else {
-            assertEq(signerAccount.allowance(bob), approvedAmount);
+            assertEq(signerAccount.nativeAllowance(bob), approvedAmount);
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }
@@ -145,7 +145,7 @@ contract ERC7914Test is DelegationHandler {
         vm.startPrank(address(signerAccount));
         bool success = signerAccount.approveNativeTransient(bob, 1 ether);
         assertTrue(success);
-        assertEq(signerAccount.transientAllowance(bob), 1 ether);
+        assertEq(signerAccount.transientNativeAllowance(bob), 1 ether);
     }
 
     /// forge-config: default.isolate = true
@@ -198,7 +198,7 @@ contract ERC7914Test is DelegationHandler {
         success = signerAccount.transferFromNativeTransient(address(signerAccount), bob, 1 ether);
         assertTrue(success);
 
-        assertEq(signerAccount.transientAllowance(bob), 0);
+        assertEq(signerAccount.transientNativeAllowance(bob), 0);
         assertEq(bob.balance, bobBalanceBefore + 1 ether);
         assertEq(address(signerAccount).balance, signerAccountBalanceBefore - 1 ether);
     }
@@ -212,7 +212,7 @@ contract ERC7914Test is DelegationHandler {
         vm.deal(address(signerAccount), balance);
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNativeTransient(bob, approvedAmount);
-        assertEq(signerAccount.transientAllowance(bob), approvedAmount);
+        assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount);
         assertTrue(success);
 
         uint256 bobBalanceBefore = bob.balance;
@@ -231,14 +231,14 @@ contract ERC7914Test is DelegationHandler {
         // otherwise check the balances have not changed
         if (success) {
             if (approvedAmount < type(uint256).max) {
-                assertEq(signerAccount.transientAllowance(bob), approvedAmount - transferAmount);
+                assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount - transferAmount);
             } else {
-                assertEq(signerAccount.transientAllowance(bob), approvedAmount);
+                assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount);
             }
             assertEq(bob.balance, bobBalanceBefore + transferAmount);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore - transferAmount);
         } else {
-            assertEq(signerAccount.transientAllowance(bob), approvedAmount);
+            assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount);
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }
