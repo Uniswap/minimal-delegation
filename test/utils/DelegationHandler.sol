@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
-import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "../../src/interfaces/ICalibur.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
@@ -17,7 +17,7 @@ contract DelegationHandler is Test {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
 
-    IMinimalDelegation public minimalDelegation;
+    ICalibur public calibur;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
     TestKey signerTestKey = TestKey(KeyType.Secp256k1, abi.encode(signer), signerPrivateKey);
@@ -33,13 +33,12 @@ contract DelegationHandler is Test {
     Settings public mockSecp256k1Key2Settings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
 
     EntryPoint public entryPoint;
-    IMinimalDelegation public signerAccount;
+    ICalibur public signerAccount;
 
     function setUpDelegation() public {
-        minimalDelegation =
-            IMinimalDelegation(create2(vm.getCode("MinimalDelegationEntry.sol:MinimalDelegationEntry"), bytes32(0)));
-        _delegate(signer, address(minimalDelegation));
-        signerAccount = IMinimalDelegation(signer);
+        calibur = ICalibur(create2(vm.getCode("CaliburEntry.sol:CaliburEntry"), bytes32(0)));
+        _delegate(signer, address(calibur));
+        signerAccount = ICalibur(signer);
 
         vm.etch(Constants.ENTRY_POINT_V_0_8, Constants.ENTRY_POINT_V_0_8_CODE);
         vm.label(Constants.ENTRY_POINT_V_0_8, "EntryPoint");

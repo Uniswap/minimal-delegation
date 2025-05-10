@@ -14,7 +14,7 @@ import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
-contract MinimalDelegationTest is DelegationHandler, HookHandler {
+contract CaliburTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using SettingsLib for Settings;
@@ -35,8 +35,13 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(address(signerAccount).code.length, 0x17);
     }
 
-    function test_minimalDelegationEntry_codeSize() public {
-        vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
+    function test_caliburEntry_codeSize() public {
+        vm.snapshotValue("caliburEntry bytecode size", address(calibur).code.length);
+    }
+
+    function test_entrypoint_gas() public {
+        signerAccount.ENTRY_POINT();
+        vm.snapshotGasLastCall("entrypoint");
     }
 
     function test_register() public {
@@ -248,23 +253,6 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), true);
         assertEq(keySettings.expiration(), 0);
         assertEq(address(keySettings.hook()), address(0));
-    }
-
-    function test_setERC1271CallerIsSafe() public {
-        address caller = makeAddr("caller");
-
-        vm.expectEmit(true, false, false, true);
-        emit ERC1271CallerIsSafeSet(caller, true);
-
-        vm.prank(address(signerAccount));
-        signerAccount.setERC1271CallerIsSafe(caller, true);
-        assertEq(signerAccount.erc1271CallerIsSafe(caller), true);
-    }
-
-    function test_setERC1271CallerIsSafe_revertsWithUnauthorized() public {
-        address caller = makeAddr("caller");
-        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
-        signerAccount.setERC1271CallerIsSafe(caller, true);
     }
 
     function test_entryPoint_defaultValue() public view {
