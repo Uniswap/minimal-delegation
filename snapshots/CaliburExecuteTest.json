@@ -3,7 +3,7 @@
   "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "134569",
   "execute_BATCHED_CALL_opData_P256_singleCall": "122589",
   "execute_BATCHED_CALL_opData_singleCall": "97067",
-  "execute_BATCHED_CALL_opData_singleCall_native": "97862",
+  "execute_BATCHED_CALL_opData_singleCall_native": "97850",
   "execute_BATCHED_CALL_opData_twoCalls": "134569",
   "execute_BATCHED_CALL_singleCall": "59522",
   "execute_BATCHED_CALL_singleCall_native": "59853",
