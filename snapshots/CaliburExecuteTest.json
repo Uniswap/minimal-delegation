@@ -1,14 +1,14 @@
 {
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "97038",
-  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "134528",
-  "execute_BATCHED_CALL_opData_P256_singleCall": "122612",
-  "execute_BATCHED_CALL_opData_singleCall": "97038",
-  "execute_BATCHED_CALL_opData_singleCall_native": "97821",
-  "execute_BATCHED_CALL_opData_twoCalls": "134528",
-  "execute_BATCHED_CALL_singleCall": "59566",
-  "execute_BATCHED_CALL_singleCall_native": "59875",
-  "execute_BATCHED_CALL_twoCalls": "95418",
-  "execute_invalidMode_reverts": "22966",
-  "execute_signedBatchedCallL_executor_singleCall": "97302",
-  "multicall": "185268"
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall": "97067",
+  "execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls": "134569",
+  "execute_BATCHED_CALL_opData_P256_singleCall": "122589",
+  "execute_BATCHED_CALL_opData_singleCall": "97067",
+  "execute_BATCHED_CALL_opData_singleCall_native": "97862",
+  "execute_BATCHED_CALL_opData_twoCalls": "134569",
+  "execute_BATCHED_CALL_singleCall": "59522",
+  "execute_BATCHED_CALL_singleCall_native": "59853",
+  "execute_BATCHED_CALL_twoCalls": "95374",
+  "execute_invalidMode_reverts": "22940",
+  "execute_signedBatchedCallL_executor_singleCall": "97331",
+  "multicall": "185200"
 }

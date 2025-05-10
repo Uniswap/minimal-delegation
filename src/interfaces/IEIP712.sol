@@ -11,8 +11,10 @@ interface IEIP712 {
     /// @param hash The nested typed data. Assumes the hash is the result of applying EIP-712 `hashStruct`.
     function hashTypedData(bytes32 hash) external view returns (bytes32);
 
-    /// @notice Set the salt for the EIP-712 domain
-    /// @dev Use this to invalidate all existing signatures made under the old domain separator
-    /// @param salt The salt to set
-    function setSalt(bytes32 salt) external;
+    /// @notice Update the EIP-712 domain salt by setting the upper 96 bits to `prefix`
+    ///   12 bytes | 20 bytes
+    ///   prefix   | Implementation address (immutable, set on deployment)
+    /// @dev Use this to invalidate existing signatures signed under the old domain separator
+    /// @param prefix The prefix to set
+    function updateSalt(uint96 prefix) external;
 }

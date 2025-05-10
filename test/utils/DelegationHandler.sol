@@ -36,8 +36,7 @@ contract DelegationHandler is Test {
     ICalibur public signerAccount;
 
     function setUpDelegation() public {
-        calibur =
-            ICalibur(create2(vm.getCode("CaliburEntry.sol:CaliburEntry"), bytes32(0)));
+        calibur = ICalibur(create2(vm.getCode("CaliburEntry.sol:CaliburEntry"), bytes32(0)));
         _delegate(signer, address(calibur));
         signerAccount = ICalibur(signer);
 
