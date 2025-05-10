@@ -8942,8 +8942,7 @@ init_pad();
 
 // src/utils/constants.ts
 var DOMAIN_NAME = "Calibur";
-var DOMAIN_VERSION = "1";
-var DEFAULT_DOMAIN_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
+var DOMAIN_VERSION = "1.0.0";
 var types = {
   SignedBatchedCall: [
     { name: "batchedCall", type: "BatchedCall" },
@@ -8970,7 +8969,7 @@ if (args.length < 1) {
   process.exit(1);
 }
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, signedBatchedCall } = jsonInput;
+var { privateKey, verifyingContract, signedBatchedCall, prefixedSalt } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var domain = {
   name: DOMAIN_NAME,
@@ -8978,7 +8977,7 @@ var domain = {
   chainId: 31337,
   // Default Anvil chain ID
   verifyingContract,
-  salt: DEFAULT_DOMAIN_SALT
+  salt: prefixedSalt
 };
 var walletClient = createWalletClient({
   account,

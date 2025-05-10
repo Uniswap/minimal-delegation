@@ -10620,7 +10620,7 @@ init_pad();
 
 // src/utils/constants.ts
 var DOMAIN_NAME = "Calibur";
-var DOMAIN_VERSION = "1";
+var DOMAIN_VERSION = "1.0.0";
 
 // node_modules/viem/_esm/experimental/erc7739/actions/signMessage.js
 init_parseAccount();
@@ -10774,7 +10774,7 @@ var PermitSingleTypes = {
   ]
 };
 var jsonInput = JSON.parse(args[0]);
-var { privateKey, verifyingContract, appDomainName, appDomainVersion, appVerifyingContract, contents } = jsonInput;
+var { privateKey, verifyingContract, prefixedSalt, appDomainName, appDomainVersion, appVerifyingContract, contents } = jsonInput;
 var account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 var walletClient = createWalletClient({
   account,
@@ -10797,7 +10797,7 @@ async function signWrappedTypedData() {
       verifyingContract,
       chainId: 31337,
       // Default Anvil chain ID
-      salt: "0x0000000000000000000000000000000000000000000000000000000000000000"
+      salt: prefixedSalt
     };
     const wrappedSignature = await walletClient.signTypedData({
       account,

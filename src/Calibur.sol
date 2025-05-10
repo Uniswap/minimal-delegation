@@ -30,6 +30,7 @@ import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {ModeDecoder} from "./libraries/ModeDecoder.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 import {SignedBatchedCallLib, SignedBatchedCall} from "./libraries/SignedBatchedCallLib.sol";
+import {WrappedSignatureLib} from "./libraries/WrappedSignatureLib.sol";
 
 contract Calibur is
     ICalibur,
@@ -55,6 +56,7 @@ contract Calibur is
     using HooksLib for IHook;
     using SettingsLib for Settings;
     using ERC7739Utils for bytes;
+    using WrappedSignatureLib for bytes;
 
     /// @inheritdoc ICalibur
     function execute(BatchedCall memory batchedCall) public payable {
@@ -64,14 +66,14 @@ contract Calibur is
     }
 
     /// @inheritdoc ICalibur
-    function execute(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature) public payable {
+    function execute(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature) public payable {
         if (!_senderIsExecutor(signedBatchedCall.executor)) revert Unauthorized();
         _handleVerifySignature(signedBatchedCall, wrappedSignature);
         _processBatch(signedBatchedCall.batchedCall, signedBatchedCall.keyHash);
     }
 
     /// @inheritdoc IERC7821
-    function execute(bytes32 mode, bytes memory executionData) external payable override {
+    function execute(bytes32 mode, bytes calldata executionData) external payable override {
         if (!mode.isBatchedCall()) revert IERC7821.UnsupportedExecutionMode();
         Call[] memory calls = abi.decode(executionData, (Call[]));
         BatchedCall memory batchedCall = BatchedCall({calls: calls, revertOnFailure: mode.revertOnFailure()});
@@ -105,20 +107,21 @@ contract Calibur is
         returns (uint256 validationData)
     {
         _payEntryPoint(missingAccountFunds);
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(userOp.signature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
+            userOp.signature.decodeWithKeyHashAndHookData();
 
         /// The userOpHash does not need to be made replay-safe, as the EntryPoint will always call the sender contract of the UserOperation for validation.
         Key memory key = getKey(keyHash);
         bool isValid = key.verify(userOpHash, signature);
 
         Settings settings = getKeySettings(keyHash);
-        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, hookData);
 
         /// validationData is (uint256(validAfter) << (160 + 48)) | (uint256(validUntil) << 160) | (success ? 0 : 1)
         /// `validAfter` is always 0.
         validationData =
             isValid ? uint256(settings.expiration()) << 160 | SIG_VALIDATION_SUCCEEDED : SIG_VALIDATION_FAILED;
+
+        settings.hook().handleAfterValidateUserOp(keyHash, userOp, userOpHash, validationData, hookData);
     }
 
     /// @inheritdoc ERC1271
@@ -132,30 +135,30 @@ contract Calibur is
     {
         // Per ERC-7739, return 0x77390001 for the sentinel hash value
         unchecked {
-            if (wrappedSignature.length == uint256(0)) {
+            if (wrappedSignature.isEmpty()) {
                 // Forces the compiler to optimize for smaller bytecode size.
                 if (uint256(digest) == ~wrappedSignature.length / 0xffff * 0x7739) return 0x77390001;
             }
+            // If the signature is 64 or 65 bytes, it must be validated as an ECDSA signature from the root key
+            // We skip any checks against expiry or hooks because settings are not supported on the root key
+            else if (wrappedSignature.isRawSignature()) {
+                if (KeyLib.toRootKey().verify(digest, wrappedSignature)) {
+                    return _1271_MAGIC_VALUE;
+                } else {
+                    return _1271_INVALID_VALUE;
+                }
+            }
         }
 
-        (bytes32 keyHash, bytes memory signature, bytes memory hookData) =
-            abi.decode(wrappedSignature, (bytes32, bytes, bytes));
+        (bytes32 keyHash, bytes calldata signature, bytes calldata hookData) =
+            wrappedSignature.decodeWithKeyHashAndHookData();
 
         Key memory key = getKey(keyHash);
-
-        /// There are 3 ways to validate a signature through ERC-1271:
-        /// 1. The caller is allowlisted, so we can validate the signature directly against the data.
-        /// 2. The caller is address(0), meaning it is an offchain call, so we can validate the signature as if it is a PersonalSign.
-        /// 3. If none of the above is true, the signature must be validated as a TypedDataSign struct according to ERC-7739.
-        bool isValid;
-        if (erc1271CallerIsSafe[msg.sender]) {
-            isValid = key.verify(digest, signature);
-        } else if (msg.sender == address(0)) {
-            // We only support PersonalSign for offchain calls
-            isValid = _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
-        } else {
-            isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature);
-        }
+        /// Signature deduction flow as specified by ERC-7739
+        // If the signature contains enough data for a TypedDataSign, try the TypedDataSign flow
+        bool isValid = _isValidTypedDataSig(key, digest, domainBytes(), signature)
+        // If the signature is not valid as a TypedDataSign, try the NestedPersonalSign flow
+        || _isValidNestedPersonalSig(key, digest, domainSeparator(), signature);
 
         // Early return if the signature is invalid
         if (!isValid) return _1271_INVALID_VALUE;
@@ -190,11 +193,11 @@ contract Calibur is
 
         (success, output) = to.call{value: _call.value}(_call.data);
 
-        hook.handleAfterExecute(keyHash, beforeExecuteData);
+        hook.handleAfterExecute(keyHash, success, output, beforeExecuteData);
     }
 
     /// @dev This function is used to handle the verification of signatures sent through execute()
-    function _handleVerifySignature(SignedBatchedCall memory signedBatchedCall, bytes memory wrappedSignature)
+    function _handleVerifySignature(SignedBatchedCall calldata signedBatchedCall, bytes calldata wrappedSignature)
         private
     {
         uint256 deadline = signedBatchedCall.deadline;
@@ -202,7 +205,7 @@ contract Calibur is
 
         _useNonce(signedBatchedCall.nonce);
 
-        (bytes memory signature, bytes memory hookData) = abi.decode(wrappedSignature, (bytes, bytes));
+        (bytes calldata signature, bytes calldata hookData) = wrappedSignature.decodeWithHookData();
 
         bytes32 digest = hashTypedData(signedBatchedCall.hash());
 

@@ -34,7 +34,7 @@ contract MockHook is IHook {
         _beforeExecuteRevertData = revertData;
     }
 
-    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, bytes calldata)
+    function afterValidateUserOp(bytes32, PackedUserOperation calldata, bytes32, uint256, bytes calldata)
         external
         view
         returns (bytes4 selector)
@@ -72,7 +72,7 @@ contract MockHook is IHook {
         return (IExecutionHook.beforeExecute.selector, _beforeExecuteReturnValue);
     }
 
-    function afterExecute(bytes32, bytes calldata) external pure returns (bytes4) {
+    function afterExecute(bytes32, bool, bytes calldata, bytes calldata) external pure returns (bytes4) {
         return (IExecutionHook.afterExecute.selector);
     }
 }

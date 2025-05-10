@@ -9,6 +9,7 @@ import {HandlerCall, CallUtils} from "./utils/CallUtils.sol";
 import {Call} from "../src/libraries/CallLib.sol";
 import {CallLib} from "../src/libraries/CallLib.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
+import {PrefixedSaltLib} from "../src/libraries/PrefixedSaltLib.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {TokenHandler} from "./utils/TokenHandler.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
@@ -42,9 +43,9 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         // Ensure that verifying contract is the signer
         assertEq(verifyingContract, address(signerAccount));
         assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
-        assertEq(salt, bytes32(0));
+        assertEq(salt, PrefixedSaltLib.pack(uint96(0), address(calibur)));
         assertEq(name, "Calibur");
-        assertEq(version, "1");
+        assertEq(version, "1.0.0");
         bytes32 expected = keccak256(
             abi.encode(
                 keccak256(
@@ -79,21 +80,24 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);
         // Make it clear that the verifying contract is set properly.
         address verifyingContract = address(signerAccount);
+        (,,,,, bytes32 salt,) = signerAccount.eip712Domain();
 
-        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCall, verifyingContract);
+        (bytes memory signature) = ffi_signTypedData(signerPrivateKey, signedBatchedCall, verifyingContract, salt);
 
         assertEq(signature, key.sign(signerAccount.hashTypedData(signedBatchedCall.hash())));
     }
 
-    function test_setSalt() public {
-        bytes32 _salt = keccak256(abi.encodePacked("new salt"));
+    function test_updateSalt() public {
+        uint96 _prefix = uint96(0x1);
 
         vm.prank(address(signerAccount));
-        signerAccount.setSalt(_salt);
+        signerAccount.updateSalt(_prefix);
 
         (, string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) =
             signerAccount.eip712Domain();
-        assertEq(salt, _salt);
+
+        bytes32 expectedSalt = PrefixedSaltLib.pack(_prefix, address(calibur));
+        assertEq(salt, expectedSalt);
 
         bytes32 expected = keccak256(
             abi.encode(
@@ -104,7 +108,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
                 keccak256(bytes(version)),
                 chainId,
                 verifyingContract,
-                _salt
+                expectedSalt
             )
         );
         assertEq(expected, signerAccount.domainSeparator());
