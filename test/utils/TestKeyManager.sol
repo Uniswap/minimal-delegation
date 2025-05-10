@@ -73,7 +73,7 @@ library TestKeyManager {
     function sign(TestKey memory key, bytes32 hash) internal pure returns (bytes memory) {
         if (key.keyType == KeyType.P256) {
             (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, hash);
-            return abi.encodePacked(r, s, false);
+            return abi.encode(r, s, false);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);
             return abi.encodePacked(r, s, v);
