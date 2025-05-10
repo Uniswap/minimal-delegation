@@ -77,6 +77,20 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
 
     /**
      * Scenario: Root key
+     * 1. 64 byte compact signature from the root key
+     * = valid signature
+     */
+    function test_isValidSignature_rootKey_compactSignature_isValid_gas() public {
+        bytes32 digest = keccak256("test");
+        (bytes32 r, bytes32 vs) = vm.signCompact(signerTestKey.privateKey, digest);
+        bytes memory signature = abi.encodePacked(r, vs);
+        bytes4 result = signerAccount.isValidSignature(digest, signature);
+        vm.snapshotGasLastCall("isValidSignature_rootKey_compactSignature");
+        assertEq(result, _1271_MAGIC_VALUE);
+    }
+
+    /**
+     * Scenario: Root key
      * 1. Not raw signature
      * 2. Typed data sign
      * = valid signature
