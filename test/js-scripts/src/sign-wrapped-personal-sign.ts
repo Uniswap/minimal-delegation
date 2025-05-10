@@ -29,7 +29,7 @@ interface WrappedPersonalSignInputData extends InputData {
 
 // Parse the JSON input
 const jsonInput = JSON.parse(args[0]) as WrappedPersonalSignInputData;
-const { privateKey, verifyingContract, message } = jsonInput;
+const { privateKey, verifyingContract, message, prefixedSalt } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 
@@ -49,7 +49,7 @@ async function signWrappedPersonalSign(): Promise<void> {
             version: VERIFIER_DOMAIN_VERSION,
             verifyingContract: verifyingContract,
             chainId: 31337, // Default Anvil chain ID
-            salt: DEFAULT_DOMAIN_SALT
+            salt: prefixedSalt
         }
 
         // For some reason this is not working 
