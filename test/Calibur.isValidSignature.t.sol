@@ -18,6 +18,8 @@ import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
+import "forge-std/console2.sol";
+
 contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271Handler {
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;

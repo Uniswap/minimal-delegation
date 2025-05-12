@@ -94,6 +94,22 @@ contract WrappedSignatureLibTest is Test {
         assertEq(_arg3, bytes(""));
     }
 
+    // Calldata version
+    // Doesnt revert but returns bad values
+    function test_decodeWithKeyHashAndHookData_incorrectlyEncodedKeyHash_reverts() public {
+        bytes memory data = abi.encode(bytes("4444"));
+        vm.expectRevert();
+        decoder.decodeWithKeyHashAndHookData(data);
+    }
+
+    // In memory version
+    // reverts
+    function test_decodeWithKeyHashAndHookData_incorrectlyEncodedKeyHash_inMemory_reverts() public {
+        bytes memory data = abi.encode(bytes("4444"));
+        vm.expectRevert();
+        decoder.decodeWithKeyHashAndHookDataInMemory(data);
+    }
+
     function test_decodeWithKeyHashAndHookData_incorrectlyEncodedSignature_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")));
         vm.expectRevert();

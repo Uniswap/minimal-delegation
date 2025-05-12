@@ -37,4 +37,12 @@ contract MockWrappedSignatureLib {
     {
         (signature, hookData) = abi.decode(data, (bytes, bytes));
     }
+
+    function decodeWithKeyHashAndHookDataInMemory(bytes calldata data)
+        public
+        pure
+        returns (bytes32 keyHash, bytes memory signature, bytes memory hookData)
+    {
+        (keyHash, signature, hookData) = abi.decode(data, (bytes32, bytes, bytes));
+    }
 }
