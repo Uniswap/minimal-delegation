@@ -64,20 +64,4 @@ library WrappedSignatureLib {
         }
         contentsDescr = string(data.toBytes(3));
     }
-
-    /// @notice Decode the r, s, and preHash flag from the calldata
-    /// @dev The calldata is expected to be encoded as `abi.encodePacked(bytes32 r, bytes32 s, bool preHash)`
-    function decodeAsP256Sig(bytes calldata data) internal pure returns (bytes32 r, bytes32 s, bool preHash) {
-        assembly ("memory-safe") {
-            // Enforce that P256 signatures must be packed with a preHash flag
-            if lt(data.length, 65) {
-                mstore(0, SLICE_ERROR_SELECTOR)
-                revert(0x1c, 4)
-            }
-            r := calldataload(data.offset)
-            s := calldataload(add(data.offset, 0x20))
-            // last byte of the signature represents preHash
-            preHash := shr(248, calldataload(add(data.offset, 0x40)))
-        }
-    }
 }
