@@ -8,9 +8,6 @@ import {CalldataDecoder} from "./CalldataDecoder.sol";
 library WrappedSignatureLib {
     using CalldataDecoder for bytes;
 
-    /// error SliceOutOfBounds();
-    uint256 constant SLICE_ERROR_SELECTOR = 0x3b99b53d;
-
     /// @notice Returns true if the signature is empty
     /// @dev For use in the ERC-7739 sentinel value check
     function isEmpty(bytes calldata data) internal pure returns (bool) {
