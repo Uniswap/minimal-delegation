@@ -97,6 +97,10 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
     /// - Any reverts are expected by the generated handler call
     function executeBatchedCall(uint256 generatorSeed) public useKey setBlock {
         address caller = vm.addr(currentSigningKey.privateKey);
+        bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
+
+        bytes32 callerKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
+
         vm.startPrank(caller);
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
@@ -105,17 +109,24 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
             CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
 
         Settings callerSettings;
-        try signerAccount.getKey(currentSigningKey.toKeyHash()) {
-            callerSettings = signerAccount.getKeySettings(currentSigningKey.toKeyHash());
+        bool isRegisteredCaller;
+        try signerAccount.getKey(callerKeyHash) {
+            isRegisteredCaller = true;
+            callerSettings = signerAccount.getKeySettings(callerKeyHash);
         } catch (bytes memory revertData) {
+            isRegisteredCaller = false;
             assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
         }
 
         try signerAccount.execute(batchedCall) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (caller != address(signerAccount) && !callerSettings.isAdmin()) {
+            (bool isExpired,) = callerSettings.isExpired();
+            if (!isRegisteredCaller || (caller != address(signerAccount) && isExpired)) {
                 assertEq(bytes4(revertData), BaseAuthorization.Unauthorized.selector);
+            } else if (!callerSettings.isAdmin() && batchedCall.calls.containsSelfCall()) {
+                // TODO: Handler may only be generating self calls, so we should update that.
+                assertEq(bytes4(revertData), IKeyManagement.OnlyAdminCanSelfCall.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {
@@ -130,7 +141,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
+    function executeSignedBatchedCall(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
@@ -231,7 +242,7 @@ contract CaliburExecuteInvariantTest is TokenHandler, DelegationHandler {
         // Explicitly target the wrapped execute functions in the handler
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = CaliburExecuteInvariantHandler.executeBatchedCall.selector;
-        selectors[1] = CaliburExecuteInvariantHandler.executeWithOpData.selector;
+        selectors[1] = CaliburExecuteInvariantHandler.executeSignedBatchedCall.selector;
         FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
 
         targetSelector(selector);
