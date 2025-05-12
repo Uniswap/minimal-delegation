@@ -6,7 +6,7 @@ import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract NonceManagerTest is DelegationHandler {
-    event NonceSequenceNumberUpdated(uint256 indexed key, uint256 seq);
+    event NonceInvalidated(uint256 nonce);
 
     function setUp() public {
         setUpDelegation();
@@ -57,8 +57,8 @@ contract NonceManagerTest is DelegationHandler {
         uint64 sequence = type(uint16).max;
         uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
-        vm.expectEmit(true, false, false, true);
-        emit NonceSequenceNumberUpdated(nonceKey, sequence);
+        vm.expectEmit(true, false, false, false);
+        emit NonceInvalidated(nonce);
 
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
@@ -70,8 +70,8 @@ contract NonceManagerTest is DelegationHandler {
         sequence = uint64(sequence * 2);
         nonce = (uint256(nonceKey) << 64) | sequence;
 
-        vm.expectEmit(true, false, false, true);
-        emit NonceSequenceNumberUpdated(nonceKey, sequence);
+        vm.expectEmit(true, false, false, false);
+        emit NonceInvalidated(nonce);
 
         signerAccount.invalidateNonce(nonce);
 

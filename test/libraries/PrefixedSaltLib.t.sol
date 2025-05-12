@@ -13,7 +13,7 @@ contract PrefixedSaltLibTest is Test {
         mockPrefixedSaltLib = new MockPrefixedSaltLib();
     }
 
-    function test_pack_unpack_fuzz(uint96 _prefix, address _implementation) public {
+    function test_pack_unpack_fuzz(uint96 _prefix, address _implementation) public view {
         bytes32 prefixedSalt = mockPrefixedSaltLib.pack(_prefix, _implementation);
 
         (uint96 prefix, address implementation) = mockPrefixedSaltLib.unpack(prefixedSalt);

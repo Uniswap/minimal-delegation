@@ -176,10 +176,6 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
 
-        (, uint256 newSeq) = _buildNextValidNonce(nonceKey);
-        vm.expectEmit(true, false, false, true);
-        emit NonceSequenceNumberUpdated(nonceKey, newSeq);
-
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
@@ -251,10 +247,6 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
 
-        (, uint256 newSeq) = _buildNextValidNonce(nonceKey);
-        vm.expectEmit(true, false, false, true);
-        emit NonceSequenceNumberUpdated(nonceKey, newSeq);
-
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
@@ -274,10 +266,6 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
-
-        (, uint256 newSeq) = _buildNextValidNonce(nonceKey);
-        vm.expectEmit(true, false, false, true);
-        emit NonceSequenceNumberUpdated(nonceKey, newSeq);
 
         signerAccount.execute(signedBatchedCall, wrappedSignature);
 
