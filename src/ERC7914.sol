@@ -6,7 +6,9 @@ import {TransientNativeAllowance} from "./libraries/TransientNativeAllowance.sol
 import {BaseAuthorization} from "./BaseAuthorization.sol";
 
 /// @title ERC-7914
-/// @notice Abstract ERC-7914 implementation
+/// @notice Abstract ERC-7914 implementation with support for transient allowances
+/// @dev this ERC is not finalized and is subject to change in the future
+/// https://github.com/ethereum/ERCs/blob/8380220418521ff1995445cff5ca1d0e496a3d2d/ERCS/erc-7914.md
 abstract contract ERC7914 is IERC7914, BaseAuthorization {
     mapping(address spender => uint256 allowance) public nativeAllowance;
 
