@@ -105,10 +105,11 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
      */
     function _generateHandlerCall(uint256 randomSeed) internal returns (HandlerCall memory) {
         TestKey memory testKey = _randKeyFromArray(fixtureKeys);
-        bytes32 keyHash = testKey.toKeyHash();
+
+        bytes32 currentKeyHash = _testKeyIsSignerAccount(testKey) ? KeyLib.ROOT_KEY_HASH : testKey.toKeyHash();
 
         bool isRegistered;
-        try signerAccount.getKey(keyHash) {
+        try signerAccount.getKey(currentKeyHash) {
             isRegistered = true;
         } catch (bytes memory _revertData) {
             assertEq(bytes4(_revertData), IKeyManagement.KeyDoesNotExist.selector);
@@ -126,10 +127,11 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         }
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
-            if (!isRegistered) {
+            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered
+            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
-            return _revokeCall(keyHash, revertData);
+            return _revokeCall(currentKeyHash, revertData);
         }
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
@@ -139,7 +141,7 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
             } else if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
             }
-            return _updateCall(keyHash, settings, revertData);
+            return _updateCall(currentKeyHash, settings, revertData);
         } else {
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
