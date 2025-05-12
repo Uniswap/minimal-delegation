@@ -421,15 +421,13 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
      * 1. 64 or 65-byte signature not from the root key
      * = invalid signer
      */
-    /// @dev We generate a signature without the `preHash` flag encoded so it passes the length check for 64 || 65 bytes
     function test_isValidSignature_P256_rawSignature_invalidSigner() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         vm.prank(address(signer));
         signerAccount.register(p256Key.toKey());
 
         bytes32 digest = keccak256("test");
-        (bytes32 r, bytes32 s) = vm.signP256(p256Key.privateKey, digest);
-        bytes memory signature = abi.encode(r, s);
+        bytes memory signature = p256Key.sign(digest);
 
         assertEq(signerAccount.isValidSignature(digest, signature), _1271_INVALID_VALUE);
     }
