@@ -4,11 +4,18 @@ pragma solidity ^0.8.23;
 import {Test} from "forge-std/Test.sol";
 import {IHook} from "src/interfaces/IHook.sol";
 import {MockHook} from "./MockHook.sol";
+import {GuardedExecutorHook} from "src/hooks/execution/GuardedExecutorHook.sol";
 
 abstract contract HookHandler is Test {
     MockHook internal mockHook;
     MockHook internal mockValidationHook;
     MockHook internal mockExecutionHook;
+
+    GuardedExecutorHook internal guardedExecutorHook;
+
+    /// Only supports beforeExecute hook
+    /// 0x1111 ...10000
+    address payable constant GUARDED_EXECUTOR_HOOK = payable(0xffffFFfFFfFffFFFfffFfFfffffFFffFFfffff10);
 
     /// 0x1111 ... 1111
     address payable constant ALL_HOOKS = payable(0xf00000000000000000000000000000000000000f);
@@ -25,9 +32,13 @@ abstract contract HookHandler is Test {
         vm.etch(ALL_VALIDATION_HOOKS, address(impl).code);
         vm.etch(ALL_EXECUTION_HOOKS, address(impl).code);
 
+        GuardedExecutorHook _guardedExecutorHook = new GuardedExecutorHook();
+        vm.etch(ALL_EXECUTION_HOOKS, address(_guardedExecutorHook).code);
+
         mockHook = MockHook(ALL_HOOKS);
         mockValidationHook = MockHook(ALL_VALIDATION_HOOKS);
         mockExecutionHook = MockHook(ALL_EXECUTION_HOOKS);
+        guardedExecutorHook = GuardedExecutorHook(GUARDED_EXECUTOR_HOOK);
 
         vm.label(ALL_HOOKS, "AllMockHook");
         vm.label(ALL_VALIDATION_HOOKS, "ValidationMockHook");
