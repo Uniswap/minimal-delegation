@@ -29,4 +29,12 @@ contract MockWrappedSignatureLib {
     {
         return data.decodeAsTypedDataSig();
     }
+
+    function decodeSignatureWithHookDataInMemory(bytes calldata data)
+        public
+        pure
+        returns (bytes memory signature, bytes memory hookData)
+    {
+        (signature, hookData) = abi.decode(data, (bytes, bytes));
+    }
 }

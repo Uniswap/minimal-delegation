@@ -22,17 +22,19 @@ library WrappedSignatureLib {
 
     /// @notice Decode the signature and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes hookData)`
+    /// If the signature or hookData are not present the function will revert with `SliceOutOfBounds()`
     function decodeWithHookData(bytes calldata data)
         internal
         pure
         returns (bytes calldata signature, bytes calldata hookData)
     {
-        signature = data.toBytes(0);
-        hookData = data.toBytes(1);
+        signature = data.toSafeBytes(0);
+        hookData = data.toSafeBytes(1);
     }
 
     /// @notice Decode the keyHash, signature, and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 keyHash, bytes signature, bytes hookData)`
+    /// If the signature or hookData are not present the function will revert with `SliceOutOfBounds()`
     function decodeWithKeyHashAndHookData(bytes calldata data)
         internal
         pure
@@ -41,14 +43,15 @@ library WrappedSignatureLib {
         assembly {
             keyHash := calldataload(data.offset)
         }
-        signature = data.toBytes(1);
-        hookData = data.toBytes(2);
+        signature = data.toSafeBytes(1);
+        hookData = data.toSafeBytes(2);
     }
 
     /// @notice Decode the signature, appSeparator, contentsHash, and contentsDescr from the calldata
     ///         the return values MUST be checked for length before use
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes32 appSeparator, bytes32 contentsHash, string contentsDescr)`
     ///      there may be an uint16 contentsLength at the end of the calldata, but this is not used
+    /// This function should NOT revert, and just returns empty values if the bytes length are incorrect.
     function decodeAsTypedDataSig(bytes calldata data)
         internal
         pure
