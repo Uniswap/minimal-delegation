@@ -22,7 +22,6 @@ contract CaliburTest is DelegationHandler, HookHandler {
 
     event Registered(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
-    event ERC1271CallerIsSafeSet(address indexed caller, bool isSafe);
     event KeySettingsUpdated(bytes32 indexed keyHash, Settings settings);
 
     function setUp() public {
