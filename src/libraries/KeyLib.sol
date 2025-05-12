@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
+import {WrappedSignatureLib} from "./WrappedSignatureLib.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -21,6 +23,7 @@ struct Key {
 }
 
 library KeyLib {
+    using WrappedSignatureLib for bytes;
     /// @notice The sentinel hash value used to represent the root key
     bytes32 public constant ROOT_KEY_HASH = bytes32(0);
 
@@ -53,12 +56,12 @@ library KeyLib {
     }
 
     /// @notice Verifies a signature from `key` over a `_hash`
-    function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
+    function verify(Key memory key, bytes32 _hash, bytes calldata signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
             isValid = ECDSA.tryRecover(_hash, signature) == abi.decode(key.publicKey, (address));
         } else if (key.keyType == KeyType.P256) {
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
-            (bytes32 r, bytes32 s, bool preHash) = abi.decode(signature, (bytes32, bytes32, bool));
+            (bytes32 r, bytes32 s, bool preHash) = signature.decodeAsP256Sig();
             isValid = P256.verify(preHash ? EfficientHashLib.sha2(_hash) : _hash, r, s, x, y);
         } else if (key.keyType == KeyType.WebAuthnP256) {
             (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));
