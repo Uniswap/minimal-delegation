@@ -25,6 +25,7 @@ struct Key {
 library KeyLib {
     using WrappedSignatureLib for bytes;
     /// @notice The sentinel hash value used to represent the root key
+
     bytes32 public constant ROOT_KEY_HASH = bytes32(0);
 
     /// @notice Hashes a key
