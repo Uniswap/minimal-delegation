@@ -35,8 +35,6 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
     using SettingsLib for Settings;
     using SettingsBuilder for Settings;
 
-    event NonceSequenceNumberUpdated(uint256 indexed key, uint256 seq);
-
     address receiver = makeAddr("receiver");
 
     function setUp() public {
