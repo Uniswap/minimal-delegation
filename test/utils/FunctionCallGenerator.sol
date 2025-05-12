@@ -127,11 +127,8 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         }
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
-            if (!isRegistered) {
-                revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
-            }
-            // Cannot revoke the rootKeyHash since it cannot be registered 
-            else if (currentKeyHash == KeyLib.ROOT_KEY_HASH) {
+            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered
+            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
             return _revokeCall(currentKeyHash, revertData);
