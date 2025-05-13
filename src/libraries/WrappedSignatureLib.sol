@@ -28,8 +28,8 @@ library WrappedSignatureLib {
         pure
         returns (bytes calldata signature, bytes calldata hookData)
     {
-        signature = data.toSafeBytes(0);
-        hookData = data.toSafeBytes(1);
+        signature = data.safeToBytes(0);
+        hookData = data.safeToBytes(1);
     }
 
     /// @notice Decode the keyHash, signature, and hook data from the calldata
@@ -43,8 +43,8 @@ library WrappedSignatureLib {
         assembly {
             keyHash := calldataload(data.offset)
         }
-        signature = data.toSafeBytes(1);
-        hookData = data.toSafeBytes(2);
+        signature = data.safeToBytes(1);
+        hookData = data.safeToBytes(2);
     }
 
     /// @notice Decode the signature, appSeparator, contentsHash, and contentsDescr from the calldata

@@ -57,7 +57,7 @@ library CalldataDecoder {
     /// @dev Reverts if the length is not what the encoding is expecting
     // @param _bytes The input bytes string to extract a bytes string from
     // @param _arg The index of the argument to extract
-    function toSafeBytes(bytes calldata _bytes, uint256 _arg) internal pure returns (bytes calldata res) {
+    function safeToBytes(bytes calldata _bytes, uint256 _arg) internal pure returns (bytes calldata res) {
         uint256 length;
         uint256 _logLengthPtr;
         uint256 _logLength;
