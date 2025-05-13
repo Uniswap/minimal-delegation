@@ -22,6 +22,7 @@ contract CaliburTest is DelegationHandler, HookHandler {
 
     event Registered(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
+    event KeySettingsUpdated(bytes32 indexed keyHash, Settings settings);
 
     function setUp() public {
         setUpDelegation();
@@ -115,6 +116,9 @@ contract CaliburTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), false);
 
         keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+
+        vm.expectEmit(true, false, false, true);
+        emit KeySettingsUpdated(keyHash, keySettings);
         signerAccount.update(keyHash, keySettings);
 
         keySettings = signerAccount.getKeySettings(keyHash);
@@ -133,6 +137,9 @@ contract CaliburTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), false);
 
         keySettings = SettingsBuilder.init().fromIsAdmin(true);
+
+        vm.expectEmit(true, false, false, true);
+        emit KeySettingsUpdated(keyHash, keySettings);
         signerAccount.update(keyHash, keySettings);
 
         keySettings = signerAccount.getKeySettings(keyHash);
