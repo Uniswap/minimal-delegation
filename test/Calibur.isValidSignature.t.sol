@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {HookHandler} from "./utils/HookHandler.sol";
@@ -22,6 +21,8 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
     using TypedDataSignBuilder for *;
+
+    error SliceOutOfBounds();
 
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
@@ -441,7 +442,7 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         bytes32 digest = keccak256("test");
         bytes memory signature = webAuthnP256Key.sign(digest);
 
-        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        vm.expectRevert(SliceOutOfBounds.selector);
         signerAccount.isValidSignature(digest, signature);
     }
 
