@@ -2,8 +2,10 @@
 pragma solidity ^0.8.23;
 
 import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
+import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
+import {WrappedSignatureLib} from "./WrappedSignatureLib.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -20,7 +22,9 @@ struct Key {
 }
 
 library KeyLib {
+    using WrappedSignatureLib for bytes;
     /// @notice The sentinel hash value used to represent the root key
+
     bytes32 public constant ROOT_KEY_HASH = bytes32(0);
 
     /// @notice Hashes a key
@@ -52,7 +56,8 @@ library KeyLib {
     }
 
     /// @notice Verifies a signature from `key` over a `_hash`
-    function verify(Key memory key, bytes32 _hash, bytes memory signature) internal view returns (bool isValid) {
+    /// @dev Signatures from P256 are expected to be over the `sha256` hash of `_hash`
+    function verify(Key memory key, bytes32 _hash, bytes calldata signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
             isValid = ECDSA.tryRecover(_hash, signature) == abi.decode(key.publicKey, (address));
         } else if (key.keyType == KeyType.P256) {
@@ -60,9 +65,11 @@ library KeyLib {
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));
             // Split signature into r and s values.
             (bytes32 r, bytes32 s) = abi.decode(signature, (bytes32, bytes32));
-            isValid = P256.verify(_hash, r, s, x, y);
+            isValid = P256.verify(EfficientHashLib.sha2(_hash), r, s, x, y);
         } else if (key.keyType == KeyType.WebAuthnP256) {
+            // Extract x,y from the public key
             (uint256 x, uint256 y) = abi.decode(key.publicKey, (uint256, uint256));
+            // Decode the signature into the WebAuthnAuth struct
             WebAuthn.WebAuthnAuth memory auth = abi.decode(signature, (WebAuthn.WebAuthnAuth));
             isValid = WebAuthn.verify({challenge: abi.encode(_hash), requireUV: false, webAuthnAuth: auth, x: x, y: y});
         } else {

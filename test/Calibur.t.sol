@@ -314,9 +314,10 @@ contract CaliburTest is DelegationHandler, HookHandler {
 
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        // incorrect private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Sign with an incorrect private key for the claimed keyHash
+        TestKey memory otherP256Key = TestKeyManager.withSeed(KeyType.P256, 1234);
+        bytes memory signature = otherP256Key.sign(userOpHash);
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         userOp.signature = wrappedSignature;
 
