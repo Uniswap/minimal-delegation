@@ -85,7 +85,7 @@ contract Calibur4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, Ho
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(abi.encode(p256Key.toKeyHash(), p256Key.sign(digest)));
+        userOp.withSignature(abi.encode(p256Key.toKeyHash(), p256Key.sign(digest), EMPTY_HOOK_DATA));
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;
