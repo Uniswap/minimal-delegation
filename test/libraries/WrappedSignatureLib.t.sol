@@ -60,4 +60,53 @@ contract WrappedSignatureLibTest is Test {
         assertEq(_arg3, arg3);
         assertEq(_arg4, arg4);
     }
+
+    function test_decodeSignatureWithHookData() public view {
+        bytes memory data = abi.encode(bytes(""), bytes(""));
+        (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
+        assertEq(_arg1, bytes(""));
+        assertEq(_arg2, bytes(""));
+    }
+
+    function test_decodeSignatureWithHookData_incorrectlyEncodedSignature_reverts() public {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""));
+        vm.expectRevert();
+        decoder.decodeWithHookData(data);
+    }
+
+    function test_decodeWithKeyHashAndHookData() public view {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""), bytes(""));
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+        assertEq(_arg1, bytes32(keccak256("test")));
+        assertEq(_arg2, bytes(""));
+        assertEq(_arg3, bytes(""));
+    }
+
+    // In memory version
+    // reverts
+    function test_decodeWithKeyHashAndHookData_incorrectlyEncodedKeyHash_inMemory_reverts() public {
+        bytes memory data = abi.encode(bytes("4444"));
+        vm.expectRevert();
+        decoder.decodeWithKeyHashAndHookDataInMemory(data);
+    }
+
+    function test_decodeWithKeyHashAndHookData_incorrectlyEncodedSignature_reverts() public {
+        bytes memory data = abi.encode(bytes32(keccak256("test")));
+        vm.expectRevert();
+        decoder.decodeWithKeyHashAndHookData(data);
+    }
+
+    function test_decodeWithKeyHashAndHookData_incorrectlyEncodedHookData_reverts() public {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""));
+        vm.expectRevert();
+        decoder.decodeWithKeyHashAndHookData(data);
+    }
+
+    function test_decodeWithKeyHashAndHookData_empty_succeeds() public view {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""), bytes(""));
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+        assertEq(_arg1, bytes32(keccak256("test")));
+        assertEq(_arg2, bytes(""));
+        assertEq(_arg3, bytes(""));
+    }
 }
