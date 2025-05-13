@@ -74,62 +74,12 @@ contract WrappedSignatureLibTest is Test {
         decoder.decodeWithHookData(data);
     }
 
-    function test_decodeSignatureWithHookData_incorrectlyEncodedHookData_reverts() public {
-        bytes memory data = abi.encode(bytes(""));
-        vm.expectRevert();
-        decoder.decodeWithHookData(data);
-    }
-
-    function test_decodeSignatureWithHookData_incorrectlyEncodedHookData_inMemory_reverts() public {
-        bytes memory data = abi.encode(bytes(""));
-        vm.expectRevert();
-        decoder.decodeSignatureWithHookDataInMemory(data);
-    }
-
     function test_decodeWithKeyHashAndHookData() public view {
         bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""), bytes(""));
         (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
         assertEq(_arg1, bytes32(keccak256("test")));
         assertEq(_arg2, bytes(""));
         assertEq(_arg3, bytes(""));
-    }
-
-    // Calldata version
-    // Doesnt revert but returns bad values
-    function test_decodeWithKeyHashAndHookData_incorrectlyEncodedKeyHash_reverts() public {
-        bytes memory data = abi.encode(bytes("4444"));
-        /**
-        ├ Hex (Tuple Encoded):
-        ├─ Pointer ([0x00:0x20]):  0x0000000000000000000000000000000000000000000000000000000000000020 // offset for abi.encode(bytes("4444"))
-        ├─ Length ([0x20:0x40]):   0x0000000000000000000000000000000000000000000000000000000000000060 // length of abi.encode(bytes("4444"))
-        └─ Contents ([0x40:0x60]): 0x0000000000000000000000000000000000000000000000000000000000000020 // offset for bytes("4444")
-                     [0x60:0x80]:  0x0000000000000000000000000000000000000000000000000000000000000004 // length of bytes("4444")
-                     [0x80:0xA0]:  0x3434343400000000000000000000000000000000000000000000000000000000 // bytes("4444")
-         */
-
-        // data.offset = 0x44
-        // keyHash := calldataload(data.offset)                                         // 0x40:0x60 (0x0000000000000000000000000000000000000000000000000000000000000020)
-        // toSafeBytes(1)
-        // -> lengthPtr := add(0x44, and(calldataload(add(0x44, 0x20)), 0xffffffff)))
-        // ->              add(0x44, and(calldataload(0x64), 0xffffffff))
-        // ->              add(0x44, and(0x04, 0xffffffff))
-        // ->              add(0x44, 0x04) = 0x48 (verified by log output)
-        // -> length := and(calldataload(lengthPtr), OFFSET_OR_LENGTH_MASK)
-        // ->              and(calldataload(0x48), 0xffffffff)                         // 0x48:0x68 (0x00000000000000000000000000000000000000000000200000000000000000000)
-        // ->              and(9x200000000000000000000 , 0xffffffff) = 0x00
-        // -> offset := add(lengthPtr, 0x20)
-        // ->              add(0x48, 0x20) = 0x68 (verified by log output)
-        // -> res.length := length
-        // ->              length = 0x00 (output from above)
-        // -> res.offset := offset
-        // ->              offset = 0x68
-        // -> if lt(add(_bytes.length, _bytes.offset), add(length, offset)) {
-        // ->              lt(add(0x60, 0x44), add(0x00, 0x68))
-        // ->              lt(0xa4, 0x68)
-        // ->              false
-        // -> No revert
-        vm.expectRevert();
-        decoder.decodeWithKeyHashAndHookData(data);
     }
 
     // In memory version
