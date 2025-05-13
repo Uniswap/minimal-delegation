@@ -9,7 +9,7 @@ import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOper
 /// @title HooksLib
 /// @notice Hooks are invoked by inspecting the least significant bits of the address it is deployed to
 /// For example, a hook deployed to address: 0x000000000000000000000000000000000000000a
-/// has the lowest bits '0001 1010' which would cause the 'VALIDATE_USER_OP', 'BEFORE_EXECUTE', and 'AFTER_EXECUTE' hooks to be used.
+/// has the lowest bits '1010' which would cause the 'AFTER_VALIDATE_USER_OP_FLAG', and 'BEFORE_EXECUTE_FLAG' hooks to be used.
 /// @author Inspired by https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol
 library HooksLib {
     using HooksLib for IHook;

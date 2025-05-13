@@ -2,24 +2,26 @@
 pragma solidity ^0.8.23;
 
 import {IERC7914} from "./interfaces/IERC7914.sol";
-import {TransientAllowance} from "./libraries/TransientAllowance.sol";
+import {TransientNativeAllowance} from "./libraries/TransientNativeAllowance.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
 
 /// @title ERC-7914
-/// @notice Abstract ERC-7914 implementation
+/// @notice Abstract ERC-7914 implementation with support for transient allowances
+/// @dev this ERC is not finalized and is subject to change in the future
+/// https://github.com/ethereum/ERCs/blob/8380220418521ff1995445cff5ca1d0e496a3d2d/ERCS/erc-7914.md
 abstract contract ERC7914 is IERC7914, BaseAuthorization {
-    mapping(address spender => uint256 allowance) public allowance;
+    mapping(address spender => uint256 allowance) public nativeAllowance;
 
     /// @inheritdoc IERC7914
     function approveNative(address spender, uint256 amount) external onlyThis returns (bool) {
-        allowance[spender] = amount;
+        nativeAllowance[spender] = amount;
         emit ApproveNative(address(this), spender, amount);
         return true;
     }
 
     /// @inheritdoc IERC7914
     function approveNativeTransient(address spender, uint256 amount) external onlyThis returns (bool) {
-        TransientAllowance.set(spender, amount);
+        TransientNativeAllowance.set(spender, amount);
         emit ApproveNativeTransient(address(this), spender, amount);
         return true;
     }
@@ -41,8 +43,8 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
     }
 
     /// @inheritdoc IERC7914
-    function transientAllowance(address spender) public view returns (uint256) {
-        return TransientAllowance.get(spender);
+    function transientNativeAllowance(address spender) public view returns (uint256) {
+        return TransientNativeAllowance.get(spender);
     }
 
     /// @dev Internal function to validate and execute transfers
@@ -55,7 +57,7 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
         if (from != address(this)) revert IncorrectSender();
 
         // Check allowance
-        uint256 currentAllowance = isTransient ? transientAllowance(msg.sender) : allowance[msg.sender];
+        uint256 currentAllowance = isTransient ? transientNativeAllowance(msg.sender) : nativeAllowance[msg.sender];
         if (currentAllowance < amount) revert AllowanceExceeded();
 
         // Update allowance
@@ -65,9 +67,9 @@ abstract contract ERC7914 is IERC7914, BaseAuthorization {
                 newAllowance = currentAllowance - amount;
             }
             if (isTransient) {
-                TransientAllowance.set(msg.sender, newAllowance);
+                TransientNativeAllowance.set(msg.sender, newAllowance);
             } else {
-                allowance[msg.sender] = newAllowance;
+                nativeAllowance[msg.sender] = newAllowance;
             }
         }
 
