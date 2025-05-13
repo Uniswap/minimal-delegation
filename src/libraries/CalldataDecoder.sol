@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
-
 /// @title CalldataDecoder
 library CalldataDecoder {
     /// @notice mask used for offsets and lengths to ensure no overflow
@@ -59,11 +57,6 @@ library CalldataDecoder {
     // @param _arg The index of the argument to extract
     function safeToBytes(bytes calldata _bytes, uint256 _arg) internal pure returns (bytes calldata res) {
         uint256 length;
-        uint256 _logLengthPtr;
-        uint256 _logLength;
-        uint256 _logOffset;
-        uint256 _bytesLength;
-        uint256 _bytesOffset;
         assembly ("memory-safe") {
             // The offset of the `_arg`-th element is `32 * arg`, which stores the offset of the length pointer.
             // shl(5, x) is equivalent to mul(32, x)
@@ -76,11 +69,6 @@ library CalldataDecoder {
             // assign the return parameters
             res.length := length
             res.offset := offset
-            _logLengthPtr := lengthPtr
-            _logLength := length
-            _logOffset := offset
-            _bytesLength := _bytes.length
-            _bytesOffset := _bytes.offset
 
             // if the provided bytes string isnt as long as the encoding says, revert
             if lt(add(_bytes.length, _bytes.offset), add(length, offset)) {
@@ -88,10 +76,5 @@ library CalldataDecoder {
                 revert(0x1c, 4)
             }
         }
-        console2.log("bytesLength %s", _bytesLength);
-        console2.log("bytesOffset %s", _bytesOffset);
-        console2.log("lengthPtr %s", _logLengthPtr);
-        console2.log("length %s", _logLength);
-        console2.log("offset %s", _logOffset);
     }
 }
