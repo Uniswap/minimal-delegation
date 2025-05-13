@@ -33,7 +33,7 @@ abstract contract HookHandler is Test {
         vm.etch(ALL_EXECUTION_HOOKS, address(impl).code);
 
         GuardedExecutorHook _guardedExecutorHook = new GuardedExecutorHook();
-        vm.etch(ALL_EXECUTION_HOOKS, address(_guardedExecutorHook).code);
+        vm.etch(GUARDED_EXECUTOR_HOOK, address(_guardedExecutorHook).code);
 
         mockHook = MockHook(ALL_HOOKS);
         mockValidationHook = MockHook(ALL_VALIDATION_HOOKS);
