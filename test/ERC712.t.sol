@@ -103,7 +103,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
         SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
             .withNonce(nonce).withExecutor(address(1)).withDeadline(block.timestamp + 300000);
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);

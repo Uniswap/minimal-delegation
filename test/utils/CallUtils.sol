@@ -114,7 +114,7 @@ library CallUtils {
         return batchedCall;
     }
 
-    function withShouldRevert(BatchedCall memory batchedCall, bool revertOnFailure)
+    function withRevertOnFailure(BatchedCall memory batchedCall, bool revertOnFailure)
         internal
         pure
         returns (BatchedCall memory)

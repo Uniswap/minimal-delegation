@@ -25,7 +25,8 @@ contract SignedBatchedCallLibTest is Test {
         public
         pure
     {
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(revertOnFailure);
+        BatchedCall memory batchedCall =
+            CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(revertOnFailure);
         SignedBatchedCall memory signedBatchedCall =
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withNonce(nonce).withKeyHash(keyHash);
         bytes32 actualHash = signedBatchedCall.hash();

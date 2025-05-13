@@ -43,7 +43,7 @@ contract Calibur4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, Ho
     function test_handleOps_single_eoaSigner_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
         bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, batchedCall);
@@ -76,7 +76,7 @@ contract Calibur4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, Ho
 
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
         bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, batchedCall);
