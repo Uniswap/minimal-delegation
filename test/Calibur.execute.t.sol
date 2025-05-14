@@ -153,7 +153,6 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
 
-    // TODO: This does NOT revert.
     function test_execute_withSignature_addressZero_invalidSignature_reverts() public {
         TestKey memory addressZeroKey =
             TestKey({keyType: KeyType.Secp256k1, publicKey: abi.encode(0, 0), privateKey: uint256(0)});
