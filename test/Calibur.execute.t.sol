@@ -53,7 +53,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         nonce = key << 64 | seq;
     }
 
-    function test_supportsExecutionMode_fuzz(bytes32 _mode) public {
+    function test_supportsExecutionMode_fuzz(bytes32 _mode) public view {
         assertEq(signerAccount.supportsExecutionMode(_mode), _mode == BATCHED_CALL || _mode == BATCHED_CAN_REVERT_CALL);
     }
 

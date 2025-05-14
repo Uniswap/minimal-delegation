@@ -28,4 +28,8 @@ contract MockKeyLib {
     function toKeyHash(address caller) public view returns (bytes32) {
         return KeyLib.toKeyHash(caller);
     }
+    
+    function verify(Key calldata key, bytes32 digest, bytes calldata signature) public view returns (bool) {
+        return KeyLib.verify(key, digest, signature);
+    }
 }

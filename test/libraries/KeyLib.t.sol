@@ -50,7 +50,7 @@ contract KeyLibTest is Test {
         TestKey memory testKey = TestKeyManager.initDefault(KeyType.Secp256k1);
         (bytes32 r, bytes32 vs) = vm.signCompact(testKey.privateKey, digest);
         bytes memory signature = abi.encodePacked(r, vs);
-        assertEq(KeyLib.verify(testKey.toKey(), digest, signature), true);
+        assertEq(mockKeyLib.verify(testKey.toKey(), digest, signature), true);
     }
 
     function test_verify_secp256k1_compactSignature_invalid_fuzz(bytes32 digest) public view {
@@ -60,14 +60,14 @@ contract KeyLibTest is Test {
         (bytes32 r, bytes32 vs) = vm.signCompact(testKey.privateKey, invalidDigest);
         bytes memory signature = abi.encodePacked(r, vs);
         // Try to verify against the original digest
-        assertEq(KeyLib.verify(testKey.toKey(), digest, signature), false);
+        assertEq(mockKeyLib.verify(testKey.toKey(), digest, signature), false);
     }
 
     function test_verify_secp256k1_signature_valid_fuzz(bytes32 digest) public view {
         TestKey memory testKey = TestKeyManager.initDefault(KeyType.Secp256k1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(testKey.privateKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
-        assertEq(KeyLib.verify(testKey.toKey(), digest, signature), true);
+        assertEq(mockKeyLib.verify(testKey.toKey(), digest, signature), true);
     }
 
     function test_verify_secp256k1_signature_invalid_fuzz(bytes32 digest) public view {
@@ -77,14 +77,14 @@ contract KeyLibTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(testKey.privateKey, invalidDigest);
         bytes memory signature = abi.encodePacked(r, s, v);
         // Try to verify against the original digest
-        assertEq(KeyLib.verify(testKey.toKey(), digest, signature), false);
+        assertEq(mockKeyLib.verify(testKey.toKey(), digest, signature), false);
     }
 
     function test_verify_p256_signature_valid_fuzz(bytes32 digest) public view {
         TestKey memory testKey = TestKeyManager.initDefault(KeyType.P256);
-        (bytes32 r, bytes32 s) = vm.signP256(testKey.privateKey, digest);
-        bytes memory signature = abi.encodePacked(r, s);
-        assertEq(KeyLib.verify(testKey.toKey(), digest, signature), true);
+        // Use TestKeyManager here since it applies the sha256 hashing
+        bytes memory signature = testKey.sign(digest);
+        assertEq(mockKeyLib.verify(testKey.toKey(), digest, signature), true);
     }
 
     function test_verify_p256_signature_invalid_fuzz(bytes32 digest) public view {
@@ -94,6 +94,6 @@ contract KeyLibTest is Test {
         (bytes32 r, bytes32 s) = vm.signP256(testKey.privateKey, invalidDigest);
         bytes memory signature = abi.encodePacked(r, s);
         // Try to verify against the original digest
-        assertEq(KeyLib.verify(testKey.toKey(), digest, signature), false);
+        assertEq(mockKeyLib.verify(testKey.toKey(), digest, signature), false);
     }
 }
