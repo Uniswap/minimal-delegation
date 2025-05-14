@@ -58,7 +58,7 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
             uint256[] memory extensions
         )
     {
-        fields = hex"0f"; // `0b1111`.
+        fields = hex"1f"; // `0b11111`.
         (name, version) = _domainNameAndVersion();
         chainId = block.chainid;
         verifyingContract = address(this);
