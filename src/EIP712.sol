@@ -8,7 +8,7 @@ import {BaseAuthorization} from "./BaseAuthorization.sol";
 import {PrefixedSaltLib} from "./libraries/PrefixedSaltLib.sol";
 
 /// @title EIP712
-/// @dev This contract does not cache the domain separator and calculates it on the fly
+/// @dev This contract does not cache the domain separator and instead calculates it on the fly
 ///      since it will change when delegated to or when the salt is updated.
 /// @notice It is not compatible with use by proxy contracts since the domain name and version are cached on deployment.
 contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
