@@ -720,7 +720,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_singleCall");
+        vm.snapshotGasLastCall("execute_singleCall");
     }
 
     /// forge-config: default.isolate = true
@@ -737,7 +737,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         vm.prank(address(signerAccount));
         signerAccount.execute(BATCHED_CALL, executionData);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_twoCalls");
+        vm.snapshotGasLastCall("execute_twoCalls");
     }
 
     /// forge-config: default.isolate = true
@@ -750,7 +750,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         vm.prank(address(signerAccount));
         signerAccount.execute(batchedCall);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_singleCall_native");
+        vm.snapshotGasLastCall("execute_native_singleCall");
     }
 
     /// forge-config: default.isolate = true
@@ -769,7 +769,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_singleCall");
+        vm.snapshotGasLastCall("execute_withSignature_singleCall");
     }
 
     /// forge-config: default.isolate = true
@@ -791,7 +791,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         vm.prank(executor);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_signedBatchedCallL_executor_singleCall");
+        vm.snapshotGasLastCall("execute_withSignatureL_executor_singleCall");
     }
 
     /// forge-config: default.isolate = true
@@ -813,7 +813,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_P256_singleCall");
+        vm.snapshotGasLastCall("execute_withSignature_P256_singleCall");
     }
 
     /// forge-config: default.isolate = true
@@ -833,7 +833,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_twoCalls");
+        vm.snapshotGasLastCall("execute_withSignature_twoCalls");
     }
 
     /// forge-config: default.isolate = true
@@ -852,7 +852,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_singleCall_native");
+        vm.snapshotGasLastCall("execute_withSignature_singleCall_native");
     }
 
     /// forge-config: default.isolate = true
