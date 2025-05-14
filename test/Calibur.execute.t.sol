@@ -53,10 +53,8 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         nonce = key << 64 | seq;
     }
 
-    function test_supportsExecutionMode() public {
-        // Test ERC-7821 supportsExecutionMode
-        assertEq(signerAccount.supportsExecutionMode(BATCHED_CALL), true);
-        assertEq(signerAccount.supportsExecutionMode(BATCHED_CAN_REVERT_CALL), true);
+    function test_supportsExecutionMode_fuzz(bytes32 _mode) public {
+        assertEq(signerAccount.supportsExecutionMode(_mode), _mode == BATCHED_CALL || _mode == BATCHED_CAN_REVERT_CALL);
     }
 
     function test_execute_reverts_withUnsupportedExecutionMode() public {
@@ -238,7 +236,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
     }
 
     // Execute can contain a self call which registers a new key even if the caller is untrusted as long as the signature is valid
-    function test_execute_opData_rootSigner_selfCall_succeeds() public {
+    function test_execute_withSignature_rootSigner_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         Call[] memory calls = CallUtils.initArray();
@@ -261,7 +259,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
 
-    function test_execute_opData_P256_isAdmin_selfCall_succeeds() public {
+    function test_execute_withSignature_P256_isAdmin_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         TestKey memory secp256k1Key = TestKeyManager.initDefault(KeyType.Secp256k1);
 
@@ -289,7 +287,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
     }
 
     // Root EOA using key.hash() will revert with KeyDoesNotExist
-    function test_execute_batch_opData_rootEOA_withKeyHash_reverts() public {
+    function test_execute_withSignature_rootEOA_withKeyHash_reverts() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
@@ -312,7 +310,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
     }
 
     // Root EOA must use bytes32(0) as their keyHash
-    function test_execute_batch_opData_rootEOA_withKeyHashZero_succeeds() public {
+    function test_execute_withSignature_rootEOA_withKeyHashZero_succeeds() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
@@ -331,7 +329,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
-    function test_execute_batch_opData_rootEOA_singleCall_succeeds() public {
+    function test_execute_withSignature_rootEOA_singleCall_succeeds() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
@@ -354,7 +352,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(signerAccount.getSeq(nonceKey), seq + 1);
     }
 
-    function test_execute_batch_opData_withHook_verifySignature_succeeds() public {
+    function test_execute_withSignature_withHook_verifySignature_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
@@ -389,7 +387,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         signerAccount.execute(signedBatchedCall, wrappedSignature);
     }
 
-    function test_execute_batch_opData_withHook_beforeExecute() public {
+    function test_execute_withSignature_withHook_beforeExecute() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
@@ -398,9 +396,8 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        uint192 key = 0;
-        uint64 seq = uint64(signerAccount.getSeq(key));
-        uint256 nonce = key << 64 | seq;
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
@@ -428,7 +425,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
-    function test_execute_batch_opData_revertOnFailureFalse_withHook_beforeExecute() public {
+    function test_execute_withSignature_revertOnFailureFalse_withHook_beforeExecute_reverts() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.prank(address(signerAccount));
@@ -437,9 +434,8 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        uint192 key = 0;
-        uint64 seq = uint64(signerAccount.getSeq(key));
-        uint256 nonce = key << 64 | seq;
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         // Set revertOnFailure to false, but expect the hook revert to still cause the entire call to revert
@@ -468,7 +464,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
 
-    function test_execute_batch_opData_isAdmin_checkedBeforeHook() public {
+    function test_execute_withSignature_isAdmin_checkedBeforeHook_reverts() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         vm.startPrank(address(signerAccount));
@@ -482,9 +478,8 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         // Permissioned call, requires admin privilges
         calls = calls.push(CallUtils.encodeRegisterCall(newKey));
 
-        uint192 key = 0;
-        uint64 seq = uint64(signerAccount.getSeq(key));
-        uint256 nonce = key << 64 | seq;
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
 
         // Create hash of the calls + nonce and sign it
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
@@ -501,7 +496,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         signerAccount.execute(signedBatchedCall, wrappedSignature);
     }
 
-    function test_execute_batch_opData_revertsWithInvalidNonce() public {
+    function test_execute_withSignature_invalidNonce_reverts() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
@@ -757,7 +752,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_execute_single_batchedCall_opData_rootSigner_gas() public {
+    function test_execute_single_batchedCall_withSignature_rootSigner_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
@@ -771,7 +766,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_singleCall");
     }
 
     /// forge-config: default.isolate = true
@@ -798,7 +793,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_execute_single_batchedCall_opData_P256_gas() public {
+    function test_execute_single_batchedCall_withSignature_P256_gas() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
 
         Call[] memory calls = CallUtils.initArray();
@@ -815,12 +810,12 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_P256_singleCall");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_P256_singleCall");
     }
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_execute_twoCalls_batchedCall_opData_rootSigner_gas() public {
+    function test_execute_twoCalls_batchedCall_withSignature_rootSigner_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18));
@@ -835,12 +830,12 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_twoCalls");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_twoCalls");
     }
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_execute_native_single_batchedCall_opData_eoaSigner_gas() public {
+    function test_execute_native_single_batchedCall_withSignature_eoaSigner_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(0), address(receiver), 1e18));
 
@@ -854,12 +849,12 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_opData_singleCall_native");
+        vm.snapshotGasLastCall("execute_BATCHED_CALL_withSignature_singleCall_native");
     }
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_execute_batch_opData_singleCall_gas() public {
+    function test_execute_withSignature_singleCall_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
 
@@ -877,12 +872,12 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         // Execute the batch of calls with the signature
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_singleCall");
+        vm.snapshotGasLastCall("execute_withSignature_singleCall");
     }
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
-    function test_execute_batch_opData_twoCalls_gas() public {
+    function test_execute_withSignature_twoCalls_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18)); // Transfer 1 tokenA
         calls = calls.push(buildTransferCall(address(tokenB), address(receiver), 1e18)); // Transfer 1 tokenB
@@ -903,7 +898,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
 
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_BATCHED_CALL_SUPPORTS_OPDATA_twoCalls");
+        vm.snapshotGasLastCall("execute_withSignature_twoCalls");
     }
 
     /**
