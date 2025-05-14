@@ -22,7 +22,7 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     bytes32 private immutable _cachedVersionHash;
     address private immutable _cachedImplementation;
 
-    /// @dev Any prefix to be added to the salt. This can be updated by the owner but it defaults to 0.
+    /// @dev Any prefix to be added to the salt. This can be updated by the owner or an admin but it defaults to 0.
     uint96 private _saltPrefix;
 
     constructor() {
