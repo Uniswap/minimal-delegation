@@ -18,6 +18,8 @@ interface IERC7914 {
     event TransferFromNativeTransient(address indexed from, address indexed to, uint256 value);
     /// @notice Emitted when a transient native approval is made
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
+    /// @notice Emitted when the native allowance of a spender is updated when a transfer happens
+    event NativeAllowanceUpdated(address indexed spender, uint256 value);
 
     /// @notice Returns the allowance of a spender
     function nativeAllowance(address spender) external view returns (uint256);

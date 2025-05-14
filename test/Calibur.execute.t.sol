@@ -173,6 +173,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         assertEq(signerAccount.getKey(p256Key.toKeyHash()).hash(), p256Key.toKeyHash());
     }
@@ -243,6 +244,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory signature = signerTestKey.sign(digest);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
         signerAccount.execute(signedBatchedCall, wrappedSignature);
         assertEq(tokenA.balanceOf(address(receiver)), 1e18);
     }
@@ -262,6 +264,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory signature = signerTestKey.sign(hashToSign);
 
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
         signerAccount.execute(signedBatchedCall, wrappedSignature);
 
         // Verify the transfers succeeded
