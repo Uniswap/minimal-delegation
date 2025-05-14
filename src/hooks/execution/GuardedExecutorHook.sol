@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {LibBytes} from "solady/utils/LibBytes.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
