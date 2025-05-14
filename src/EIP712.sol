@@ -95,9 +95,11 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
 
     /// @inheritdoc IEIP712
     function updateSalt(uint96 prefix) external onlyThis {
+        if (prefix != _saltPrefix) {
+            // per EIP-5267, emit an event to notify that the domain separator has changed
+            emit EIP712DomainChanged();
+        }
         _saltPrefix = prefix;
-        // per EIP-5267, emit an event to notify that the domain separator has changed
-        emit EIP712DomainChanged();
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.
