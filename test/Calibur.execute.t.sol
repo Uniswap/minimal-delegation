@@ -153,6 +153,33 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
 
+    // TODO: This does NOT revert.
+    function test_execute_withSignature_addressZero_invalidSignature_reverts() public {
+        TestKey memory addressZeroKey =
+            TestKey({keyType: KeyType.Secp256k1, publicKey: abi.encode(0, 0), privateKey: uint256(0)});
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(addressZeroKey.toKey());
+
+        // Transfer the whole balance of tokenB
+        uint256 userBalanceTokenB = tokenB.balanceOf(address(signerAccount));
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), userBalanceTokenB));
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withNonce(nonce).withKeyHash(addressZeroKey.toKeyHash());
+
+        bytes memory signature = bytes("invalid");
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.expectRevert(ICalibur.InvalidSignature.selector);
+        signerAccount.execute(signedBatchedCall, wrappedSignature);
+    }
+
     // Execute can contain a self call which registers a new key even if the caller is untrusted as long as the signature is valid
     function test_execute_opData_rootSigner_selfCall_succeeds() public {
         TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
