@@ -10,5 +10,5 @@
   "execute_BATCHED_CALL_twoCalls": "95374",
   "execute_invalidMode_reverts": "22940",
   "execute_signedBatchedCallL_executor_singleCall": "97267",
-  "multicall": "184864"
+  "multicall": "184852"
 }
