@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {console2} from "forge-std/console2.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {HookHandler} from "./utils/HookHandler.sol";
@@ -22,6 +21,8 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
     using TypedDataSignBuilder for *;
+
+    error SliceOutOfBounds();
 
     bytes4 private constant _1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 private constant _1271_INVALID_VALUE = 0xffffffff;
@@ -455,7 +456,7 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         bytes32 digest = keccak256("test");
         bytes memory signature = webAuthnP256Key.sign(digest);
 
-        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        vm.expectRevert(SliceOutOfBounds.selector);
         signerAccount.isValidSignature(digest, signature);
     }
 
@@ -555,6 +556,34 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         bytes memory typedDataSignSignature =
             TypedDataSignBuilder.buildTypedDataSignSignature(signature, appDomainSeparator, contentsHash, contentsDescr);
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
+
+        // ensure the call returns the ERC1271 invalid magic value
+        vm.prank(address(mockERC1271VerifyingContract));
+        assertEq(signerAccount.isValidSignature(digest, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    /**
+     * Scenario: P256 key sent a TypedDataSign signature but the signed digest was not `sha256` hashed
+     * 1. Not raw signature
+     * 2. Not typed data sign
+     * 3. Not nested personal sign
+     * = invalid signer
+     */
+    function test_isValidSignature_P256_wrappedSignature___typedDataSign_notSha256Hashed_invalidSigner() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.prank(address(signer));
+        signerAccount.register(p256Key.toKey());
+
+        // We do not sign the sha256 hash of the digest, but the digest itself
+        (bytes32 r, bytes32 s) = vm.signP256(p256Key.privateKey, TEST_TYPED_DATA_SIGN_DIGEST);
+        bytes memory signature = abi.encodePacked(r, s);
+        (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) = getERC1271Fixtures();
+        bytes memory typedDataSignSignature =
+            TypedDataSignBuilder.buildTypedDataSignSignature(signature, appDomainSeparator, contentsHash, contentsDescr);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), typedDataSignSignature, EMPTY_HOOK_DATA);
+
+        // Built by the ERC1271 contract which hashes its domain separator to the contents hash
+        bytes32 digest = mockERC1271VerifyingContract.hashTypedDataV4(contentsHash);
 
         // ensure the call returns the ERC1271 invalid magic value
         vm.prank(address(mockERC1271VerifyingContract));
@@ -750,6 +779,35 @@ contract CaliburIsValidSignatureTest is DelegationHandler, HookHandler, ERC1271H
         bytes memory signature = p256Key.sign(messageHash);
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
 
+        vm.prank(address(mockERC1271VerifyingContract));
+        assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
+    }
+
+    /**
+     * Scenario: P256 key with valid nestedPersonalSign but the digest is not sha256 hashed
+     * 1. Not raw signature
+     * 2. Not typed data sign
+     * 3. Not nested personal sign
+     * = invalid signature
+     */
+    function test_isValidSignature_P256_wrappedSignature__nestedPersonalSign_notSha256Hashed_invalidSignature()
+        public
+    {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        string memory message = "test";
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(bytes(message));
+        bytes32 signerAccountDomainSeparator = signerAccount.domainSeparator();
+        bytes32 wrappedPersonalSignDigest =
+            TypedDataSignBuilder.hashWrappedPersonalSign(messageHash, signerAccountDomainSeparator);
+
+        // We do not sign the sha256 hash of the digest, but the digest itself
+        (bytes32 r, bytes32 s) = vm.signP256(p256Key.privateKey, wrappedPersonalSignDigest);
+        bytes memory signature = abi.encodePacked(r, s);
+        bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         vm.prank(address(mockERC1271VerifyingContract));
         assertEq(signerAccount.isValidSignature(messageHash, wrappedSignature), _1271_INVALID_VALUE);
     }

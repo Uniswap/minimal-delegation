@@ -22,6 +22,7 @@ contract CaliburTest is DelegationHandler, HookHandler {
 
     event Registered(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
+    event KeySettingsUpdated(bytes32 indexed keyHash, Settings settings);
 
     function setUp() public {
         setUpDelegation();
@@ -119,6 +120,9 @@ contract CaliburTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), false);
 
         keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+
+        vm.expectEmit(true, false, false, true);
+        emit KeySettingsUpdated(keyHash, keySettings);
         signerAccount.update(keyHash, keySettings);
 
         keySettings = signerAccount.getKeySettings(keyHash);
@@ -137,6 +141,9 @@ contract CaliburTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), false);
 
         keySettings = SettingsBuilder.init().fromIsAdmin(true);
+
+        vm.expectEmit(true, false, false, true);
+        emit KeySettingsUpdated(keyHash, keySettings);
         signerAccount.update(keyHash, keySettings);
 
         keySettings = signerAccount.getKeySettings(keyHash);
@@ -361,9 +368,10 @@ contract CaliburTest is DelegationHandler, HookHandler {
 
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        // incorrect private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Sign with an incorrect private key for the claimed keyHash
+        TestKey memory otherP256Key = TestKeyManager.withSeed(KeyType.P256, 1234);
+        bytes memory signature = otherP256Key.sign(userOpHash);
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         userOp.signature = wrappedSignature;
 

@@ -4,10 +4,17 @@ pragma solidity ^0.8.23;
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {LibBytes} from "solady/utils/LibBytes.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
-import {BaseAuthorization} from "../../BaseAuthorization.sol";
 import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
 
 interface IGuardedExecutorHook is IExecutionHook {
+    /// @notice Thrown when a key is not authorized to execute a call.
+    error Unauthorized();
+    /// @notice Thrown when a self call is not allowed.
+    error SelfCallNotAllowed();
+    // For testing convenience
+    function ANY_KEYHASH() external view returns (bytes32);
+    function ANY_TARGET() external view returns (address);
+    function ANY_FN_SEL() external view returns (bytes4);
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external;
 }
 
@@ -36,8 +43,6 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
     /// An empty calldata does not have 4 bytes for a function selector,
     /// and we will use this special value to denote empty calldata.
     bytes4 public constant EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0;
-
-    error SelfCallNotAllowed();
 
     /// @notice Set the canExecute flag for a keyHash, to, and selector
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external {
@@ -85,7 +90,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         returns (bytes4, bytes memory)
     {
         // TODO: check value
-        if (!_canExecute(keyHash, to, data)) revert BaseAuthorization.Unauthorized();
+        if (!_canExecute(keyHash, to, data)) revert Unauthorized();
         return (IExecutionHook.beforeExecute.selector, bytes(""));
     }
 
