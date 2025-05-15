@@ -106,7 +106,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
         BatchedCall memory batchedCall =
-            CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
+            CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withRevertOnFailure(true);
 
         Settings callerSettings;
         bool isRegisteredCaller;
@@ -151,7 +151,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
         Call[] memory calls = handlerCalls.toCalls();
 
         // TODO: remove the hardcoded revertOnFailure once we can test for it
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
         SignedBatchedCall memory signedBatchedCall =
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withKeyHash(currentKeyHash).withNonce(nonce);
 

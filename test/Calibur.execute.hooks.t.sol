@@ -65,7 +65,7 @@ contract CaliburExecuteHooksTest is TokenHandler, HookHandler, ExecuteFixtures, 
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
 
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
 
         vm.expectRevert(IGuardedExecutorHook.Unauthorized.selector);
         signerAccount.execute(batchedCall);    

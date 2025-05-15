@@ -30,6 +30,35 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         setUpTokens();
     }
 
+    function test_eip712Domain() public view {
+        (
+            ,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        ) = signerAccount.eip712Domain();
+        assertEq(name, "Calibur");
+        assertEq(version, "1.0.0");
+        assertEq(chainId, block.chainid);
+        assertEq(verifyingContract, address(signerAccount));
+        assertEq(abi.encode(extensions), abi.encode(new uint256[](0)));
+        assertEq(salt, PrefixedSaltLib.pack(uint96(0), address(calibur)));
+    }
+
+    function test_domainBytes() public view {
+        bytes memory domainBytes = signerAccount.domainBytes();
+        (bytes32 hashedName, bytes32 hashedVersion, uint256 chainId, address verifyingContract, bytes32 salt) =
+            abi.decode(domainBytes, (bytes32, bytes32, uint256, address, bytes32));
+        assertEq(hashedName, keccak256(bytes("Calibur")));
+        assertEq(hashedVersion, keccak256(bytes("1.0.0")));
+        assertEq(chainId, block.chainid);
+        assertEq(verifyingContract, address(signerAccount));
+        assertEq(salt, PrefixedSaltLib.pack(uint96(0), address(calibur)));
+    }
+
     function test_domainSeparator() public view {
         (
             ,
@@ -74,7 +103,7 @@ contract ERC712Test is DelegationHandler, TokenHandler, FFISignTypedData {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
         uint256 nonce = 0;
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
         SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
             .withNonce(nonce).withExecutor(address(1)).withDeadline(block.timestamp + 300000);
         TestKey memory key = TestKeyManager.withSeed(KeyType.Secp256k1, signerPrivateKey);

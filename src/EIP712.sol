@@ -67,8 +67,7 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
         extensions = new uint256[](0);
     }
 
-    /// @notice Encode the EIP-5267 domain into bytes
-    /// @dev for use in ERC-7739
+    /// @inheritdoc IEIP712
     function domainBytes() public view returns (bytes memory) {
         // _eip712Domain().fields and _eip712Domain().extensions are not used
         (,,, uint256 chainId, address verifyingContract, bytes32 salt,) = eip712Domain();
