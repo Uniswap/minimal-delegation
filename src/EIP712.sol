@@ -8,7 +8,8 @@ import {BaseAuthorization} from "./BaseAuthorization.sol";
 import {PrefixedSaltLib} from "./libraries/PrefixedSaltLib.sol";
 
 /// @title EIP712
-/// @dev This contract does not cache the domain separator and calculates it on the fly since it will change when delegated to.
+/// @dev This contract does not cache the domain separator and instead calculates it on the fly
+///      since it will change when delegated to or when the salt is updated.
 /// @notice It is not compatible with use by proxy contracts since the domain name and version are cached on deployment.
 contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     using PrefixedSaltLib for uint96;
@@ -21,7 +22,7 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
     bytes32 private immutable _cachedVersionHash;
     address private immutable _cachedImplementation;
 
-    /// @dev Any prefix to be added to the salt. This can be updated by the owner but it defaults to 0.
+    /// @dev Any prefix to be added to the salt. This can be updated by the owner or an admin but it defaults to 0.
     uint96 private _saltPrefix;
 
     constructor() {
@@ -58,7 +59,7 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
             uint256[] memory extensions
         )
     {
-        fields = hex"0f"; // `0b1111`.
+        fields = hex"1f"; // `0b11111`.
         (name, version) = _domainNameAndVersion();
         chainId = block.chainid;
         verifyingContract = address(this);
@@ -94,9 +95,11 @@ contract EIP712 is IEIP712, IERC5267, BaseAuthorization {
 
     /// @inheritdoc IEIP712
     function updateSalt(uint96 prefix) external onlyThis {
-        _saltPrefix = prefix;
-        // per EIP-5267, emit an event to notify that the domain separator has changed
-        emit EIP712DomainChanged();
+        if (prefix != _saltPrefix) {
+            _saltPrefix = prefix;
+            // per EIP-5267, emit an event to notify that the domain separator has changed
+            emit EIP712DomainChanged();
+        }
     }
 
     /// @notice Returns the domain name and version to use when creating EIP-712 signatures.
