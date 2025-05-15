@@ -82,4 +82,27 @@ contract ERC7739UtilsTest is Test {
         assertEq(contentsName, "");
         assertEq(contentsType, "");
     }
+
+    /// Explicit mode searches from the end of the string
+    function test_decodeContentsDescr_explicitMode_returnsEmptyStrings_ifInvalidChar() public view {
+        // invalid char: ,
+        string memory contentsDescr = "A(C c)B(A a)C(uint256 v),B";
+        (string memory contentsName, string memory contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        assertEq(contentsName, "");
+        assertEq(contentsType, "");
+
+        // invalid char: space
+        contentsDescr = "A(C c)B(A a)C(uint256 v) B";
+        (contentsName, contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        assertEq(contentsName, "");
+        assertEq(contentsType, "");
+
+        // We can't catch a misplaced ')' because we stop explicit search at the first ')'
+
+        // invalid char: \x00
+        contentsDescr = "A(C c)B(A a)C(uint256 v)\x00B";
+        (contentsName, contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        assertEq(contentsName, "");
+        assertEq(contentsType, "");
+    }
 }
