@@ -5,7 +5,6 @@ import {P256} from "@openzeppelin/contracts/utils/cryptography/P256.sol";
 import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
-import {WrappedSignatureLib} from "./WrappedSignatureLib.sol";
 
 /// @dev The type of key.
 enum KeyType {
@@ -22,7 +21,6 @@ struct Key {
 }
 
 library KeyLib {
-    using WrappedSignatureLib for bytes;
     /// @notice The sentinel hash value used to represent the root key
 
     bytes32 public constant ROOT_KEY_HASH = bytes32(0);

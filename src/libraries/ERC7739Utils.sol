@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.23;
 
-import {LibString} from "solady/utils/LibString.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {PersonalSignLib} from "./PersonalSignLib.sol";
 import {TypedDataSignLib} from "./TypedDataSignLib.sol";
