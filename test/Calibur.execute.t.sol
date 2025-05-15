@@ -712,6 +712,16 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
 
     /// forge-config: default.isolate = true
     /// forge-config: ci.isolate = true
+    function test_execute_empty_gas() public {
+        Call[] memory calls = CallUtils.initArray();
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
+        vm.prank(address(signerAccount));
+        signerAccount.execute(batchedCall);
+        vm.snapshotGasLastCall("execute_empty");
+    }
+
+    /// forge-config: default.isolate = true
+    /// forge-config: ci.isolate = true
     function test_execute_single_batchedCall_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
@@ -791,7 +801,7 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
         vm.prank(executor);
         signerAccount.execute(signedBatchedCall, wrappedSignature);
-        vm.snapshotGasLastCall("execute_withSignatureL_executor_singleCall");
+        vm.snapshotGasLastCall("execute_withSignature_executor_singleCall");
     }
 
     /// forge-config: default.isolate = true
