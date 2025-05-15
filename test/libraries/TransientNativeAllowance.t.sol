@@ -6,7 +6,7 @@ import {TransientNativeAllowance} from "../../src/libraries/TransientNativeAllow
 
 /// @notice Simple tests for the TransientAllowance library
 contract TransientNativeAllowanceTest is Test {
-    function test_get_uninitialized(address spender) public {
+    function test_get_uninitialized(address spender) public view {
         assertEq(TransientNativeAllowance.get(spender), 0);
     }
 

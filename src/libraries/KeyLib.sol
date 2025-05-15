@@ -57,7 +57,8 @@ library KeyLib {
     /// @dev Signatures from P256 are expected to be over the `sha256` hash of `_hash`
     function verify(Key memory key, bytes32 _hash, bytes calldata signature) internal view returns (bool isValid) {
         if (key.keyType == KeyType.Secp256k1) {
-            isValid = ECDSA.tryRecover(_hash, signature) == abi.decode(key.publicKey, (address));
+            address result = ECDSA.tryRecoverCalldata(_hash, signature);
+            isValid = result == address(0) ? false : result == abi.decode(key.publicKey, (address));
         } else if (key.keyType == KeyType.P256) {
             // Extract x,y from the public key
             (bytes32 x, bytes32 y) = abi.decode(key.publicKey, (bytes32, bytes32));

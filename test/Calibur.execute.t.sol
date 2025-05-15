@@ -157,6 +157,32 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         assertEq(tokenB.balanceOf(address(receiver)), 0);
     }
 
+    function test_execute_withSignature_addressZero_invalidSignature_reverts() public {
+        TestKey memory addressZeroKey =
+            TestKey({keyType: KeyType.Secp256k1, publicKey: abi.encode(0, 0), privateKey: uint256(0)});
+
+        vm.prank(address(signerAccount));
+        signerAccount.register(addressZeroKey.toKey());
+
+        // Transfer the whole balance of tokenB
+        uint256 userBalanceTokenB = tokenB.balanceOf(address(signerAccount));
+        Call[] memory calls = CallUtils.initArray();
+        calls = calls.push(buildTransferCall(address(tokenB), address(receiver), userBalanceTokenB));
+
+        uint256 nonceKey = 0;
+        (uint256 nonce,) = _buildNextValidNonce(nonceKey);
+
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
+        SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
+            .withNonce(nonce).withKeyHash(addressZeroKey.toKeyHash());
+
+        bytes memory signature = bytes("invalid");
+        bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
+
+        vm.expectRevert(ICalibur.InvalidSignature.selector);
+        signerAccount.execute(signedBatchedCall, wrappedSignature);
+    }
+
     function test_execute_batchedCall_owner() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
