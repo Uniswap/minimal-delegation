@@ -93,6 +93,22 @@ contract WrappedSignatureLibTest is Test {
         assertEq(_arg2, bytes(""));
     }
 
+    function test_decodeSignatureWithKeyHashAndHookData() public view {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), EMPTY_64_BYTES, bytes(""));
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+        assertEq(_arg1, bytes32(keccak256("test")));
+        assertEq(_arg2, EMPTY_64_BYTES);
+        assertEq(_arg3, bytes(""));
+    }
+
+    function test_decodeSignatureWithKeyHashAndHookData_65BytesSignature() public view {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), EMPTY_65_BYTES, bytes(""));
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+        assertEq(_arg1, bytes32(keccak256("test")));
+        assertEq(_arg2, EMPTY_65_BYTES);
+        assertEq(_arg3, bytes(""));
+    }
+
     function test_decodeSignatureWithHookData_emptySignature_reverts() public {
         bytes memory data = abi.encode(bytes(""), bytes(""));
         vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
