@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IHook} from "./IHook.sol";
 import {Key} from "../libraries/KeyLib.sol";
 import {Settings} from "../libraries/SettingsLib.sol";
 
@@ -11,6 +10,9 @@ interface IKeyManagement {
 
     /// @dev Emitted when a key is revoked.
     event Revoked(bytes32 indexed keyHash);
+
+    /// @dev Emitted when a key's settings are updated.
+    event KeySettingsUpdated(bytes32 indexed keyHash, Settings settings);
 
     /// @dev The key does not exist.
     error KeyDoesNotExist();

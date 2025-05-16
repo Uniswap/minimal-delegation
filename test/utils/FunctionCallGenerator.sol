@@ -15,14 +15,14 @@ import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {HandlerCall, CallUtils} from "./CallUtils.sol";
 import {ExecuteFixtures} from "./ExecuteFixtures.sol";
 import {IInvariantCallbacks, InvariantFixtures} from "./InvariantFixtures.sol";
-import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "../../src/interfaces/ICalibur.sol";
 import {SettingsBuilder} from "./SettingsBuilder.sol";
 import {SignedBatchedCall} from "../../src/libraries/SignedBatchedCallLib.sol";
 import {BatchedCall} from "../../src/libraries/BatchedCallLib.sol";
 
 /**
  * @title FunctionCallGenerator
- * @dev Helper contract to generate random function calls for MinimalDelegation invariant testing
+ * @dev Helper contract to generate random function calls for Calibur invariant testing
  */
 abstract contract FunctionCallGenerator is InvariantFixtures {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
@@ -34,11 +34,11 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     uint256 public constant FUZZED_FUNCTION_COUNT = 3;
 
     /// Member variables passed in by inheriting contract
-    IMinimalDelegation internal signerAccount;
+    ICalibur internal signerAccount;
     address private immutable _tokenA;
     address private immutable _tokenB;
 
-    constructor(IMinimalDelegation _signerAccount, address tokenA, address tokenB) {
+    constructor(ICalibur _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
         _tokenA = tokenA;
         _tokenB = tokenB;
@@ -49,7 +49,7 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     }
 
     function _wrapCallFailedRevertData(bytes4 selector) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IMinimalDelegation.CallFailed.selector, abi.encodePacked(selector));
+        return abi.encodeWithSelector(ICalibur.CallFailed.selector, abi.encodePacked(selector));
     }
 
     /// @return calldata to register a new key along with its callback
@@ -105,10 +105,11 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
      */
     function _generateHandlerCall(uint256 randomSeed) internal returns (HandlerCall memory) {
         TestKey memory testKey = _randKeyFromArray(fixtureKeys);
-        bytes32 keyHash = testKey.toKeyHash();
+
+        bytes32 currentKeyHash = _testKeyIsSignerAccount(testKey) ? KeyLib.ROOT_KEY_HASH : testKey.toKeyHash();
 
         bool isRegistered;
-        try signerAccount.getKey(keyHash) {
+        try signerAccount.getKey(currentKeyHash) {
             isRegistered = true;
         } catch (bytes memory _revertData) {
             assertEq(bytes4(_revertData), IKeyManagement.KeyDoesNotExist.selector);
@@ -126,10 +127,11 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         }
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
-            if (!isRegistered) {
+            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered
+            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
-            return _revokeCall(keyHash, revertData);
+            return _revokeCall(currentKeyHash, revertData);
         }
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
@@ -139,7 +141,7 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
             } else if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
             }
-            return _updateCall(keyHash, settings, revertData);
+            return _updateCall(currentKeyHash, settings, revertData);
         } else {
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }

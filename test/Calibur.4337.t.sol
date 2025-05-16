@@ -20,7 +20,7 @@ import {KeyLib} from "../src/libraries/KeyLib.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
-contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, HookHandler {
+contract Calibur4337Test is ExecuteFixtures, DelegationHandler, TokenHandler, HookHandler {
     using CallUtils for *;
     using UserOpBuilder for PackedUserOperation;
     using TestKeyManager for TestKey;
@@ -43,7 +43,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
     function test_handleOps_single_eoaSigner_gas() public {
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
         bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, batchedCall);
@@ -76,7 +76,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
 
         Call[] memory calls = CallUtils.initArray();
         calls = calls.push(buildTransferCall(address(tokenA), address(receiver), 1e18));
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
 
         /// This is extremely jank, but we have to encode the calls with the executeUserOp selector so the 4337 entrypoint forces a call to executeUserOp on the account.
         bytes memory callData = abi.encodeWithSelector(IAccountExecute.executeUserOp.selector, batchedCall);
@@ -85,7 +85,7 @@ contract MinimalDelegation4337Test is ExecuteFixtures, DelegationHandler, TokenH
             UserOpBuilder.initDefault().withSender(address(signerAccount)).withNonce(0).withCallData(callData);
 
         bytes32 digest = entryPoint.getUserOpHash(userOp);
-        userOp.withSignature(abi.encode(p256Key.toKeyHash(), p256Key.sign(digest)));
+        userOp.withSignature(abi.encode(p256Key.toKeyHash(), p256Key.sign(digest), EMPTY_HOOK_DATA));
 
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;

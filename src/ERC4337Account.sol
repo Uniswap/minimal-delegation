@@ -31,7 +31,8 @@ abstract contract ERC4337Account is IERC4337Account, BaseAuthorization {
 
     /// @inheritdoc IERC4337Account
     function ENTRY_POINT() public view override returns (address) {
-        return _CACHED_ENTRYPOINT.isOverriden() ? _CACHED_ENTRYPOINT.unpack() : Static.ENTRY_POINT_V_0_8;
+        uint256 _entryPoint = _CACHED_ENTRYPOINT;
+        return _entryPoint.isOverriden() ? _entryPoint.unpack() : Static.ENTRY_POINT_V_0_8;
     }
 
     // https://github.com/coinbase/smart-wallet/blob/main/src/CoinbaseSmartWallet.sol#L100
