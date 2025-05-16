@@ -179,7 +179,8 @@ contract Calibur is
     function _processBatch(BatchedCall memory batchedCall, bytes32 keyHash) private {
         for (uint256 i = 0; i < batchedCall.calls.length; i++) {
             (bool success, bytes memory output) = _process(batchedCall.calls[i], keyHash);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            // Reverts with the first call that is unsuccessful if `revertOnFailure` is set to true
+            // This does not catch hook reverts which cause the entire call to revert regardless of the value of `revertOnFailure`
             if (!success && batchedCall.revertOnFailure) revert ICalibur.CallFailed(output);
         }
     }
