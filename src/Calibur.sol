@@ -129,8 +129,6 @@ contract Calibur is
     }
 
     /// @inheritdoc ERC1271
-    /// @dev wrappedSignature contains a keyHash, signature, and any optional hook data
-    ///      `signature` can contain extra fields used for webauthn verification or ERC7739 nested typed data verification
     function isValidSignature(bytes32 digest, bytes calldata wrappedSignature)
         public
         view
