@@ -55,8 +55,10 @@ contract CaliburExecuteHooksTest is TokenHandler, HookHandler, ExecuteFixtures, 
         // Ensure the key is registered and the hook is set
         vm.startPrank(address(signerAccount));
         signerAccount.register(secp256k1Key.toKey());
-        signerAccount.update(secp256k1Key.toKeyHash(), SettingsBuilder.init().fromHook(IHook(address(guardedExecutorHook))));
-        
+        signerAccount.update(
+            secp256k1Key.toKeyHash(), SettingsBuilder.init().fromHook(IHook(address(guardedExecutorHook)))
+        );
+
         bytes4 fnSel = bytes4(keccak256("transfer(address,uint256)"));
         // Then, apply the restrictions on beforeExecute
         guardedExecutorHook.setCanExecute(secp256k1Key.toKeyHash(), address(tokenA), fnSel, false);
@@ -68,6 +70,6 @@ contract CaliburExecuteHooksTest is TokenHandler, HookHandler, ExecuteFixtures, 
         BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
 
         vm.expectRevert(IGuardedExecutorHook.Unauthorized.selector);
-        signerAccount.execute(batchedCall);    
+        signerAccount.execute(batchedCall);
     }
 }

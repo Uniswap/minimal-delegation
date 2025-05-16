@@ -28,9 +28,11 @@ contract WrappedSignatureLibTest is Test {
         }
     }
 
-    function test_decodeSignatureWithKeyHashAndHookData_fuzz(bytes32 _keyHash, bytes memory _signature, bytes memory _hookData)
-        public
-    {
+    function test_decodeSignatureWithKeyHashAndHookData_fuzz(
+        bytes32 _keyHash,
+        bytes memory _signature,
+        bytes memory _hookData
+    ) public {
         bytes memory data = abi.encode(_keyHash, _signature, _hookData);
         if (_signature.length == 0) {
             vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));

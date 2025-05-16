@@ -12,6 +12,7 @@ interface IGuardedExecutorHook is IExecutionHook {
     /// @notice Thrown when a self call is not allowed.
     error SelfCallNotAllowed();
     // For testing convenience
+
     function ANY_KEYHASH() external view returns (bytes32);
     function ANY_TARGET() external view returns (address);
     function ANY_FN_SEL() external view returns (bytes4);
