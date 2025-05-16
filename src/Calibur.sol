@@ -190,6 +190,10 @@ contract Calibur is
         address to = _call.to == address(0) ? address(this) : _call.to;
 
         Settings settings = getKeySettings(keyHash);
+
+        // By default, only admin keys can self-call. This is to prevent untrusted keys from updating their own settings
+        // However, admin keys CAN update their own settings and evade the hook checks below
+        // To prevent this, we recommend adding a hook which restricts calls to `update` to the admin key
         if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
 
         IHook hook = settings.hook();
