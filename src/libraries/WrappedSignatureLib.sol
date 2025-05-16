@@ -17,12 +17,12 @@ library WrappedSignatureLib {
     /// @notice Returns true for standard or compact length ECDSA signatures
     /// @dev will also return true for standard p256 signatures however those MUST be wrapped with extra information in the verify sig flow
     function isRawSignature(bytes calldata data) internal pure returns (bool) {
-        return data.length == 64 || data.length == 65;
+        return data.length == 65 || data.length == 64;
     }
 
     /// @notice Decode the signature and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes hookData)`
-    /// If the signature or hookData are not present the function will revert with `SliceOutOfBounds()`
+    /// If the length of the data does not match the encoded length the function will revert with `SliceOutOfBounds()`
     function decodeWithHookData(bytes calldata data)
         internal
         pure
@@ -34,7 +34,7 @@ library WrappedSignatureLib {
 
     /// @notice Decode the keyHash, signature, and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 keyHash, bytes signature, bytes hookData)`
-    /// If the signature or hookData are not present the function will revert with `SliceOutOfBounds()`
+    /// If the length of the data does not match the encoded length the function will revert with `SliceOutOfBounds()`
     function decodeWithKeyHashAndHookData(bytes calldata data)
         internal
         pure
