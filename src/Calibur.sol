@@ -179,7 +179,8 @@ contract Calibur is
     function _processBatch(BatchedCall memory batchedCall, bytes32 keyHash) private {
         for (uint256 i = 0; i < batchedCall.calls.length; i++) {
             (bool success, bytes memory output) = _process(batchedCall.calls[i], keyHash);
-            // Reverts with the first call that is unsuccessful if the EXEC_TYPE is set to force a revert.
+            // Reverts with the first call that is unsuccessful if `revertOnFailure` is set to true
+            // This does not catch hook reverts which cause the entire call to revert regardless of the value of `revertOnFailure`
             if (!success && batchedCall.revertOnFailure) revert ICalibur.CallFailed(output);
         }
     }
@@ -190,6 +191,10 @@ contract Calibur is
         address to = _call.to == address(0) ? address(this) : _call.to;
 
         Settings settings = getKeySettings(keyHash);
+
+        // By default, only the root key or admin keys can self-call. This is to prevent untrusted keys from updating their own settings
+        // However, admin keys CAN update their own settings and evade the hook checks below
+        // To prevent this, we recommend adding a hook which disallows calls by admin keys to the `register` and `update` functions
         if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
 
         IHook hook = settings.hook();
