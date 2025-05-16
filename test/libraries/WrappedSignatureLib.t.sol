@@ -10,7 +10,12 @@ contract WrappedSignatureLibTest is Test {
 
     MockWrappedSignatureLib decoder;
 
+    error SliceOutOfBounds();
     error InvalidSignatureLength();
+
+    // Dummy signatures (64 for compact ECDSA and P256, 65 for standard ECDSA)
+    bytes constant EMPTY_64_BYTES = abi.encodePacked(bytes32(0), bytes32(0));
+    bytes constant EMPTY_65_BYTES = abi.encodePacked(bytes32(0), bytes32(0), uint8(0));
 
     function setUp() public {
         decoder = new MockWrappedSignatureLib();
@@ -18,7 +23,7 @@ contract WrappedSignatureLibTest is Test {
 
     function test_decodeSignatureWithHookData_fuzz(bytes memory _signature, bytes memory _hookData) public {
         bytes memory data = abi.encode(_signature, _hookData);
-        if (_signature.length == 0) {
+        if (_signature.length < 64) {
             vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
             decoder.decodeWithHookData(data);
         } else {
@@ -34,7 +39,7 @@ contract WrappedSignatureLibTest is Test {
         bytes memory _hookData
     ) public {
         bytes memory data = abi.encode(_keyHash, _signature, _hookData);
-        if (_signature.length == 0) {
+        if (_signature.length < 64) {
             vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
             decoder.decodeWithKeyHashAndHookData(data);
         } else {
@@ -75,23 +80,36 @@ contract WrappedSignatureLibTest is Test {
     }
 
     function test_decodeSignatureWithHookData() public view {
-        bytes memory data = abi.encode(bytes("test"), bytes(""));
+        bytes memory data = abi.encode(EMPTY_64_BYTES, bytes(""));
         (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
-        assertEq(_arg1, bytes("test"));
+        assertEq(_arg1, EMPTY_64_BYTES);
         assertEq(_arg2, bytes(""));
+    }
+
+    function test_decodeSignatureWithHookData_65BytesSignature() public view {
+        bytes memory data = abi.encode(EMPTY_65_BYTES, bytes(""));
+        (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
+        assertEq(_arg1, EMPTY_65_BYTES);
+        assertEq(_arg2, bytes(""));
+    }
+
+    function test_decodeSignatureWithHookData_emptySignature_reverts() public {
+        bytes memory data = abi.encode(bytes(""), bytes(""));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
+        decoder.decodeWithHookData(data);
     }
 
     function test_decodeSignatureWithHookData_incorrectlyEncodedSignature_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.decodeWithHookData(data);
     }
 
     function test_decodeWithKeyHashAndHookData() public view {
-        bytes memory data = abi.encode(bytes32(keccak256("test")), bytes("test"), bytes(""));
+        bytes memory data = abi.encode(bytes32(keccak256("test")), EMPTY_64_BYTES, bytes(""));
         (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
         assertEq(_arg1, bytes32(keccak256("test")));
-        assertEq(_arg2, bytes("test"));
+        assertEq(_arg2, EMPTY_64_BYTES);
         assertEq(_arg3, bytes(""));
     }
 
@@ -105,13 +123,13 @@ contract WrappedSignatureLibTest is Test {
 
     function test_decodeWithKeyHashAndHookData_incorrectlyEncodedSignature_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.decodeWithKeyHashAndHookData(data);
     }
 
     function test_decodeWithKeyHashAndHookData_incorrectlyEncodedHookData_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.decodeWithKeyHashAndHookData(data);
     }
 

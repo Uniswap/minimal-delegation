@@ -26,6 +26,7 @@ library WrappedSignatureLib {
     /// @notice Decode the signature and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes signature, bytes hookData)`
     /// If the length of the data does not match the encoded length the function will revert with `SliceOutOfBounds()`
+    /// Also, if the signature is less than 64 bytes, it will revert with `InvalidSignatureLength()`
     function decodeWithHookData(bytes calldata data)
         internal
         pure
@@ -34,7 +35,7 @@ library WrappedSignatureLib {
         signature = data.safeToBytes(0);
         hookData = data.safeToBytes(1);
         assembly ("memory-safe") {
-            if iszero(signature.length) {
+            if lt(signature.length, 64) {
                 mstore(0, INVALID_SIGNATURE_LENGTH_SELECTOR)
                 revert(0x1c, 4)
             }
@@ -44,6 +45,7 @@ library WrappedSignatureLib {
     /// @notice Decode the keyHash, signature, and hook data from the calldata
     /// @dev The calldata is expected to be encoded as `abi.encode(bytes32 keyHash, bytes signature, bytes hookData)`
     /// If the length of the data does not match the encoded length the function will revert with `SliceOutOfBounds()`
+    /// Also, if the signature is less than 64 bytes, it will revert with `InvalidSignatureLength()`
     function decodeWithKeyHashAndHookData(bytes calldata data)
         internal
         pure
@@ -55,7 +57,7 @@ library WrappedSignatureLib {
         signature = data.safeToBytes(1);
         hookData = data.safeToBytes(2);
         assembly ("memory-safe") {
-            if iszero(signature.length) {
+            if lt(signature.length, 64) {
                 mstore(0, INVALID_SIGNATURE_LENGTH_SELECTOR)
                 revert(0x1c, 4)
             }

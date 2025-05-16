@@ -176,7 +176,9 @@ contract CaliburExecuteTest is TokenHandler, HookHandler, ExecuteFixtures, Deleg
         SignedBatchedCall memory signedBatchedCall = CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall)
             .withNonce(nonce).withKeyHash(addressZeroKey.toKeyHash());
 
-        bytes memory signature = bytes("invalid");
+        // Use a dummy signature that is at least 64 bytes
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, keccak256("invalidDigest"));
+        bytes memory signature = abi.encodePacked(r, s, v);
         bytes memory wrappedSignature = abi.encode(signature, EMPTY_HOOK_DATA);
 
         vm.expectRevert(ICalibur.InvalidSignature.selector);
