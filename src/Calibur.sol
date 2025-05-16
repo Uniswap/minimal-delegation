@@ -194,7 +194,7 @@ contract Calibur is
 
         // By default, only the root key or admin keys can self-call. This is to prevent untrusted keys from updating their own settings
         // However, admin keys CAN update their own settings and evade the hook checks below
-        // To prevent this, we recommend adding a hook which disallows calls by admin keys to the register and `update` functions
+        // To prevent this, we recommend adding a hook which disallows calls by admin keys to the `register` and `update` functions
         if (!settings.isAdmin() && to == address(this)) revert IKeyManagement.OnlyAdminCanSelfCall();
 
         IHook hook = settings.hook();
