@@ -17,7 +17,7 @@ abstract contract HookHandler is Test {
     /// Only supports beforeExecute hook
     /// 0x1111 ...10000
     address payable constant GUARDED_EXECUTOR_HOOK = payable(0xffffFFfFFfFffFFFfffFfFfffffFFffFFfffff10);
-    
+
     /// These addresses are prefixed with 0xC to not conflict with precompile addresses
     /// 0xC000 ...  0000
     address payable constant NO_HOOKS = payable(0xC000000000000000000000000000000000000000);

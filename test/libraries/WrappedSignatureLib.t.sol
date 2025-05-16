@@ -10,26 +10,44 @@ contract WrappedSignatureLibTest is Test {
 
     MockWrappedSignatureLib decoder;
 
+    error SliceOutOfBounds();
+    error InvalidSignatureLength();
+
+    // Dummy signatures (64 for compact ECDSA and P256, 65 for standard ECDSA)
+    bytes constant EMPTY_64_BYTES = abi.encodePacked(bytes32(0), bytes32(0));
+    bytes constant EMPTY_65_BYTES = abi.encodePacked(bytes32(0), bytes32(0), uint8(0));
+
     function setUp() public {
         decoder = new MockWrappedSignatureLib();
     }
 
-    function test_decodeSignatureWithHookData_fuzz(bytes memory arg1, bytes memory arg2) public view {
-        bytes memory data = abi.encode(arg1, arg2);
-        (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
-        assertEq(_arg1, arg1);
-        assertEq(_arg2, arg2);
+    function test_decodeSignatureWithHookData_fuzz(bytes memory _signature, bytes memory _hookData) public {
+        bytes memory data = abi.encode(_signature, _hookData);
+        if (_signature.length < 64) {
+            vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
+            decoder.decodeWithHookData(data);
+        } else {
+            (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
+            assertEq(_arg1, _signature);
+            assertEq(_arg2, _hookData);
+        }
     }
 
-    function test_decodeSignatureWithKeyHashAndHookData_fuzz(bytes32 arg1, bytes memory arg2, bytes memory arg3)
-        public
-        view
-    {
-        bytes memory data = abi.encode(arg1, arg2, arg3);
-        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
-        assertEq(_arg1, arg1);
-        assertEq(_arg2, arg2);
-        assertEq(_arg3, arg3);
+    function test_decodeSignatureWithKeyHashAndHookData_fuzz(
+        bytes32 _keyHash,
+        bytes memory _signature,
+        bytes memory _hookData
+    ) public {
+        bytes memory data = abi.encode(_keyHash, _signature, _hookData);
+        if (_signature.length < 64) {
+            vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
+            decoder.decodeWithKeyHashAndHookData(data);
+        } else {
+            (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+            assertEq(_arg1, _keyHash);
+            assertEq(_arg2, _signature);
+            assertEq(_arg3, _hookData);
+        }
     }
 
     function test_decodeTypedDataSig_fuzz(bytes memory arg1, bytes32 arg2, bytes32 arg3, string memory arg4)
@@ -62,23 +80,52 @@ contract WrappedSignatureLibTest is Test {
     }
 
     function test_decodeSignatureWithHookData() public view {
-        bytes memory data = abi.encode(bytes(""), bytes(""));
+        bytes memory data = abi.encode(EMPTY_64_BYTES, bytes(""));
         (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
-        assertEq(_arg1, bytes(""));
+        assertEq(_arg1, EMPTY_64_BYTES);
         assertEq(_arg2, bytes(""));
+    }
+
+    function test_decodeSignatureWithHookData_65BytesSignature() public view {
+        bytes memory data = abi.encode(EMPTY_65_BYTES, bytes(""));
+        (bytes memory _arg1, bytes memory _arg2) = decoder.decodeWithHookData(data);
+        assertEq(_arg1, EMPTY_65_BYTES);
+        assertEq(_arg2, bytes(""));
+    }
+
+    function test_decodeSignatureWithKeyHashAndHookData() public view {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), EMPTY_64_BYTES, bytes(""));
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+        assertEq(_arg1, bytes32(keccak256("test")));
+        assertEq(_arg2, EMPTY_64_BYTES);
+        assertEq(_arg3, bytes(""));
+    }
+
+    function test_decodeSignatureWithKeyHashAndHookData_65BytesSignature() public view {
+        bytes memory data = abi.encode(bytes32(keccak256("test")), EMPTY_65_BYTES, bytes(""));
+        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
+        assertEq(_arg1, bytes32(keccak256("test")));
+        assertEq(_arg2, EMPTY_65_BYTES);
+        assertEq(_arg3, bytes(""));
+    }
+
+    function test_decodeSignatureWithHookData_emptySignature_reverts() public {
+        bytes memory data = abi.encode(bytes(""), bytes(""));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
+        decoder.decodeWithHookData(data);
     }
 
     function test_decodeSignatureWithHookData_incorrectlyEncodedSignature_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.decodeWithHookData(data);
     }
 
     function test_decodeWithKeyHashAndHookData() public view {
-        bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""), bytes(""));
+        bytes memory data = abi.encode(bytes32(keccak256("test")), EMPTY_64_BYTES, bytes(""));
         (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
         assertEq(_arg1, bytes32(keccak256("test")));
-        assertEq(_arg2, bytes(""));
+        assertEq(_arg2, EMPTY_64_BYTES);
         assertEq(_arg3, bytes(""));
     }
 
@@ -92,21 +139,19 @@ contract WrappedSignatureLibTest is Test {
 
     function test_decodeWithKeyHashAndHookData_incorrectlyEncodedSignature_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.decodeWithKeyHashAndHookData(data);
     }
 
     function test_decodeWithKeyHashAndHookData_incorrectlyEncodedHookData_reverts() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(SliceOutOfBounds.selector));
         decoder.decodeWithKeyHashAndHookData(data);
     }
 
-    function test_decodeWithKeyHashAndHookData_empty_succeeds() public view {
+    function test_decodeWithKeyHashAndHookData_empty_reverts_withInvalidSignatureLength() public {
         bytes memory data = abi.encode(bytes32(keccak256("test")), bytes(""), bytes(""));
-        (bytes32 _arg1, bytes memory _arg2, bytes memory _arg3) = decoder.decodeWithKeyHashAndHookData(data);
-        assertEq(_arg1, bytes32(keccak256("test")));
-        assertEq(_arg2, bytes(""));
-        assertEq(_arg3, bytes(""));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignatureLength.selector));
+        decoder.decodeWithKeyHashAndHookData(data);
     }
 }
