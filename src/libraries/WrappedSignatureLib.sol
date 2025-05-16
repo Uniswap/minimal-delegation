@@ -8,6 +8,9 @@ import {CalldataDecoder} from "./CalldataDecoder.sol";
 library WrappedSignatureLib {
     using CalldataDecoder for bytes;
 
+    /// error InvalidSignatureLength();
+    uint256 constant INVALID_SIGNATURE_LENGTH_SELECTOR = 0x4be6321b;
+
     /// @notice Returns true if the signature is empty
     /// @dev For use in the ERC-7739 sentinel value check
     function isEmpty(bytes calldata data) internal pure returns (bool) {
@@ -30,6 +33,12 @@ library WrappedSignatureLib {
     {
         signature = data.safeToBytes(0);
         hookData = data.safeToBytes(1);
+        assembly ("memory-safe") {
+            if iszero(signature.length) {
+                mstore(0, INVALID_SIGNATURE_LENGTH_SELECTOR)
+                revert(0x1c, 4)
+            }
+        }
     }
 
     /// @notice Decode the keyHash, signature, and hook data from the calldata
@@ -45,6 +54,12 @@ library WrappedSignatureLib {
         }
         signature = data.safeToBytes(1);
         hookData = data.safeToBytes(2);
+        assembly ("memory-safe") {
+            if iszero(signature.length) {
+                mstore(0, INVALID_SIGNATURE_LENGTH_SELECTOR)
+                revert(0x1c, 4)
+            }
+        }
     }
 
     /// @notice Decode the signature, appSeparator, contentsHash, and contentsDescr from the calldata
