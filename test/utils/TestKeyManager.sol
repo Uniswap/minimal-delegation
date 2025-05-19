@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 import {KeyType, Key, KeyLib} from "../../src/libraries/KeyLib.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Utils, WebAuthnInfo} from "webauthn-sol/test/Utils.sol";
@@ -18,9 +19,6 @@ library TestKeyManager {
     using KeyLib for Key;
 
     error KeyNotSupported();
-
-    // vm.addr(0xa11ce)
-    address constant signerTestKeyAddress = 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7;
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -70,9 +68,10 @@ library TestKeyManager {
         }
     }
 
-    function sign(TestKey memory key, bytes32 hash) internal pure returns (bytes memory) {
+    /// @dev Signatures from P256 are over the `sha256` hash of `_hash`
+    function sign(TestKey memory key, bytes32 hash) internal view returns (bytes memory) {
         if (key.keyType == KeyType.P256) {
-            (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, hash);
+            (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, EfficientHashLib.sha2(hash));
             return abi.encodePacked(r, s);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);

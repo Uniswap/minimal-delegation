@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
 import {BaseAuthorization} from "./BaseAuthorization.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
 /// @dev A base contract for managing keys
@@ -13,9 +13,9 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using KeyLib for *;
     using SettingsLib for Settings;
 
-    EnumerableSetLib.Bytes32Set keyHashes;
-    mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-    mapping(bytes32 keyHash => Settings settings) keySettings;
+    EnumerableSetLib.Bytes32Set public keyHashes;
+    mapping(bytes32 keyHash => bytes encodedKey) private keyStorage;
+    mapping(bytes32 keyHash => Settings settings) private keySettings;
 
     /// @inheritdoc IKeyManagement
     function register(Key memory key) external onlyThis {
@@ -33,6 +33,7 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         if (keyHash.isRootKey()) revert CannotUpdateRootKey();
         if (!isRegistered(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
+        emit KeySettingsUpdated(keyHash, settings);
     }
 
     /// @inheritdoc IKeyManagement
@@ -79,12 +80,11 @@ abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
         if (isExpired) revert IKeyManagement.KeyExpired(expiry);
     }
 
-    /// @notice Check if the keyHash is the root key or an admin key
-    function _isOwnerOrAdmin(bytes32 keyHash) internal view returns (bool) {
+    /// @notice Check if the keyHash is the root key or a registered, unexpired key
+    function _isOwnerOrValidKey(bytes32 keyHash) internal view returns (bool) {
         if (keyHash.isRootKey()) return true;
         if (!isRegistered(keyHash)) return false;
-        Settings settings = keySettings[keyHash];
-        if (settings.isAdmin()) return true;
-        return false;
+        (bool isExpired,) = keySettings[keyHash].isExpired();
+        return !isExpired;
     }
 }

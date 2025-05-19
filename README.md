@@ -1,4 +1,4 @@
-# Minimal Delegation
+# Calibur
 
 a minimal, non-upgradeable implementation contract that can be set on an EIP-7702 delegation txn
 
@@ -37,22 +37,22 @@ forge test
 
 ```mermaid
 classDiagram
-    MinimalDelegation --|> ERC7821
-    MinimalDelegation --|> ERC1271
-    MinimalDelegation --|> EIP712
-    MinimalDelegation --|> ERC4337Account
-    MinimalDelegation --|> Receiver
-    MinimalDelegation --|> KeyManagement
-    MinimalDelegation --|> NonceManager
-    MinimalDelegation --|> ERC7914
-    MinimalDelegation --|> ERC7201
-    MinimalDelegation --|> ERC7739
-    MinimalDelegation --|> Multicall
+    Calibur --|> ERC7821
+    Calibur --|> ERC1271
+    Calibur --|> EIP712
+    Calibur --|> ERC4337Account
+    Calibur --|> Receiver
+    Calibur --|> KeyManagement
+    Calibur --|> NonceManager
+    Calibur --|> ERC7914
+    Calibur --|> ERC7201
+    Calibur --|> ERC7739
+    Calibur --|> Multicall
     
     EIP712 --|> IERC5267
     ERC4337Account --|> IAccount
     
-    class MinimalDelegation {
+    class Calibur {
         +execute(BatchedCall batchedCall)
         +execute(SignedBatchedCall signedBatchedCall, bytes wrappedSignature)
         +execute(bytes32 mode, bytes executionData)
@@ -68,12 +68,12 @@ classDiagram
 
 ```mermaid
 sequenceDiagram
-    participant SignerAccount as EOA (delegated to MinimalDelegation)
-    participant Account as MinimalDelegation
+    participant SignerAccount as EOA (delegated to Calibur)
+    participant Account as Calibur
     participant Hook
     participant Target
     
-    Note over SignerAccount, Account: EOA is delegated to MinimalDelegation via EIP-7702
+    Note over SignerAccount, Account: EOA is delegated to Calibur via EIP-7702
     SignerAccount->>Account: execute(BatchedCall batchedCall)
     Account->>Account: Check if sender keyHash is owner or admin
     Account->>Account: _processBatch(batchedCall, keyHash)
@@ -106,7 +106,7 @@ sequenceDiagram
 sequenceDiagram
     actor Signer
     participant Relayer
-    participant Account as MinimalDelegation
+    participant Account as Calibur
     participant Hook
     participant Target
     
@@ -164,12 +164,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant SignerAccount as EOA (delegated to MinimalDelegation)
-    participant Account as MinimalDelegation
+    participant SignerAccount as EOA (delegated to Calibur)
+    participant Account as Calibur
     participant Hook
     participant Target
     
-    Note over SignerAccount, Account: EOA is delegated to MinimalDelegation via EIP-7702
+    Note over SignerAccount, Account: EOA is delegated to Calibur via EIP-7702
     SignerAccount->>Account: execute(bytes32 mode, bytes executionData)
     Account->>Account: mode.isBatchedCall()
     opt If !mode.isBatchedCall()
@@ -214,7 +214,7 @@ sequenceDiagram
     actor Signer
     participant Bundler
     participant EntryPoint
-    participant Account as MinimalDelegation
+    participant Account as Calibur
     participant Hook
     participant Target
     
@@ -274,7 +274,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant VerifyingContract
-    participant Account as MinimalDelegation
+    participant Account as Calibur
     participant Hook
     
     VerifyingContract->>+Account: isValidSignature(bytes32 digest, bytes wrappedSignature)
@@ -314,7 +314,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Caller
-    participant Account as MinimalDelegation
+    participant Account as Calibur
     participant Spender
     
     Caller->>+Account: approveNative(spender, amount)

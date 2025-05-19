@@ -3,17 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC7739Utils} from "../../src/libraries/ERC7739Utils.sol";
-
-/// Helper contract to test internal library functions
-contract MockERC7739Utils {
-    function decodeContentsDescr(string memory contentsDescr)
-        public
-        pure
-        returns (string memory contentsName, string memory contentsType)
-    {
-        return ERC7739Utils.decodeContentsDescr(contentsDescr);
-    }
-}
+import {MockERC7739Utils} from "../utils/MockERC7739Utils.sol";
 
 /// @title ERC7739UtilsTest
 /// @notice Test suite for the ERC7739Utils library
@@ -88,6 +78,29 @@ contract ERC7739UtilsTest is Test {
 
         // invalid char: \x00
         contentsDescr = "SomeType\x00(address foo,uint256 bar)";
+        (contentsName, contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        assertEq(contentsName, "");
+        assertEq(contentsType, "");
+    }
+
+    /// Explicit mode searches from the end of the string
+    function test_decodeContentsDescr_explicitMode_returnsEmptyStrings_ifInvalidChar() public view {
+        // invalid char: ,
+        string memory contentsDescr = "A(C c)B(A a)C(uint256 v),B";
+        (string memory contentsName, string memory contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        assertEq(contentsName, "");
+        assertEq(contentsType, "");
+
+        // invalid char: space
+        contentsDescr = "A(C c)B(A a)C(uint256 v) B";
+        (contentsName, contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
+        assertEq(contentsName, "");
+        assertEq(contentsType, "");
+
+        // We can't catch a misplaced ')' because we stop explicit search at the first ')'
+
+        // invalid char: \x00
+        contentsDescr = "A(C c)B(A a)C(uint256 v)\x00B";
         (contentsName, contentsType) = mockERC7739Utils.decodeContentsDescr(contentsDescr);
         assertEq(contentsName, "");
         assertEq(contentsType, "");

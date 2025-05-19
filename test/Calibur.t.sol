@@ -14,7 +14,7 @@ import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {Constants} from "./utils/Constants.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
-contract MinimalDelegationTest is DelegationHandler, HookHandler {
+contract CaliburTest is DelegationHandler, HookHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using SettingsLib for Settings;
@@ -22,6 +22,7 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
     event Registered(bytes32 indexed keyHash, Key key);
     event Revoked(bytes32 indexed keyHash);
+    event KeySettingsUpdated(bytes32 indexed keyHash, Settings settings);
 
     function setUp() public {
         setUpDelegation();
@@ -33,8 +34,17 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(address(signerAccount).code.length, 0x17);
     }
 
-    function test_minimalDelegationEntry_codeSize() public {
-        vm.snapshotValue("minimalDelegationEntry bytecode size", address(minimalDelegation).code.length);
+    function test_caliburEntry_codeSize() public {
+        vm.snapshotValue("caliburEntry bytecode size", address(calibur).code.length);
+    }
+
+    function test_namespaceAndVersion() public view {
+        assertEq(signerAccount.namespaceAndVersion(), "Uniswap.Calibur.1.0.0");
+    }
+
+    function test_entrypoint_gas() public {
+        signerAccount.ENTRY_POINT();
+        vm.snapshotGasLastCall("entrypoint");
     }
 
     function test_register() public {
@@ -110,6 +120,9 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), false);
 
         keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+
+        vm.expectEmit(true, false, false, true);
+        emit KeySettingsUpdated(keyHash, keySettings);
         signerAccount.update(keyHash, keySettings);
 
         keySettings = signerAccount.getKeySettings(keyHash);
@@ -128,6 +141,9 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(keySettings.isAdmin(), false);
 
         keySettings = SettingsBuilder.init().fromIsAdmin(true);
+
+        vm.expectEmit(true, false, false, true);
+        emit KeySettingsUpdated(keyHash, keySettings);
         signerAccount.update(keyHash, keySettings);
 
         keySettings = signerAccount.getKeySettings(keyHash);
@@ -180,14 +196,14 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
     /// forge-config: default.fuzz.runs = 100
     /// forge-config: ci.fuzz.runs = 500
     function test_fuzz_keyCount(uint8 numKeys) public {
-        Key memory mockSecp256k1Key;
-        string memory publicKey = "";
-        address mockSecp256k1PublicKey;
+        Key memory _mockKey;
+        string memory _publicKey = "";
+        address _mockPublicKey;
         for (uint256 i = 0; i < numKeys; i++) {
-            mockSecp256k1PublicKey = makeAddr(string(abi.encodePacked(publicKey, i)));
-            mockSecp256k1Key = Key(KeyType.Secp256k1, abi.encode(mockSecp256k1PublicKey));
+            _mockPublicKey = makeAddr(string(abi.encodePacked(_publicKey, i)));
+            _mockKey = Key(KeyType.Secp256k1, abi.encode(_mockPublicKey));
             vm.prank(address(signerAccount));
-            signerAccount.register(mockSecp256k1Key);
+            signerAccount.register(_mockKey);
         }
 
         assertEq(signerAccount.keyCount(), numKeys);
@@ -234,6 +250,28 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(signerAccount.keyCount(), 1);
     }
 
+    function test_getKey_returnsRootKey() public view {
+        Key memory key = signerAccount.getKey(KeyLib.ROOT_KEY_HASH);
+        assertEq(uint256(key.keyType), uint256(KeyType.Secp256k1));
+        assertEq(key.publicKey, abi.encode(address(signerAccount)));
+    }
+
+    function test_getKey_returnsRegisteredKey() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
+        vm.prank(address(signerAccount));
+        signerAccount.register(p256Key.toKey());
+
+        Key memory key = signerAccount.getKey(p256Key.toKeyHash());
+        assertEq(uint256(key.keyType), uint256(KeyType.P256));
+        assertEq(key.publicKey, p256Key.publicKey);
+    }
+
+    function test_getKey_reverts_withKeyDoesNotExist() public {
+        bytes32 keyHash = keccak256("does not exist");
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.getKey(keyHash);
+    }
+
     function test_getKeySettings_returnsRootSettings() public view {
         Settings keySettings = signerAccount.getKeySettings(KeyLib.ROOT_KEY_HASH);
         assertEq(Settings.unwrap(keySettings), Settings.unwrap(SettingsLib.ROOT_KEY_SETTINGS));
@@ -242,17 +280,32 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
         assertEq(address(keySettings.hook()), address(0));
     }
 
-    function test_setERC1271CallerIsSafe() public {
-        address caller = makeAddr("caller");
+    function test_getKeySettings_returnsRegisteredKeySettings() public {
+        TestKey memory p256Key = TestKeyManager.initDefault(KeyType.P256);
         vm.prank(address(signerAccount));
-        signerAccount.setERC1271CallerIsSafe(caller, true);
-        assertEq(signerAccount.erc1271CallerIsSafe(caller), true);
+        signerAccount.register(p256Key.toKey());
+
+        Settings keySettings = signerAccount.getKeySettings(p256Key.toKeyHash());
+        // Expect default settings
+        assertEq(keySettings.expiration(), 0);
+        assertEq(keySettings.isAdmin(), false);
+        assertEq(address(keySettings.hook()), address(0));
+
+        // Update settings
+        keySettings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
+        vm.prank(address(signerAccount));
+        signerAccount.update(p256Key.toKeyHash(), keySettings);
+
+        keySettings = signerAccount.getKeySettings(p256Key.toKeyHash());
+        assertEq(keySettings.expiration(), uint40(block.timestamp + 3600));
+        assertEq(keySettings.isAdmin(), false);
+        assertEq(address(keySettings.hook()), address(0));
     }
 
-    function test_setERC1271CallerIsSafe_revertsWithUnauthorized() public {
-        address caller = makeAddr("caller");
-        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
-        signerAccount.setERC1271CallerIsSafe(caller, true);
+    function test_getKeySettings_reverts_withKeyDoesNotExist() public {
+        bytes32 keyHash = keccak256("does not exist");
+        vm.expectRevert(IKeyManagement.KeyDoesNotExist.selector);
+        signerAccount.getKeySettings(keyHash);
     }
 
     function test_entryPoint_defaultValue() public view {
@@ -315,9 +368,10 @@ contract MinimalDelegationTest is DelegationHandler, HookHandler {
 
         PackedUserOperation memory userOp;
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-        // incorrect private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1234, userOpHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Sign with an incorrect private key for the claimed keyHash
+        TestKey memory otherP256Key = TestKeyManager.withSeed(KeyType.P256, 1234);
+        bytes memory signature = otherP256Key.sign(userOpHash);
         bytes memory wrappedSignature = abi.encode(p256Key.toKeyHash(), signature, EMPTY_HOOK_DATA);
         userOp.signature = wrappedSignature;
 

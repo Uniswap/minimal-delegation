@@ -10,7 +10,7 @@ import {TokenHandler} from "./utils/TokenHandler.sol";
 import {ExecuteFixtures} from "./utils/ExecuteFixtures.sol";
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
-import {IMinimalDelegation} from "../src/interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "../src/interfaces/ICalibur.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
 import {IERC7821} from "../src/interfaces/IERC7821.sol";
 import {IKeyManagement} from "../src/interfaces/IKeyManagement.sol";
@@ -28,13 +28,13 @@ import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
 
 // To avoid stack to deep
 struct SetupParams {
-    IMinimalDelegation _signerAccount;
+    ICalibur _signerAccount;
     TestKey[] _signingKeys;
     address _tokenA;
     address _tokenB;
 }
 
-contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerator {
+contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerator {
     using TestKeyManager for TestKey;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using KeyLib for Key;
@@ -97,25 +97,36 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// - Any reverts are expected by the generated handler call
     function executeBatchedCall(uint256 generatorSeed) public useKey setBlock {
         address caller = vm.addr(currentSigningKey.privateKey);
+        bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
+
+        bytes32 callerKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
+
         vm.startPrank(caller);
         HandlerCall memory handlerCall = _generateHandlerCall(generatorSeed);
         HandlerCall[] memory handlerCalls = CallUtils.initHandler().push(handlerCall);
 
         BatchedCall memory batchedCall =
-            CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withShouldRevert(true);
+            CallUtils.initBatchedCall().withCalls(handlerCalls.toCalls()).withRevertOnFailure(true);
 
         Settings callerSettings;
-        try signerAccount.getKey(currentSigningKey.toKeyHash()) {
-            callerSettings = signerAccount.getKeySettings(currentSigningKey.toKeyHash());
+        bool isRegisteredCaller;
+        try signerAccount.getKey(callerKeyHash) {
+            isRegisteredCaller = true;
+            callerSettings = signerAccount.getKeySettings(callerKeyHash);
         } catch (bytes memory revertData) {
+            isRegisteredCaller = false;
             assertEq(bytes4(revertData), IKeyManagement.KeyDoesNotExist.selector);
         }
 
         try signerAccount.execute(batchedCall) {
             _processCallbacks(handlerCalls);
         } catch (bytes memory revertData) {
-            if (caller != address(signerAccount) && !callerSettings.isAdmin()) {
+            (bool isExpired,) = callerSettings.isExpired();
+            if (!isRegisteredCaller || (caller != address(signerAccount) && isExpired)) {
                 assertEq(bytes4(revertData), BaseAuthorization.Unauthorized.selector);
+            } else if (!callerSettings.isAdmin() && batchedCall.calls.containsSelfCall()) {
+                // TODO: Handler may only be generating self calls, so we should update that.
+                assertEq(bytes4(revertData), IKeyManagement.OnlyAdminCanSelfCall.selector);
             } else if (handlerCall.revertData.length > 0) {
                 assertEq(revertData, handlerCall.revertData);
             } else {
@@ -130,7 +141,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     /// @dev Handler function meant to be called during invariant tests
     /// TODO: only supports single call arrays for now
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeWithOpData(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
+    function executeSignedBatchedCall(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 
@@ -140,7 +151,7 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
         Call[] memory calls = handlerCalls.toCalls();
 
         // TODO: remove the hardcoded revertOnFailure once we can test for it
-        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withShouldRevert(true);
+        BatchedCall memory batchedCall = CallUtils.initBatchedCall().withCalls(calls).withRevertOnFailure(true);
         SignedBatchedCall memory signedBatchedCall =
             CallUtils.initSignedBatchedCall().withBatchedCall(batchedCall).withKeyHash(currentKeyHash).withNonce(nonce);
 
@@ -192,14 +203,14 @@ contract MinimalDelegationExecuteInvariantHandler is ExecuteFixtures, FunctionCa
     }
 }
 
-/// @title MinimalDelegationExecuteInvariantTest
-contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandler {
+/// @title CaliburExecuteInvariantTest
+contract CaliburExecuteInvariantTest is TokenHandler, DelegationHandler {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using CallUtils for Call;
     using CallUtils for Call[];
 
-    MinimalDelegationExecuteInvariantHandler internal invariantHandler;
+    CaliburExecuteInvariantHandler internal invariantHandler;
 
     address public untrustedCaller = makeAddr("untrustedCaller");
     uint256 public untrustedPrivateKey = 0xdead;
@@ -226,12 +237,12 @@ contract MinimalDelegationExecuteInvariantTest is TokenHandler, DelegationHandle
             _tokenA: address(tokenA),
             _tokenB: address(tokenB)
         });
-        invariantHandler = new MinimalDelegationExecuteInvariantHandler(params);
+        invariantHandler = new CaliburExecuteInvariantHandler(params);
 
         // Explicitly target the wrapped execute functions in the handler
         bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = MinimalDelegationExecuteInvariantHandler.executeBatchedCall.selector;
-        selectors[1] = MinimalDelegationExecuteInvariantHandler.executeWithOpData.selector;
+        selectors[0] = CaliburExecuteInvariantHandler.executeBatchedCall.selector;
+        selectors[1] = CaliburExecuteInvariantHandler.executeSignedBatchedCall.selector;
         FuzzSelector memory selector = FuzzSelector({addr: address(invariantHandler), selectors: selectors});
 
         targetSelector(selector);

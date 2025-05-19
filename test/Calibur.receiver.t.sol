@@ -5,9 +5,9 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {MockERC721} from "./utils/MockERC721.sol";
 import {MockERC1155} from "./utils/MockERC1155.sol";
 
-/// @notice Simple test for receiver functionality within MinimalDelegation.
+/// @notice Simple test for receiver functionality within Calibur.
 /// @author https://github.com/Vectorized/solady/blob/main/test/Receiver.t.sol
-contract MinimalDelegationReceiverTest is DelegationHandler {
+contract CaliburReceiverTest is DelegationHandler {
     MockERC721 erc721;
     MockERC1155 erc1155;
 

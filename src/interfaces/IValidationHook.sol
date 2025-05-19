@@ -12,6 +12,7 @@ interface IValidationHook {
     /// @param keyHash the key which signed over userOpHash
     /// @param userOp UserOperation
     /// @param userOpHash hash of the UserOperation
+    /// @param validationData contains data about whether or not the signature is valid and expiration information
     /// @param hookData any data to be passed to the hook. This has NOT been validated by the user signature
     /// @return selector Must be afterValidateUserOp.selector
     /// @dev The hook can revert to prevent the UserOperation from being validated.
@@ -19,10 +20,11 @@ interface IValidationHook {
         bytes32 keyHash,
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
+        uint256 validationData,
         bytes calldata hookData
     ) external view returns (bytes4 selector);
 
-    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback. 
+    /// @notice Hook called after verifying a signature over a digest in an EIP-1271 callback.
     /// @dev MUST revert to signal that validation should fail
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
@@ -33,7 +35,7 @@ interface IValidationHook {
         view
         returns (bytes4 selector);
 
-    /// @notice Hook called after verifying a signature over `SignedBatchedCall`. 
+    /// @notice Hook called after verifying a signature over `SignedBatchedCall`.
     /// @dev MUST revert to signal that validation should fail
     /// @param keyHash the key which signed over digest
     /// @param digest the digest to verify
