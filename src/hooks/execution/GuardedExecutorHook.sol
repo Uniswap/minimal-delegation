@@ -1,14 +1,21 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {LibBytes} from "solady/utils/LibBytes.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {IERC7821} from "../../interfaces/IERC7821.sol";
-import {Call} from "../../libraries/CallLib.sol";
-import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
+import {LibBytes} from "solady/utils/LibBytes.sol";
 import {IExecutionHook} from "../../interfaces/IExecutionHook.sol";
+import {AccountKeyHash, AccountKeyHashLib} from "../shared/AccountKeyHashLib.sol";
 
 interface IGuardedExecutorHook is IExecutionHook {
+    /// @notice Thrown when a key is not authorized to execute a call.
+    error Unauthorized();
+    /// @notice Thrown when a self call is not allowed.
+    error SelfCallNotAllowed();
+    // For testing convenience
+
+    function ANY_KEYHASH() external view returns (bytes32);
+    function ANY_TARGET() external view returns (address);
+    function ANY_FN_SEL() external view returns (bytes4);
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external;
 }
 
@@ -38,8 +45,6 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
     /// and we will use this special value to denote empty calldata.
     bytes4 public constant EMPTY_CALLDATA_FN_SEL = 0xe0e0e0e0;
 
-    error SelfCallNotAllowed();
-
     /// @notice Set the canExecute flag for a keyHash, to, and selector
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external {
         _setCanExecute(keyHash, to, selector, can);
@@ -66,7 +71,7 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
 
         // This check is required to ensure that authorizing any function selector
         // or any target will still NOT allow for self execution.
-        if (_isSelfExecute(to, fnSel)) return false;
+        if (_isSelfCall(to, fnSel)) return false;
 
         EnumerableSetLib.Bytes32Set storage c = canExecute[keyHash.hashSender(msg.sender)];
         if (c.length() != 0) {
@@ -79,25 +84,25 @@ contract GuardedExecutorHook is IGuardedExecutorHook {
         return false;
     }
 
-    function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data)
+    function beforeExecute(bytes32 keyHash, address to, uint256, bytes calldata data)
         external
         view
         override
         returns (bytes4, bytes memory)
     {
         // TODO: check value
-        if (!_canExecute(keyHash, to, data)) revert IERC7821.Unauthorized();
+        if (!_canExecute(keyHash, to, data)) revert Unauthorized();
         return (IExecutionHook.beforeExecute.selector, bytes(""));
     }
 
     /// @dev This hook is a no-op.
-    function afterExecute(bytes32 keyHash, bytes calldata beforeExecuteData) external view override returns (bytes4) {
+    function afterExecute(bytes32, bool, bytes calldata, bytes calldata) external pure override returns (bytes4) {
         return IExecutionHook.afterExecute.selector;
     }
 
-    /// @dev Returns true if the call is a self-execute call.
-    function _isSelfExecute(address to, bytes4 selector) internal view returns (bool) {
-        return to == msg.sender && selector == IERC7821.execute.selector;
+    /// @dev Returns true if the call is to the same contract.
+    function _isSelfCall(address to, bytes4) internal view returns (bool) {
+        return to == msg.sender;
     }
 
     /// @dev Returns a bytes32 value that contains `to` and `selector`.

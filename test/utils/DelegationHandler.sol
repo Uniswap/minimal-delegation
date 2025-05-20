@@ -1,27 +1,26 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {Key, KeyLib, KeyType} from "../../src/libraries/KeyLib.sol";
-import {MinimalDelegationEntry} from "../../src/MinimalDelegationEntry.sol";
-import {IMinimalDelegation} from "../../src/interfaces/IMinimalDelegation.sol";
+import {ICalibur} from "../../src/interfaces/ICalibur.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
 import {Constants} from "./Constants.sol";
 import {Settings, SettingsLib} from "../../src/libraries/SettingsLib.sol";
 import {SettingsBuilder} from "./SettingsBuilder.sol";
+import {MockERC1271VerifyingContract} from "./MockERC1271VerifyingContract.sol";
 
 contract DelegationHandler is Test {
     using KeyLib for Key;
     using TestKeyManager for TestKey;
     using SettingsBuilder for Settings;
 
-    MinimalDelegationEntry public minimalDelegation;
+    ICalibur public calibur;
     uint256 signerPrivateKey = 0xa11ce;
     address signer = vm.addr(signerPrivateKey);
     TestKey signerTestKey = TestKey(KeyType.Secp256k1, abi.encode(signer), signerPrivateKey);
-    IMinimalDelegation public signerAccount;
     uint256 DEFAULT_KEY_EXPIRY = 10 days;
 
     address mockSecp256k1PublicKey = makeAddr("mockSecp256k1PublicKey");
@@ -34,16 +33,29 @@ contract DelegationHandler is Test {
     Settings public mockSecp256k1Key2Settings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp + 3600));
 
     EntryPoint public entryPoint;
+    ICalibur public signerAccount;
 
     function setUpDelegation() public {
-        minimalDelegation = new MinimalDelegationEntry();
-        _delegate(signer, address(minimalDelegation));
-        signerAccount = IMinimalDelegation(signer);
+        calibur = ICalibur(create2(vm.getCode("CaliburEntry.sol:CaliburEntry"), bytes32(0)));
+        _delegate(signer, address(calibur));
+        signerAccount = ICalibur(signer);
 
         vm.etch(Constants.ENTRY_POINT_V_0_8, Constants.ENTRY_POINT_V_0_8_CODE);
         vm.label(Constants.ENTRY_POINT_V_0_8, "EntryPoint");
 
         entryPoint = EntryPoint(payable(Constants.ENTRY_POINT_V_0_8));
+    }
+
+    function create2(bytes memory initcode, bytes32 salt) internal returns (address contractAddress) {
+        assembly {
+            contractAddress := create2(0, add(initcode, 32), mload(initcode), salt)
+            if iszero(contractAddress) {
+                let ptr := mload(0x40)
+                let errorSize := returndatasize()
+                returndatacopy(ptr, 0, errorSize)
+                revert(ptr, errorSize)
+            }
+        }
     }
 
     function _delegate(address _signer, address _implementation) internal {

@@ -8,19 +8,15 @@ import {
   createWalletClient,
   http,
   type WalletClient,
-  type Address,
   toHex,
   pad,
 } from 'viem'
 
-import { DOMAIN_NAME, DOMAIN_VERSION, types, Call} from './utils/constants';
+import { DOMAIN_NAME, DOMAIN_VERSION, types, SignedBatchedCall, InputData, DEFAULT_DOMAIN_SALT} from './utils/constants';
 
 
-interface InputData {
-  privateKey: string;
-  verifyingContract: Address;
-  calls: Call[];
-  nonce: number;
+interface SignedBatchedCallInputData extends InputData {
+  signedBatchedCall: SignedBatchedCall;
 }
 
 // Read command line arguments
@@ -31,8 +27,8 @@ if (args.length < 1) {
 }
 
 // Parse the JSON input
-const jsonInput = JSON.parse(args[0]) as InputData;
-const { privateKey, verifyingContract, calls, nonce } = jsonInput;
+const jsonInput = JSON.parse(args[0]) as SignedBatchedCallInputData;
+const { privateKey, verifyingContract, signedBatchedCall, prefixedSalt } = jsonInput;
 
 const account = privateKeyToAccount(pad(toHex(BigInt(privateKey))));
 
@@ -41,7 +37,8 @@ const domain = {
   name: DOMAIN_NAME,
   version: DOMAIN_VERSION,
   chainId: 31337, // Default Anvil chain ID
-  verifyingContract
+  verifyingContract,
+  salt: prefixedSalt
 } as const;
 
 
@@ -58,11 +55,8 @@ async function signTypedData(): Promise<void> {
       account,
       domain,
       types,
-      primaryType: 'SignedCalls',
-      message: {
-        calls: calls,
-        nonce: nonce,
-      }
+      primaryType: 'SignedBatchedCall',
+      message: signedBatchedCall
     });
     // Return the signature
     process.stdout.write(signature);

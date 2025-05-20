@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
@@ -28,6 +28,28 @@ contract SettingsLibTest is Test {
         assertEq(settings.isAdmin(), isAdmin);
     }
 
+    function test_isAdmin_fuzz(uint256 _settings) public pure {
+        uint8 isAdmin = uint8(_settings >> 200);
+        bool _isAdmin = isAdmin == 0 ? false : true;
+        Settings settings = Settings.wrap(_settings);
+        assertEq(settings.isAdmin(), _isAdmin);
+    }
+
+    function test_isAdmin_ignoresUpperBytes() public pure {
+        Settings settings = Settings.wrap(0xFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000);
+        assertEq(settings.isAdmin(), false);
+    }
+
+    function test_isAdmin_returnsTrueDirtyUpperBits() public pure {
+        Settings settings = Settings.wrap(0xFFFFFFFFFFFFE000000000000000000000000000000000000000000000000000);
+        assertEq(settings.isAdmin(), true);
+    }
+
+    function test_isAdmin_returnsTrueIfSet() public pure {
+        Settings settings = Settings.wrap(0xFFFFFFFFFFFFFF00000000000000000000000000000000000000000000000000);
+        assertEq(settings.isAdmin(), true);
+    }
+
     function test_hook() public pure {
         IHook hook = IHook(address(1));
         Settings settings = SettingsBuilder.init().fromHook(hook);
@@ -42,13 +64,25 @@ contract SettingsLibTest is Test {
     function test_isExpired_expiryOfZero_isNotExpired() public {
         Settings settings = SettingsBuilder.init().fromExpiration(0);
         vm.warp(1);
-        assertEq(settings.isExpired(), false);
+        (bool expired, uint40 expiry) = settings.isExpired();
+        assertEq(expired, false);
+        assertEq(expiry, 0);
     }
 
     function test_isExpired_fuzz(uint40 expiration) public {
         vm.assume(expiration > 0 && expiration < type(uint40).max);
         Settings settings = SettingsBuilder.init().fromExpiration(expiration);
         vm.warp(expiration + 1);
-        assertEq(settings.isExpired(), true);
+        (bool expired, uint40 expiry) = settings.isExpired();
+        assertEq(expired, true);
+        assertEq(expiry, expiration);
+    }
+
+    function test_isExpired_equalToBlockTimeStamp_isNotExpired() public {
+        vm.warp(10); // don't use 0 since it is special cased
+        Settings settings = SettingsBuilder.init().fromExpiration(uint40(block.timestamp));
+        (bool expired, uint40 expiry) = settings.isExpired();
+        assertEq(expired, false);
+        assertEq(expiry, block.timestamp);
     }
 }

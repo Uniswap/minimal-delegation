@@ -1,11 +1,13 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {INonceManager} from "../src/interfaces/INonceManager.sol";
-import {IERC7821} from "../src/interfaces/IERC7821.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract NonceManagerTest is DelegationHandler {
+    event NonceInvalidated(uint256 nonce);
+
     function setUp() public {
         setUpDelegation();
     }
@@ -20,7 +22,7 @@ contract NonceManagerTest is DelegationHandler {
 
     function test_invalidateNonce_revertsWithUnauthorized() public {
         uint256 nonce = 0;
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.invalidateNonce(nonce);
     }
 
@@ -55,6 +57,9 @@ contract NonceManagerTest is DelegationHandler {
         uint64 sequence = type(uint16).max;
         uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
+        vm.expectEmit(true, false, false, false);
+        emit NonceInvalidated(nonce);
+
         vm.startPrank(address(signerAccount));
         signerAccount.invalidateNonce(nonce);
 
@@ -65,6 +70,9 @@ contract NonceManagerTest is DelegationHandler {
         sequence = uint64(sequence * 2);
         nonce = (uint256(nonceKey) << 64) | sequence;
 
+        vm.expectEmit(true, false, false, false);
+        emit NonceInvalidated(nonce);
+
         signerAccount.invalidateNonce(nonce);
 
         // The new nonce should have been set with the sequence number incremented by 1
@@ -73,7 +81,7 @@ contract NonceManagerTest is DelegationHandler {
 
     function test_fuzz_invalidateNonce(uint256 nonceKey, uint16 sequence) public {
         // Skip sequences that would overflow when incremented
-        sequence = uint16(bound(sequence, 1, type(uint16).max));
+        sequence = uint16(_bound(sequence, 1, type(uint16).max));
 
         uint256 nonce = (uint256(nonceKey) << 64) | sequence;
 
