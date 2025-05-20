@@ -153,7 +153,8 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
             // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered OR if the key has already been revoked this call
-            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH || _keyIsMemoized(memoizedRevokedKeys, testKey)) {
+            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH || _keyIsMemoized(memoizedRevokedKeys, testKey))
+            {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
             memoizedRevokedKeys.push(testKey);

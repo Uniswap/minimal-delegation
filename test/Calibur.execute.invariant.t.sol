@@ -52,7 +52,8 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
-    bytes4 public constant EXECUTE_BATCHED_CALLS_SELECTOR = bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool,bytes),bytes)"));
+    bytes4 public constant EXECUTE_BATCHED_CALLS_SELECTOR =
+        bytes4(keccak256("execute(((address,uint256,bytes)[],uint256,bytes32,bool,bytes),bytes)"));
     bytes4 public constant EXECUTE_SIGNED_BATCHED_CALL_SELECTOR =
         bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32),bytes)"));
 
