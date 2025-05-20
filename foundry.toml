@@ -21,8 +21,8 @@ compilation_restrictions = [
 
 [profile.default.invariant]
 fail_on_revert = true
-runs = 2
-depth = 1000
+runs = 100
+depth = 500
 
 [profile.default.fuzz]
 runs = 1000
