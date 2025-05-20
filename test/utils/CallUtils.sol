@@ -6,7 +6,8 @@ import {IKeyManagement} from "../../src/interfaces/IKeyManagement.sol";
 import {IERC7821} from "../../src/interfaces/IERC7821.sol";
 import {Settings} from "../../src/libraries/SettingsLib.sol";
 import {TestKeyManager, TestKey} from "./TestKeyManager.sol";
-import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
+import {BatchedCall} from "../../src/libraries/BatchedCallLib.sol";
+import {SignedBatchedCall} from "../../src/libraries/SignedBatchedCallLib.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @dev A wrapper around Call that includes callback data for processing after execution
@@ -20,6 +21,7 @@ struct HandlerCall {
 library CallUtils {
     using CallUtils for Call;
     using CallUtils for Call[];
+    using CallUtils for BatchedCall;
     using CallUtils for HandlerCall;
     using CallUtils for HandlerCall[];
     using TestKeyManager for TestKey;
@@ -97,6 +99,103 @@ library CallUtils {
         );
     }
 
+    // BatchedCall operations
+
+    function initBatchedCall() internal pure returns (BatchedCall memory) {
+        return BatchedCall({calls: new Call[](0), revertOnFailure: false});
+    }
+
+    function withCalls(BatchedCall memory batchedCall, Call[] memory calls)
+        internal
+        pure
+        returns (BatchedCall memory)
+    {
+        batchedCall.calls = calls;
+        return batchedCall;
+    }
+
+    function withRevertOnFailure(BatchedCall memory batchedCall, bool revertOnFailure)
+        internal
+        pure
+        returns (BatchedCall memory)
+    {
+        batchedCall.revertOnFailure = revertOnFailure;
+        return batchedCall;
+    }
+
+    // SignedBatchedCall operations
+    function initSignedBatchedCall() internal pure returns (SignedBatchedCall memory) {
+        return SignedBatchedCall({
+            batchedCall: initBatchedCall(),
+            keyHash: bytes32(0),
+            nonce: 0,
+            executor: address(0),
+            deadline: 0
+        });
+    }
+
+    function withDeadline(SignedBatchedCall memory signedBatchedCall, uint256 deadline)
+        internal
+        pure
+        returns (SignedBatchedCall memory)
+    {
+        signedBatchedCall.deadline = deadline;
+        return signedBatchedCall;
+    }
+
+    function withBatchedCall(SignedBatchedCall memory signedBatchedCall, BatchedCall memory batchedCall)
+        internal
+        pure
+        returns (SignedBatchedCall memory)
+    {
+        signedBatchedCall.batchedCall = batchedCall;
+        return signedBatchedCall;
+    }
+
+    function withKeyHash(SignedBatchedCall memory signedBatchedCall, bytes32 keyHash)
+        internal
+        pure
+        returns (SignedBatchedCall memory)
+    {
+        signedBatchedCall.keyHash = keyHash;
+        return signedBatchedCall;
+    }
+
+    function withNonce(SignedBatchedCall memory signedBatchedCall, uint256 nonce)
+        internal
+        pure
+        returns (SignedBatchedCall memory)
+    {
+        signedBatchedCall.nonce = nonce;
+        return signedBatchedCall;
+    }
+
+    function withExecutor(SignedBatchedCall memory signedBatchedCall, address executor)
+        internal
+        pure
+        returns (SignedBatchedCall memory)
+    {
+        signedBatchedCall.executor = executor;
+        return signedBatchedCall;
+    }
+    /// @dev Create a single execute call for a multicall with a signed batched call
+
+    function encodeSignedExecuteCall(SignedBatchedCall memory signedBatchedCall, bytes memory signature)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes4 executeSelector =
+            bytes4(keccak256("execute((((address,uint256,bytes)[],bool),uint256,bytes32,address,uint256),bytes)"));
+        return abi.encodeWithSelector(executeSelector, signedBatchedCall, signature);
+    }
+
+    /// @dev Create a single execute call for a multicall with a batched call
+    function encodeBatchedExecuteCall(BatchedCall memory batchedCall) internal pure returns (bytes memory) {
+        bytes4 executeSelector = bytes4(keccak256("execute(((address,uint256,bytes)[],bool))"));
+        return abi.encodeWithSelector(executeSelector, batchedCall);
+    }
+
     // HandlerCall operations
 
     /// @dev Create empty HandlerCall array
@@ -129,7 +228,7 @@ library CallUtils {
 
     /// @dev Create default empty HandlerCall
     function initHandlerDefault() internal pure returns (HandlerCall memory) {
-        return HandlerCall({call: Call({to: address(0), value: 0, data: ""}), callback: "", revertData: ""});
+        return HandlerCall({call: initDefault(), callback: "", revertData: ""});
     }
 
     function withCall(HandlerCall memory handlerCall, Call memory call) internal pure returns (HandlerCall memory) {

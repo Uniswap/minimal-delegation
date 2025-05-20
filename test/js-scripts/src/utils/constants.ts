@@ -2,16 +2,28 @@ import {type Address} from "viem"
 
 
 // Define the domain name and version. Note chainId and verifyingContract are not constants.
-export const DOMAIN_NAME = 'Uniswap Minimal Delegation';
-export const DOMAIN_VERSION = "1";
+export const DOMAIN_NAME = 'Calibur';
+export const DOMAIN_VERSION = "1.0.0";
+export const DEFAULT_DOMAIN_SALT = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+export interface InputData {
+  privateKey: string;
+  verifyingContract: Address;
+  prefixedSalt: `0x${string}`;
+}
 
 // Define the struct types
 export const types = {
-  SignedCalls: [
-    { name: 'calls', type: 'Call[]' },
+  SignedBatchedCall: [
+    { name: 'batchedCall', type: 'BatchedCall' },
     { name: 'nonce', type: 'uint256' },
     { name: 'keyHash', type: 'bytes32' },
-    { name: 'shouldRevert', type: 'bool' }
+    { name: 'executor', type: 'address' },
+    { name: 'deadline', type: 'uint256' }
+  ],
+  BatchedCall: [
+    { name: 'calls', type: 'Call[]' },
+    { name: 'revertOnFailure', type: 'bool' }
   ],
   Call: [
     { name: 'to', type: 'address' },
@@ -27,9 +39,15 @@ export type Call = {
     data: string;
   }
 
-export type SignedCalls = {
+export type BatchedCall = {
     calls: Call[];
-    nonce: number;
-    keyHash: string;
-    shouldRevert: boolean;
+    revertOnFailure: boolean;
   }
+
+export interface SignedBatchedCall {
+  batchedCall: BatchedCall;
+  nonce: bigint;
+  keyHash: string;
+  executor: string;
+  deadline: bigint;
+}

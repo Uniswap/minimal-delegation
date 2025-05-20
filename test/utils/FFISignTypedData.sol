@@ -1,36 +1,72 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {JavascriptFfi} from "./JavascriptFfi.sol";
-import {SignedCalls} from "../../src/libraries/SignedCallsLib.sol";
+import {SignedBatchedCall} from "../../src/libraries/SignedBatchedCallLib.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console2} from "forge-std/console2.sol";
+import {PermitSingle} from "./MockERC1271VerifyingContract.sol";
 
 contract FFISignTypedData is JavascriptFfi {
     using stdJson for string;
 
-    function ffi_signTypedData(uint256 privateKey, SignedCalls memory signedCalls, address verifyingContract)
-        public
-        returns (bytes memory)
-    {
+    function ffi_signTypedData(
+        uint256 privateKey,
+        SignedBatchedCall memory signedBatchedCall,
+        address verifyingContract,
+        bytes32 prefixedSalt
+    ) public returns (bytes memory) {
         // Create JSON object
-        string memory jsonObj = _createJsonInput(privateKey, signedCalls, verifyingContract);
+        string memory jsonObj = _createJsonInput(privateKey, signedBatchedCall, verifyingContract, prefixedSalt);
 
         // Run the JavaScript script
         return runScript("sign-typed-data", jsonObj);
     }
 
+    function ffi_signWrappedTypedData(
+        uint256 privateKey,
+        address verifyingContract,
+        bytes32 prefixedSalt,
+        string memory appDomainName,
+        string memory appDomainVersion,
+        address appVerifyingContract,
+        PermitSingle memory contents
+    ) public returns (bytes memory) {
+        // Create JSON object
+        string memory jsonObj = _createWrappedTypedDataJsonInput(
+            privateKey, verifyingContract, prefixedSalt, appDomainName, appDomainVersion, appVerifyingContract, contents
+        );
+
+        // Run the JavaScript script
+        return runScript("sign-wrapped-typed-data", jsonObj);
+    }
+
+    function ffi_signWrappedPersonalSign(
+        uint256 privateKey,
+        address verifyingContract,
+        bytes32 prefixedSalt,
+        string memory message
+    ) public returns (bytes memory) {
+        // Create JSON object
+        string memory jsonObj =
+            _createWrappedPersonalSignJsonInput(privateKey, verifyingContract, prefixedSalt, message);
+
+        // Run the JavaScript script
+        return runScript("sign-wrapped-personal-sign", jsonObj);
+    }
+
     /**
      * @dev Creates a JSON input string for the JavaScript script
      */
-    function _createJsonInput(uint256 privateKey, SignedCalls memory signedCalls, address verifyingContract)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _createJsonInput(
+        uint256 privateKey,
+        SignedBatchedCall memory signedBatchedCall,
+        address verifyingContract,
+        bytes32 prefixedSalt
+    ) internal pure returns (string memory) {
         string memory callsJson = "[";
 
-        for (uint256 i = 0; i < signedCalls.calls.length; i++) {
+        for (uint256 i = 0; i < signedBatchedCall.batchedCall.calls.length; i++) {
             if (i > 0) {
                 callsJson = string.concat(callsJson, ",");
             }
@@ -39,13 +75,13 @@ contract FFISignTypedData is JavascriptFfi {
                 callsJson,
                 "{",
                 '"to":"',
-                vm.toString(signedCalls.calls[i].to),
+                vm.toString(signedBatchedCall.batchedCall.calls[i].to),
                 '",',
                 '"value":',
-                vm.toString(signedCalls.calls[i].value),
+                vm.toString(signedBatchedCall.batchedCall.calls[i].value),
                 ",",
                 '"data":"0x',
-                bytesToHex(signedCalls.calls[i].data),
+                bytesToHex(signedBatchedCall.batchedCall.calls[i].data),
                 '"',
                 "}"
             );
@@ -53,20 +89,34 @@ contract FFISignTypedData is JavascriptFfi {
 
         callsJson = string.concat(callsJson, "]");
 
-        // Create the SignedCalls object
-        string memory signedCallsJson = string.concat(
+        string memory batchedCallJson = string.concat(
             "{",
             '"calls":',
             callsJson,
             ",",
+            '"revertOnFailure":',
+            signedBatchedCall.batchedCall.revertOnFailure ? "true" : "false",
+            "}"
+        );
+
+        // Create the SignedBatchedCall object
+        string memory signedBatchedCallJson = string.concat(
+            "{",
+            '"batchedCall":',
+            batchedCallJson,
+            ",",
             '"nonce":',
-            vm.toString(signedCalls.nonce),
+            vm.toString(signedBatchedCall.nonce),
             ",",
             '"keyHash":"',
-            vm.toString(signedCalls.keyHash),
+            vm.toString(signedBatchedCall.keyHash),
             '",',
-            '"shouldRevert":',
-            signedCalls.shouldRevert ? "true" : "false",
+            '"executor":"',
+            vm.toString(signedBatchedCall.executor),
+            '",',
+            '"deadline":"',
+            vm.toString(signedBatchedCall.deadline),
+            '"',
             "}"
         );
 
@@ -78,8 +128,108 @@ contract FFISignTypedData is JavascriptFfi {
             '"verifyingContract":"',
             vm.toString(verifyingContract),
             '",',
-            '"signedCalls":',
-            signedCallsJson,
+            '"prefixedSalt":"',
+            vm.toString(prefixedSalt),
+            '",',
+            '"signedBatchedCall":',
+            signedBatchedCallJson,
+            "}"
+        );
+
+        console2.log(jsonObj);
+
+        return jsonObj;
+    }
+
+    function _createWrappedTypedDataJsonInput(
+        uint256 privateKey,
+        address verifyingContract,
+        bytes32 prefixedSalt,
+        string memory appDomainName,
+        string memory appDomainVersion,
+        address appVerifyingContract,
+        PermitSingle memory permitSingle
+    ) internal pure returns (string memory) {
+        string memory permitDetailsJson = string.concat(
+            "{",
+            '"token":"',
+            vm.toString(permitSingle.details.token),
+            '",',
+            '"amount":"',
+            vm.toString(permitSingle.details.amount),
+            '",',
+            '"expiration":"',
+            vm.toString(permitSingle.details.expiration),
+            '",',
+            '"nonce":"',
+            vm.toString(permitSingle.details.nonce),
+            '"',
+            "}"
+        );
+
+        string memory permitSingleJson = string.concat(
+            "{",
+            '"details":',
+            permitDetailsJson,
+            ",",
+            '"spender":"',
+            vm.toString(permitSingle.spender),
+            '",',
+            '"sigDeadline":"',
+            vm.toString(permitSingle.sigDeadline),
+            '"',
+            "}"
+        );
+
+        string memory jsonObj = string.concat(
+            "{",
+            '"privateKey":"',
+            vm.toString(privateKey),
+            '",',
+            '"verifyingContract":"',
+            vm.toString(verifyingContract),
+            '",',
+            '"prefixedSalt":"',
+            vm.toString(prefixedSalt),
+            '",',
+            '"appDomainName":"',
+            appDomainName,
+            '",',
+            '"appDomainVersion":"',
+            appDomainVersion,
+            '",',
+            '"appVerifyingContract":"',
+            vm.toString(appVerifyingContract),
+            '",',
+            '"contents":',
+            permitSingleJson,
+            "",
+            "}"
+        );
+
+        return jsonObj;
+    }
+
+    function _createWrappedPersonalSignJsonInput(
+        uint256 privateKey,
+        address verifyingContract,
+        bytes32 prefixedSalt,
+        string memory message
+    ) internal pure returns (string memory) {
+        string memory jsonObj = string.concat(
+            "{",
+            '"privateKey":"',
+            vm.toString(privateKey),
+            '",',
+            '"verifyingContract":"',
+            vm.toString(verifyingContract),
+            '",',
+            '"prefixedSalt":"',
+            vm.toString(prefixedSalt),
+            '",',
+            '"message":"',
+            message,
+            '"',
             "}"
         );
 

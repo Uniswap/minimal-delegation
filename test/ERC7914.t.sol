@@ -1,16 +1,17 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC7914} from "../src/interfaces/IERC7914.sol";
 import {ERC7914} from "../src/ERC7914.sol";
-import {IERC7821} from "../src/interfaces/IERC7821.sol";
+import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 
 contract ERC7914Test is DelegationHandler {
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
     event TransferFromNativeTransient(address indexed from, address indexed to, uint256 value);
+    event NativeAllowanceUpdated(address indexed spender, uint256 value);
 
     address bob = makeAddr("bob");
     address recipient = makeAddr("recipient");
@@ -20,7 +21,7 @@ contract ERC7914Test is DelegationHandler {
     }
 
     function test_approveNative_revertsWithUnauthorized() public {
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.approveNative(bob, 1 ether);
     }
 
@@ -30,7 +31,7 @@ contract ERC7914Test is DelegationHandler {
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, 1 ether);
         assertTrue(success);
-        assertEq(signerAccount.allowance(bob), 1 ether);
+        assertEq(signerAccount.nativeAllowance(bob), 1 ether);
     }
 
     /// forge-config: default.isolate = true
@@ -57,12 +58,12 @@ contract ERC7914Test is DelegationHandler {
         signerAccount.transferFromNative(address(signerAccount), bob, 2 ether);
     }
 
-    function test_transferFromNative_zeroAmount_returnsFalse() public {
+    function test_transferFromNative_zeroAmount_returnsTrue() public {
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, 1 ether);
         vm.prank(bob);
         success = signerAccount.transferFromNative(address(signerAccount), bob, 0);
-        assertEq(success, false);
+        assertEq(success, true);
     }
 
     function test_transferFromNative_succeeds() public {
@@ -74,11 +75,13 @@ contract ERC7914Test is DelegationHandler {
         uint256 bobBalanceBefore = bob.balance;
         uint256 signerAccountBalanceBefore = address(signerAccount).balance;
         vm.expectEmit(true, true, false, true);
+        emit NativeAllowanceUpdated(bob, 0 ether);
+        vm.expectEmit(true, true, false, true);
         emit TransferFromNative(address(signerAccount), bob, 1 ether);
         vm.prank(bob);
         success = signerAccount.transferFromNative(address(signerAccount), bob, 1 ether);
         assertTrue(success);
-        assertEq(signerAccount.allowance(bob), 0);
+        assertEq(signerAccount.nativeAllowance(bob), 0);
         assertEq(bob.balance, bobBalanceBefore + 1 ether);
         assertEq(address(signerAccount).balance, signerAccountBalanceBefore - 1 ether);
     }
@@ -102,7 +105,7 @@ contract ERC7914Test is DelegationHandler {
         vm.deal(address(signerAccount), balance);
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNative(bob, approvedAmount);
-        assertEq(signerAccount.allowance(bob), approvedAmount);
+        assertEq(signerAccount.nativeAllowance(bob), approvedAmount);
         assertTrue(success);
 
         uint256 bobBalanceBefore = bob.balance;
@@ -121,21 +124,21 @@ contract ERC7914Test is DelegationHandler {
         // otherwise check the balances have not changed
         if (success) {
             if (approvedAmount < type(uint256).max) {
-                assertEq(signerAccount.allowance(bob), approvedAmount - transferAmount);
+                assertEq(signerAccount.nativeAllowance(bob), approvedAmount - transferAmount);
             } else {
-                assertEq(signerAccount.allowance(bob), approvedAmount);
+                assertEq(signerAccount.nativeAllowance(bob), approvedAmount);
             }
             assertEq(bob.balance, bobBalanceBefore + transferAmount);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore - transferAmount);
         } else {
-            assertEq(signerAccount.allowance(bob), approvedAmount);
+            assertEq(signerAccount.nativeAllowance(bob), approvedAmount);
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }
     }
 
     function test_approveNativeTransient_revertsWithUnauthorized() public {
-        vm.expectRevert(IERC7821.Unauthorized.selector);
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
         signerAccount.approveNativeTransient(bob, 1 ether);
     }
 
@@ -145,7 +148,7 @@ contract ERC7914Test is DelegationHandler {
         vm.startPrank(address(signerAccount));
         bool success = signerAccount.approveNativeTransient(bob, 1 ether);
         assertTrue(success);
-        assertEq(signerAccount.transientAllowance(bob), 1 ether);
+        assertEq(signerAccount.transientNativeAllowance(bob), 1 ether);
     }
 
     /// forge-config: default.isolate = true
@@ -172,12 +175,12 @@ contract ERC7914Test is DelegationHandler {
         signerAccount.transferFromNativeTransient(address(signerAccount), bob, 2 ether);
     }
 
-    function test_transferFromNativeTransient_zeroAmount_returnsFalse() public {
+    function test_transferFromNativeTransient_zeroAmount_returnsTrue() public {
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNativeTransient(bob, 1 ether);
         assertTrue(success);
         success = signerAccount.transferFromNativeTransient(address(signerAccount), bob, 0);
-        assertEq(success, false);
+        assertEq(success, true);
     }
 
     function test_transferFromNativeTransient_succeeds() public {
@@ -198,7 +201,7 @@ contract ERC7914Test is DelegationHandler {
         success = signerAccount.transferFromNativeTransient(address(signerAccount), bob, 1 ether);
         assertTrue(success);
 
-        assertEq(signerAccount.transientAllowance(bob), 0);
+        assertEq(signerAccount.transientNativeAllowance(bob), 0);
         assertEq(bob.balance, bobBalanceBefore + 1 ether);
         assertEq(address(signerAccount).balance, signerAccountBalanceBefore - 1 ether);
     }
@@ -212,7 +215,7 @@ contract ERC7914Test is DelegationHandler {
         vm.deal(address(signerAccount), balance);
         vm.prank(address(signerAccount));
         bool success = signerAccount.approveNativeTransient(bob, approvedAmount);
-        assertEq(signerAccount.transientAllowance(bob), approvedAmount);
+        assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount);
         assertTrue(success);
 
         uint256 bobBalanceBefore = bob.balance;
@@ -231,14 +234,14 @@ contract ERC7914Test is DelegationHandler {
         // otherwise check the balances have not changed
         if (success) {
             if (approvedAmount < type(uint256).max) {
-                assertEq(signerAccount.transientAllowance(bob), approvedAmount - transferAmount);
+                assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount - transferAmount);
             } else {
-                assertEq(signerAccount.transientAllowance(bob), approvedAmount);
+                assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount);
             }
             assertEq(bob.balance, bobBalanceBefore + transferAmount);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore - transferAmount);
         } else {
-            assertEq(signerAccount.transientAllowance(bob), approvedAmount);
+            assertEq(signerAccount.transientNativeAllowance(bob), approvedAmount);
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SignedCalls} from "./SignedCallsLib.sol";
-
 struct Call {
     address to;
     uint256 value;
     bytes data;
 }
 
+/// @title CallLib
+/// @notice A library for hashing and encoding calls
 library CallLib {
     /// @dev The type string for the Call struct
     bytes internal constant CALL_TYPE = "Call(address to,uint256 value,bytes data)";
