@@ -38,6 +38,7 @@ interface ISpendingLimitHook is IExecutionHook {
 
 /// @title SpendingLimitHook
 /// @notice Example use case of an execution hook to set spending limits on specific key hashes.
+/// @dev This contract is NOT AUDITED and is meant for educational purposes only. 
 /// @author modified from https://github.com/ithacaxyz/account/blob/main/src/GuardedExecutor.sol
 contract SpendingLimitHook is ISpendingLimitHook {
     using EnumerableSetLib for *;
