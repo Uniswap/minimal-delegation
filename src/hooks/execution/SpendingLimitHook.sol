@@ -31,6 +31,8 @@ interface ISpendingLimitHook is IExecutionHook {
     /// @dev Emitted when a spend limit is removed.
     event SpendLimitRemoved(AccountKeyHash accountKeyHash, address token, SpendPeriod period);
 
+    /// @dev Set the spend limit for a key hash.
+    /// Uses msg.sender to compute the accountKeyHash.
     function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external;
 }
 
@@ -101,8 +103,7 @@ contract SpendingLimitHook is ISpendingLimitHook {
         uint256[] balancesBefore;
     }
 
-    /// @dev Set the spend limit for a key hash.
-    /// Uses msg.sender to compute the accountKeyHash.
+    /// @inheritdoc ISpendingLimitHook
     function setSpendLimit(bytes32 keyHash, address token, SpendPeriod period, uint256 limit) external {
         AccountKeyHash accountKeyHash = keyHash.hashSender(msg.sender);
         SpendStorage storage spends = spendStorage[accountKeyHash];
@@ -115,8 +116,10 @@ contract SpendingLimitHook is ISpendingLimitHook {
         emit SpendLimitSet(accountKeyHash, token, period, limit);
     }
 
+    /// @inheritdoc IExecutionHook
     function beforeExecute(bytes32 keyHash, address to, uint256 value, bytes calldata data)
         external
+        view
         returns (bytes4, bytes memory beforeExecuteData)
     {
         DynamicArrayLib.DynamicArray memory erc20s;
@@ -171,7 +174,8 @@ contract SpendingLimitHook is ISpendingLimitHook {
         return (IExecutionHook.beforeExecute.selector, abi.encode(tempStorage));
     }
 
-    function afterExecute(bytes32 keyHash, bytes memory beforeExecuteData) external returns (bytes4) {
+    /// @inheritdoc IExecutionHook
+    function afterExecute(bytes32 keyHash, bool, bytes calldata, bytes calldata beforeExecuteData) external returns (bytes4) {
         // Ensure spends in beforeExecuteData are within limits, revert if not.
         TempStorage memory tempStorage = abi.decode(beforeExecuteData, (TempStorage));
         SpendStorage storage spends = spendStorage[keyHash.hashSender(msg.sender)];
