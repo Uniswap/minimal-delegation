@@ -162,7 +162,8 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
             Settings settings = _randSettings();
-            if (!isRegistered) {
+            // Cannot update the key if unregistered OR if the key has already been revoked this call
+            if (!isRegistered || _keyIsMemoized(memoizedRevokedKeys, testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             } else if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
