@@ -123,7 +123,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
         // Top level validation checks
         (bool isExpired,) = callerSettings.isExpired();
         if (!isRegisteredCaller || (caller != address(signerAccount) && isExpired)) {
-            expectedReverts = expectedReverts.push(abi.encodeWithSelector(IERC7821.Unauthorized.selector));
+            expectedReverts = expectedReverts.push(abi.encodeWithSelector(BaseAuthorization.Unauthorized.selector));
         } else if (!callerSettings.isAdmin() && batchedCall.calls.containsSelfCall()) {
             expectedReverts = expectedReverts.push(abi.encodeWithSelector(IKeyManagement.OnlyAdminCanSelfCall.selector));
         }
@@ -154,7 +154,7 @@ contract CaliburExecuteInvariantHandler is ExecuteFixtures, FunctionCallGenerato
     /// @notice Executes a call with operation data (with signature)
     /// @dev Handler function meant to be called during invariant tests
     /// - If the signing key is not registered on the account, expect the call to revert
-    function executeSignedBatchedCall(uint192 nonceKey, uint256 generatorSeed) public useKey setBlock {
+    function executeSignedBatchedCall(uint192 nonceKey) public useKey setBlock {
         bool isRootKey = vm.addr(currentSigningKey.privateKey) == address(signerAccount);
         bytes32 currentKeyHash = isRootKey ? KeyLib.ROOT_KEY_HASH : currentSigningKey.toKeyHash();
 

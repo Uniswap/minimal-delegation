@@ -38,7 +38,8 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     address private immutable _tokenA;
     address private immutable _tokenB;
 
-    TestKey[] internal memoizedKeys;
+    TestKey[] internal memoizedRegisteredKeys;
+    TestKey[] internal memoizedRevokedKeys;
 
     constructor(ICalibur _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
@@ -49,10 +50,11 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     modifier useMemoizedKeys() {
         _;
         // clear storage of memoized keys
-        delete memoizedKeys;
+        delete memoizedRegisteredKeys;
+        delete memoizedRevokedKeys;
     }
 
-    function _keyIsMemoized(TestKey memory testKey) internal view returns (bool) {
+    function _keyIsMemoized(TestKey[] storage memoizedKeys, TestKey memory testKey) internal view returns (bool) {
         for (uint256 i = 0; i < memoizedKeys.length; i++) {
             if (vm.addr(memoizedKeys[i].privateKey) == vm.addr(testKey.privateKey)) {
                 return true;
@@ -131,8 +133,8 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         } catch (bytes memory _revertData) {
             assertEq(bytes4(_revertData), IKeyManagement.KeyDoesNotExist.selector);
             // If the key is in the memo, that means it was registered in this current call and can be operated on
-            if (_keyIsMemoized(testKey)) {
-                isRegistered = true; 
+            if (_keyIsMemoized(memoizedRegisteredKeys, testKey)) {
+                isRegistered = true;
             } else {
                 isRegistered = false;
             }
@@ -145,15 +147,16 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
             if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotRegisterRootKey.selector);
             }
-            memoizedKeys.push(testKey);
+            memoizedRegisteredKeys.push(testKey);
             return _registerCall(testKey, revertData);
         }
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
-            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered
-            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH) {
+            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered OR if the key has already been revoked this call
+            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH || _keyIsMemoized(memoizedRevokedKeys, testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
+            memoizedRevokedKeys.push(testKey);
             return _revokeCall(currentKeyHash, revertData);
         }
         // UPDATE == 2
