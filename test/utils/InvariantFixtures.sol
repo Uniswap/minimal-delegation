@@ -43,6 +43,7 @@ abstract contract InvariantFixtures is Test {
     using SettingsBuilder for Settings;
     using TestKeyManager for TestKey;
 
+    uint256 public constant MAX_CALL_SIZE = 5;
     uint256 public constant MAX_KEYS = 10;
 
     // Keys that will be operated over in generated calldata
