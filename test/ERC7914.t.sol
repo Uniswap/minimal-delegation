@@ -9,7 +9,6 @@ import {IPermit2} from "./interfaces/IPermit2.sol";
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
 import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
 import {IAllowanceTransfer} from "./interfaces/IAllowanceTransfer.sol";
-import {SignatureVerification} from "./utils/SignatureVerification.sol";
 import {Permit2Utils} from "./utils/Permit2Utils.sol";
 
 contract ERC7914Test is DelegationHandler {
