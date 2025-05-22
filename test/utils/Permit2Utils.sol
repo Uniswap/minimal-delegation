@@ -1,10 +1,30 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
 
-import {Script} from "forge-std/Script.sol";
+import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {IPermit2} from "../interfaces/IPermit2.sol";
 
-contract DeployPermit2 is Script {
+library Permit2Utils {
+    Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     address constant PERMIT2_ADDRESS = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+
+    struct MockWitness {
+        uint256 value;
+        address person;
+        bool test;
+    }
+
+    string constant WITNESS_TYPE_STRING =
+        "MockWitness witness)MockWitness(uint256 value,address person,bool test)TokenPermissions(address token,uint256 amount)";
+
+    bytes32 constant FULL_EXAMPLE_WITNESS_TYPEHASH = keccak256(
+        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,MockWitness witness)MockWitness(uint256 value,address person,bool test)TokenPermissions(address token,uint256 amount)"
+    );
+    bytes32 public constant TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
+    bytes32 public constant PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
+        "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
+    );
 
     function deployPermit2() internal returns (address) {
         bytes memory bytecode =
@@ -13,4 +33,41 @@ contract DeployPermit2 is Script {
         vm.etch(PERMIT2_ADDRESS, bytecode);
         return PERMIT2_ADDRESS;
     }
-}
+
+    function getPermitTransferSignature(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        uint256 privateKey,
+        bytes32 typehash,
+        bytes32 witness,
+        bytes32 domainSeparator,
+        address spender
+    ) internal pure returns (bytes memory sig) {
+        if (typehash == bytes32(0)) {
+            typehash = PERMIT_TRANSFER_FROM_TYPEHASH;
+        }
+        bytes32 tokenPermissions = keccak256(abi.encode(TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
+                    )
+                )
+            )
+        );
+        if (witness != bytes32(0)) {
+            msgHash = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    domainSeparator,
+                    keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))
+                    )
+                );
+        }
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+} 
