@@ -5,8 +5,14 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC7914} from "../src/interfaces/IERC7914.sol";
 import {ERC7914} from "../src/ERC7914.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
+import {DeployPermit2} from "./utils/DeployPermit2.sol";
+import {IPermit2} from "./interfaces/IPermit2.sol";
+import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
+import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
+import {IAllowanceTransfer} from "./interfaces/IAllowanceTransfer.sol";
+import {SignatureVerification} from "./utils/SignatureVerification.sol";
 
-contract ERC7914Test is DelegationHandler {
+contract ERC7914Test is DelegationHandler, DeployPermit2 {
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
@@ -245,5 +251,85 @@ contract ERC7914Test is DelegationHandler {
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }
+    }
+
+    // Test that a permit2 signature can be used to transfer native ETH
+    // using the ERC20-eth contract
+    function test_permit2SignatureTransferNative() public {
+        // Deploy ERC20ETH and Permit2
+        ERC20ETH erc20Eth = new ERC20ETH();
+        IPermit2 permit2 = IPermit2(deployPermit2());
+
+
+        // Give signerAccount some ETH
+        uint256 spendAmount = 1 ether;
+        uint256 totalAmount = 2 ether;
+        vm.deal(address(signerAccount), totalAmount);
+
+        // Approve ERC20ETH to use signerAccount's native ETH
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(erc20Eth), type(uint256).max);
+        
+        // Create permit details
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(erc20Eth),
+                amount: spendAmount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = getPermitTransferSignature(permit, signerPrivateKey, permit2.DOMAIN_SEPARATOR(), bob);
+
+        // Bob cannot transfer more than the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount + 1
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        permit2.permitTransferFrom(permit, invalidTransferDetails, address(signerAccount), sig);
+
+        // Bob can transfer the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory validTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount
+        });
+        vm.prank(bob);
+        permit2.permitTransferFrom(permit, validTransferDetails, address(signerAccount), sig);
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
+    }
+
+    bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
+    bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
+        "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
+    );
+
+    function getPermitTransferSignature(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator,
+        address spender
+    ) internal pure returns (bytes memory sig) {
+        bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        _PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
     }
 }
