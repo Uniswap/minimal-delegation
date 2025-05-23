@@ -33,41 +33,4 @@ library Permit2Utils {
         vm.etch(PERMIT2_ADDRESS, bytecode);
         return PERMIT2_ADDRESS;
     }
-
-    function getPermitTransferSignature(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        uint256 privateKey,
-        bytes32 typehash,
-        bytes32 witness,
-        bytes32 domainSeparator,
-        address spender
-    ) internal pure returns (bytes memory sig) {
-        if (typehash == bytes32(0)) {
-            typehash = PERMIT_TRANSFER_FROM_TYPEHASH;
-        }
-        bytes32 tokenPermissions = keccak256(abi.encode(TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                keccak256(
-                    abi.encode(
-                        PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
-                    )
-                )
-            )
-        );
-        if (witness != bytes32(0)) {
-            msgHash = keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    domainSeparator,
-                    keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))
-                    )
-                );
-        }
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
 } 

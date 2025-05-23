@@ -10,9 +10,11 @@ import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
 import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
 import {IAllowanceTransfer} from "./interfaces/IAllowanceTransfer.sol";
 import {Permit2Utils} from "./utils/Permit2Utils.sol";
+import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 
 contract ERC7914Test is DelegationHandler {
     using Permit2Utils for *;
+    using TestKeyManager for TestKey;
 
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
@@ -280,7 +282,7 @@ contract ERC7914Test is DelegationHandler {
             deadline: block.timestamp + 1 hours
         });
 
-        bytes memory sig = Permit2Utils.getPermitTransferSignature(permit, signerPrivateKey, bytes32(0), bytes32(0), permit2.DOMAIN_SEPARATOR(), bob);
+        bytes memory sig = signerTestKey.signPermitTransfer(permit, bytes32(0), bytes32(0), permit2.DOMAIN_SEPARATOR(), bob);
 
         // Bob cannot transfer more than the approved amount
         ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({
@@ -333,7 +335,7 @@ contract ERC7914Test is DelegationHandler {
             deadline: block.timestamp + 1 hours
         });
 
-        bytes memory sig = Permit2Utils.getPermitTransferSignature(permit, signerPrivateKey, Permit2Utils.FULL_EXAMPLE_WITNESS_TYPEHASH, witness, permit2.DOMAIN_SEPARATOR(), bob);
+        bytes memory sig = signerTestKey.signPermitTransfer(permit, Permit2Utils.FULL_EXAMPLE_WITNESS_TYPEHASH, witness, permit2.DOMAIN_SEPARATOR(), bob);
 
         // Bob cannot transfer more than the approved amount
         ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({

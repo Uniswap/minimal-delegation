@@ -7,6 +7,8 @@ import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Utils, WebAuthnInfo} from "webauthn-sol/test/Utils.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
+import {Permit2Utils} from "./Permit2Utils.sol";
 
 struct TestKey {
     KeyType keyType;
@@ -92,6 +94,51 @@ library TestKeyManager {
         } else {
             revert KeyNotSupported();
         }
+    }
+
+    /// @dev Signs a permit2 transfer message
+    /// @param key The key to sign with
+    /// @param permit The permit data to sign
+    /// @param typehash The typehash to use (0 for default PERMIT_TRANSFER_FROM_TYPEHASH)
+    /// @param witness Optional witness data to include in the signature
+    /// @param domainSeparator The domain separator for the permit2 contract
+    /// @param spender The spender address
+    function signPermitTransfer(
+        TestKey memory key,
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        bytes32 typehash,
+        bytes32 witness,
+        bytes32 domainSeparator,
+        address spender
+    ) internal view returns (bytes memory) {
+        if (typehash == bytes32(0)) {
+            typehash = Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH;
+        }
+
+        bytes32 tokenPermissions = keccak256(abi.encode(Permit2Utils.TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
+                    )
+                )
+            )
+        );
+
+        if (witness != bytes32(0)) {
+            msgHash = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    domainSeparator,
+                    keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))
+                )
+            );
+        }
+
+        return sign(key, msgHash);
     }
 
     function toKey(TestKey memory key) internal pure returns (Key memory) {
