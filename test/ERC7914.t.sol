@@ -5,8 +5,17 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC7914} from "../src/interfaces/IERC7914.sol";
 import {ERC7914} from "../src/ERC7914.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
+import {IPermit2} from "./interfaces/IPermit2.sol";
+import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
+import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
+import {IAllowanceTransfer} from "./interfaces/IAllowanceTransfer.sol";
+import {Permit2Utils} from "./utils/Permit2Utils.sol";
+import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 
 contract ERC7914Test is DelegationHandler {
+    using Permit2Utils for *;
+    using TestKeyManager for TestKey;
+
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
@@ -245,5 +254,109 @@ contract ERC7914Test is DelegationHandler {
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }
+    }
+
+    // Test that a permit2 signature can be used to transfer native ETH
+    // using the ERC20-eth contract
+    function test_permit2SignatureTransferNative() public {
+        // Deploy ERC20ETH and Permit2
+        ERC20ETH erc20Eth = new ERC20ETH();
+        IPermit2 permit2 = IPermit2(Permit2Utils.deployPermit2());
+
+        // Give signerAccount some ETH
+        uint256 spendAmount = 1 ether;
+        uint256 totalAmount = 2 ether;
+        vm.deal(address(signerAccount), totalAmount);
+
+        // Approve ERC20ETH to use signerAccount's native ETH
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(erc20Eth), type(uint256).max);
+        
+        // Create permit details
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(erc20Eth),
+                amount: spendAmount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = signerTestKey.signPermitTransfer(permit, bytes32(0), bytes32(0), permit2.DOMAIN_SEPARATOR(), bob);
+
+        // Bob cannot transfer more than the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount + 1
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        permit2.permitTransferFrom(permit, invalidTransferDetails, address(signerAccount), sig);
+
+        // Bob can transfer the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory validTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount
+        });
+        vm.prank(bob);
+        permit2.permitTransferFrom(permit, validTransferDetails, address(signerAccount), sig);
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
+    }
+
+    // Test that a permit2 witness signature can be used to transfer native ETH
+    // using the ERC20-eth contract
+    function test_permit2WitnessSignatureTransferNative() public {
+        // Deploy ERC20ETH and Permit2
+        ERC20ETH erc20Eth = new ERC20ETH();
+        IPermit2 permit2 = IPermit2(Permit2Utils.deployPermit2());
+
+        // Give signerAccount some ETH
+        uint256 spendAmount = 1 ether;
+        uint256 totalAmount = 2 ether;
+        vm.deal(address(signerAccount), totalAmount);
+
+        // Approve ERC20ETH to use signerAccount's native ETH
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(erc20Eth), type(uint256).max);
+        
+        // Create permit details
+        Permit2Utils.MockWitness memory witnessData = Permit2Utils.MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(erc20Eth),
+                amount: spendAmount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes memory sig = signerTestKey.signPermitTransfer(permit, Permit2Utils.FULL_EXAMPLE_WITNESS_TYPEHASH, witness, permit2.DOMAIN_SEPARATOR(), bob);
+
+        // Bob cannot transfer more than the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount + 1
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        permit2.permitWitnessTransferFrom(permit, invalidTransferDetails, address(signerAccount), witness, Permit2Utils.WITNESS_TYPE_STRING, sig);
+
+        // Bob can transfer the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory validTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount
+        });
+        vm.prank(bob);
+        permit2.permitWitnessTransferFrom(permit, validTransferDetails, address(signerAccount), witness, Permit2Utils.WITNESS_TYPE_STRING, sig);
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
     }
 }
