@@ -11,7 +11,7 @@ contract DeployCaliburEntry is Script {
     function run() public returns (CaliburEntry entry) {
         vm.startBroadcast();
 
-        entry = new CaliburEntry{salt: bytes32(0x000000000000000000000000000000000000000047f2da1e74570f387f0d0080)}();
+        entry = new CaliburEntry{salt: bytes32(0)}();
         console2.log("CaliburEntry", address(entry));
 
         vm.stopBroadcast();
