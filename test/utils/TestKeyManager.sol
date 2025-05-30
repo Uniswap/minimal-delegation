@@ -7,7 +7,7 @@ import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Utils, WebAuthnInfo} from "webauthn-sol/test/Utils.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
+import {ISignatureTransfer} from "../../lib/permit2/src/interfaces/ISignatureTransfer.sol";
 import {Permit2Utils} from "./Permit2Utils.sol";
 
 struct TestKey {

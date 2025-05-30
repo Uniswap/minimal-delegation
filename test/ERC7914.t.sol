@@ -5,10 +5,10 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC7914} from "../src/interfaces/IERC7914.sol";
 import {ERC7914} from "../src/ERC7914.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
-import {IPermit2} from "./interfaces/IPermit2.sol";
-import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
+import {IPermit2} from "../lib/permit2/src/interfaces/IPermit2.sol";
+import {ISignatureTransfer} from "../lib/permit2/src/interfaces/ISignatureTransfer.sol";
 import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
-import {IAllowanceTransfer} from "./interfaces/IAllowanceTransfer.sol";
+import {IAllowanceTransfer} from "../lib/permit2/src/interfaces/IAllowanceTransfer.sol";
 import {Permit2Utils} from "./utils/Permit2Utils.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 

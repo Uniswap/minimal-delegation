@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
+import {ISignatureTransfer} from "../../lib/permit2/src/interfaces/ISignatureTransfer.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
+import {IPermit2} from "../../lib/permit2/src/interfaces/IPermit2.sol";
 
 library Permit2Utils {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
