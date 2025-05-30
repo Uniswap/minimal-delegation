@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {ISignatureTransfer} from "../interfaces/ISignatureTransfer.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {IPermit2} from "../interfaces/IPermit2.sol";
+import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
 
 library Permit2Utils {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -33,4 +33,4 @@ library Permit2Utils {
         vm.etch(PERMIT2_ADDRESS, bytecode);
         return PERMIT2_ADDRESS;
     }
-} 
+}
