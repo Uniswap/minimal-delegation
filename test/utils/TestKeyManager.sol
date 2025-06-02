@@ -111,24 +111,23 @@ library TestKeyManager {
         bytes32 domainSeparator,
         address spender
     ) internal view returns (bytes memory) {
-        if (typehash == bytes32(0)) {
-            typehash = Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH;
-        }
 
         bytes32 tokenPermissions = keccak256(abi.encode(Permit2Utils.TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                keccak256(
-                    abi.encode(
-                        Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
+        bytes32 msgHash;
+        if (witness == bytes32(0)) {
+            msgHash = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    domainSeparator,
+                    keccak256(
+                        abi.encode(
+                            Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
+                        )
                     )
                 )
-            )
-        );
-
-        if (witness != bytes32(0)) {
+            );
+        }
+        else {
             msgHash = keccak256(
                 abi.encodePacked(
                     "\x19\x01",
