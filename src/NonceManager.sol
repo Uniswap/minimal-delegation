@@ -1,24 +1,16 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {INonceManager} from "./interfaces/INonceManager.sol";
+import {BaseAuthorization} from "./BaseAuthorization.sol";
 
 /// @title NonceManager
 /// @notice A contract that manages nonces to prevent replay attacks
-abstract contract NonceManager is INonceManager {
-    mapping(uint256 key => uint256 seq) nonceSequenceNumber;
-
-    /// @dev Must be overridden by the implementation
-    function _onlyThis() internal view virtual {}
+abstract contract NonceManager is INonceManager, BaseAuthorization {
+    mapping(uint256 key => uint256 seq) public nonceSequenceNumber;
 
     /// @inheritdoc INonceManager
-    function getSeq(uint256 key) external view override returns (uint256 seq) {
-        return nonceSequenceNumber[uint192(key)];
-    }
-
-    /// @inheritdoc INonceManager
-    function invalidateNonce(uint256 newNonce) external override {
-        _onlyThis();
+    function invalidateNonce(uint256 newNonce) external onlyThis {
         uint192 key = uint192(newNonce >> 64);
         uint64 currentSeq = uint64(nonceSequenceNumber[key]);
         uint64 targetSeq = uint64(newNonce);
@@ -30,6 +22,11 @@ abstract contract NonceManager is INonceManager {
         }
         nonceSequenceNumber[key] = targetSeq;
         emit NonceInvalidated(newNonce);
+    }
+
+    /// @inheritdoc INonceManager
+    function getSeq(uint256 key) external view override returns (uint256 seq) {
+        return nonceSequenceNumber[uint192(key)];
     }
 
     /// @notice Validates that the provided nonce is valid and increments the sequence number

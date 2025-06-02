@@ -1,25 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {IValidationHook} from "./IValidationHook.sol";
+import {IExecutionHook} from "./IExecutionHook.sol";
 
-interface IHook {
-    /// @notice Validates a user operation
-    /// Does not require passing in missingAccountFunds like the IAccount interface
-    function overrideValidateUserOp(bytes32 keyHash, PackedUserOperation calldata, bytes32)
-        external
-        view
-        returns (bytes4, uint256);
-
-    /// @notice Validates a signature over a digest and returns the ERC1271 return value
-    function overrideIsValidSignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
-        external
-        view
-        returns (bytes4, bytes4);
-
-    /// @notice Validates a signature over a digest and returns a boolean
-    function overrideVerifySignature(bytes32 keyHash, bytes32 data, bytes calldata signature)
-        external
-        view
-        returns (bytes4, bool);
-}
+/// @title IHook
+/// @notice Unified interface for validation and execution hooks
+/// @dev Hooks may implement both interfaces
+interface IHook is IValidationHook, IExecutionHook {}

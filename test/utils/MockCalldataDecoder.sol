@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {CalldataDecoder} from "../../src/libraries/CalldataDecoder.sol";
@@ -6,10 +6,6 @@ import {Call} from "../../src/libraries/CallLib.sol";
 
 contract MockCalldataDecoder {
     using CalldataDecoder for bytes;
-
-    function decodeCallsBytes(bytes calldata data) public pure returns (Call[] calldata calls, bytes calldata opData) {
-        return data.decodeCallsBytes();
-    }
 
     function removeSelector(bytes calldata data) public pure returns (bytes memory _data) {
         return data.removeSelector();

@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
 import {KeyType, Key, KeyLib} from "../../src/libraries/KeyLib.sol";
 import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Utils, WebAuthnInfo} from "webauthn-sol/test/Utils.sol";
@@ -38,18 +39,14 @@ library TestKeyManager {
     function initDefault(KeyType keyType) internal pure returns (TestKey memory) {
         if (keyType == KeyType.P256) {
             (uint256 x, uint256 y) = vm.publicKeyP256(DEFAULT_SECP256R1_PK);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(x, y), privateKey: DEFAULT_SECP256R1_PK});
+            return TestKey({keyType: keyType, publicKey: abi.encode(x, y), privateKey: DEFAULT_SECP256R1_PK});
         } else if (keyType == KeyType.Secp256k1) {
             address defaultAddress = vm.addr(DEFAULT_SECP256K1_PK);
-            return TestKey({
-                keyType: keyType,
-                publicKey: abi.encodePacked(defaultAddress),
-                privateKey: DEFAULT_SECP256K1_PK
-            });
+            return TestKey({keyType: keyType, publicKey: abi.encode(defaultAddress), privateKey: DEFAULT_SECP256K1_PK});
         } else if (keyType == KeyType.WebAuthnP256) {
             return TestKey({
                 keyType: keyType,
-                publicKey: abi.encodePacked(DEFAULT_WEBAUTHN_P256_PUBLIC_X, DEFAULT_WEBAUTHN_P256_PUBLIC_Y),
+                publicKey: abi.encode(DEFAULT_WEBAUTHN_P256_PUBLIC_X, DEFAULT_WEBAUTHN_P256_PUBLIC_Y),
                 privateKey: DEFAULT_WEBAUTHN_P256_PK
             });
         } else {
@@ -62,18 +59,19 @@ library TestKeyManager {
     function withSeed(KeyType keyType, uint256 seed) internal pure returns (TestKey memory) {
         if (keyType == KeyType.P256) {
             (uint256 x, uint256 y) = vm.publicKeyP256(seed);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(x, y), privateKey: seed});
+            return TestKey({keyType: keyType, publicKey: abi.encode(x, y), privateKey: seed});
         } else if (keyType == KeyType.Secp256k1) {
             address addr = vm.addr(seed);
-            return TestKey({keyType: keyType, publicKey: abi.encodePacked(addr), privateKey: seed});
+            return TestKey({keyType: keyType, publicKey: abi.encode(addr), privateKey: seed});
         } else {
             revert KeyNotSupported();
         }
     }
 
-    function sign(TestKey memory key, bytes32 hash) internal pure returns (bytes memory) {
+    /// @dev Signatures from P256 are over the `sha256` hash of `_hash`
+    function sign(TestKey memory key, bytes32 hash) internal view returns (bytes memory) {
         if (key.keyType == KeyType.P256) {
-            (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, hash);
+            (bytes32 r, bytes32 s) = vm.signP256(key.privateKey, EfficientHashLib.sha2(hash));
             return abi.encodePacked(r, s);
         } else if (key.keyType == KeyType.Secp256k1) {
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(key.privateKey, hash);

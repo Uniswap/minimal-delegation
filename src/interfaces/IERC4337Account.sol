@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.0;
 
 import {IAccount} from "account-abstraction/interfaces/IAccount.sol";
 
@@ -15,7 +15,7 @@ interface IERC4337Account is IAccount {
     event EntryPointUpdated(address indexed newEntryPoint);
 
     /// @notice Updates the EntryPoint address
-    /// @dev By default, the EntryPoint is the zero address, meaning this must be called to enable 4337 support.
+    /// @dev 4337 support is enabled by default, so this must be called with address(0) in order to disable it.
     /// @param entryPoint The new EntryPoint address
     function updateEntryPoint(address entryPoint) external;
 

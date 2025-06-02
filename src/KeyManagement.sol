@@ -1,46 +1,47 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {Key, KeyLib, KeyType} from "./libraries/KeyLib.sol";
 import {IKeyManagement} from "./interfaces/IKeyManagement.sol";
-import {IHook} from "./interfaces/IHook.sol";
+import {BaseAuthorization} from "./BaseAuthorization.sol";
+import {Key, KeyLib} from "./libraries/KeyLib.sol";
 import {Settings, SettingsLib} from "./libraries/SettingsLib.sol";
 
 /// @dev A base contract for managing keys
-abstract contract KeyManagement is IKeyManagement {
+abstract contract KeyManagement is IKeyManagement, BaseAuthorization {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-    using KeyLib for Key;
+    using KeyLib for *;
+    using SettingsLib for Settings;
 
-    EnumerableSetLib.Bytes32Set keyHashes;
-    mapping(bytes32 keyHash => bytes encodedKey) keyStorage;
-    mapping(bytes32 keyHash => Settings settings) keySettings;
-
-    /// @dev Must be overridden by the implementation
-    function _onlyThis() internal view virtual {}
+    EnumerableSetLib.Bytes32Set public keyHashes;
+    mapping(bytes32 keyHash => bytes encodedKey) private keyStorage;
+    mapping(bytes32 keyHash => Settings settings) private keySettings;
 
     /// @inheritdoc IKeyManagement
-    function register(Key memory key) external {
-        _onlyThis();
+    function register(Key memory key) external onlyThis {
+        if (key.isRootKey()) revert CannotRegisterRootKey();
 
         bytes32 keyHash = key.hash();
-        // If the keyHash already exists, it does not revert and updates the key instead.
         keyStorage[keyHash] = abi.encode(key);
         keyHashes.add(keyHash);
 
         emit Registered(keyHash, key);
     }
 
-    function update(bytes32 keyHash, Settings settings) external {
-        _onlyThis();
-        if (!keyHashes.contains(keyHash)) revert KeyDoesNotExist();
+    /// @inheritdoc IKeyManagement
+    function update(bytes32 keyHash, Settings settings) external onlyThis {
+        if (keyHash.isRootKey()) revert CannotUpdateRootKey();
+        if (!isRegistered(keyHash)) revert KeyDoesNotExist();
         keySettings[keyHash] = settings;
+        emit KeySettingsUpdated(keyHash, settings);
     }
 
     /// @inheritdoc IKeyManagement
-    function revoke(bytes32 keyHash) external {
-        _onlyThis();
-        _revoke(keyHash);
+    function revoke(bytes32 keyHash) external onlyThis {
+        if (!keyHashes.remove(keyHash)) revert KeyDoesNotExist();
+        delete keyStorage[keyHash];
+        keySettings[keyHash] = SettingsLib.DEFAULT;
+
         emit Revoked(keyHash);
     }
 
@@ -51,32 +52,39 @@ abstract contract KeyManagement is IKeyManagement {
 
     /// @inheritdoc IKeyManagement
     function keyAt(uint256 i) external view returns (Key memory) {
-        return _getKey(keyHashes.at(i));
+        return getKey(keyHashes.at(i));
     }
 
     /// @inheritdoc IKeyManagement
-    function getKey(bytes32 keyHash) external view returns (Key memory) {
-        return _getKey(keyHash);
+    function getKey(bytes32 keyHash) public view returns (Key memory) {
+        if (keyHash.isRootKey()) return KeyLib.toRootKey();
+        if (isRegistered(keyHash)) return abi.decode(keyStorage[keyHash], (Key));
+        revert KeyDoesNotExist();
     }
 
     /// @inheritdoc IKeyManagement
-    function getKeySettings(bytes32 keyHash) external view returns (Settings) {
-        return keySettings[keyHash];
+    function getKeySettings(bytes32 keyHash) public view returns (Settings) {
+        if (keyHash.isRootKey()) return SettingsLib.ROOT_KEY_SETTINGS;
+        if (isRegistered(keyHash)) return keySettings[keyHash];
+        revert KeyDoesNotExist();
     }
 
-    function _revoke(bytes32 keyHash) internal {
-        delete keyStorage[keyHash];
-        keySettings[keyHash] = SettingsLib.DEFAULT;
-
-        if (!keyHashes.remove(keyHash)) {
-            revert KeyDoesNotExist();
-        }
+    /// @inheritdoc IKeyManagement
+    function isRegistered(bytes32 keyHash) public view returns (bool) {
+        return keyHashes.contains(keyHash);
     }
 
-    function _getKey(bytes32 keyHash) internal view returns (Key memory) {
-        if (keyHash == bytes32(0)) return KeyLib.toRootKey();
-        bytes memory data = keyStorage[keyHash];
-        if (data.length == 0) revert KeyDoesNotExist();
-        return abi.decode(data, (Key));
+    /// @notice Reverts if the key settings are expired
+    function _checkExpiry(Settings settings) internal view {
+        (bool isExpired, uint40 expiry) = settings.isExpired();
+        if (isExpired) revert IKeyManagement.KeyExpired(expiry);
+    }
+
+    /// @notice Check if the keyHash is the root key or a registered, unexpired key
+    function _isOwnerOrValidKey(bytes32 keyHash) internal view returns (bool) {
+        if (keyHash.isRootKey()) return true;
+        if (!isRegistered(keyHash)) return false;
+        (bool isExpired,) = keySettings[keyHash].isExpired();
+        return !isExpired;
     }
 }
