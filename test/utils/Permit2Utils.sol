@@ -15,16 +15,18 @@ library Permit2Utils {
         bool test;
     }
 
+
+    string constant PERMIT_TRANSFER_FROM_NAME = "PermitTransferFrom";
+    string constant PERMIT_WITNESS_TRANSFER_FROM_NAME = "PermitWitnessTransferFrom";
     string constant WITNESS_TYPE_STRING =
         "MockWitness witness)MockWitness(uint256 value,address person,bool test)TokenPermissions(address token,uint256 amount)";
 
-    bytes32 constant FULL_EXAMPLE_WITNESS_TYPEHASH = keccak256(
-        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,MockWitness witness)MockWitness(uint256 value,address person,bool test)TokenPermissions(address token,uint256 amount)"
-    );
+    string constant FULL_EXAMPLE_WITNESS_TYPE = "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,MockWitness witness)MockWitness(uint256 value,address person,bool test)TokenPermissions(address token,uint256 amount)";
+    bytes32 constant FULL_EXAMPLE_WITNESS_TYPEHASH = keccak256(abi.encodePacked(FULL_EXAMPLE_WITNESS_TYPE));
     bytes32 public constant TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
-    bytes32 public constant PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
-    );
+
+    string constant PERMIT_TRANSFER_FROM_CONTENT_TYPE = "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)";
+    bytes32 constant public PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(abi.encodePacked(PERMIT_TRANSFER_FROM_CONTENT_TYPE));
 
     function deployPermit2() internal returns (address) {
         bytes memory bytecode =

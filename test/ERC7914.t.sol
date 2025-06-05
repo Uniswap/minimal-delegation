@@ -11,6 +11,9 @@ import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
 import {IAllowanceTransfer} from "../lib/permit2/src/interfaces/IAllowanceTransfer.sol";
 import {Permit2Utils} from "./utils/Permit2Utils.sol";
 import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
+import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
+import {KeyType} from "../src/libraries/KeyLib.sol";
 
 contract ERC7914Test is DelegationHandler {
     using Permit2Utils for *;
@@ -354,6 +357,148 @@ contract ERC7914Test is DelegationHandler {
         });
         vm.prank(bob);
         permit2.permitWitnessTransferFrom(permit, validTransferDetails, address(signerAccount), witness, Permit2Utils.WITNESS_TYPE_STRING, sig);
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
+    }
+
+    // Test that a permit2 witness signature from a 7739 signer can be used to
+    // transfer native ETH using the ERC20-eth contract
+    function test_permit2WitnessSignatureTransferNativeWith7739() public {
+        // Deploy ERC20ETH and Permit2
+        ERC20ETH erc20Eth = new ERC20ETH();
+        IPermit2 permit2 = IPermit2(Permit2Utils.deployPermit2());
+
+        // Give signerAccount some ETH
+        uint256 spendAmount = 1 ether;
+        uint256 totalAmount = 2 ether;
+        vm.deal(address(signerAccount), totalAmount);
+
+        // Approve ERC20ETH to use signerAccount's native ETH
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(erc20Eth), type(uint256).max);
+        
+        // Register a key for ERC7739 signing
+        TestKey memory testKey = TestKeyManager.withSeed(KeyType.Secp256k1, 0x123456);
+        vm.prank(address(signerAccount));
+        signerAccount.register(testKey.toKey());
+        
+        // Create permit details with witness data
+        Permit2Utils.MockWitness memory witnessData = Permit2Utils.MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(erc20Eth),
+                amount: spendAmount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+
+        // Get domain information for ERC7739 signing
+        bytes memory signerAccountDomainBytes = TypedDataSignBuilder.toDomainBytes(IERC5267(address(signerAccount)));
+        
+        // Create ERC7739 signature for permit2
+        bytes memory erc7739Sig = testKey.signPermitTransfer7739(
+            permit,
+            Permit2Utils.FULL_EXAMPLE_WITNESS_TYPEHASH,
+            witness,
+            permit2.DOMAIN_SEPARATOR(),
+            signerAccountDomainBytes,
+            bob
+        );
+        
+        // Wrap the ERC7739 signature for the signer account
+        bytes memory wrappedSignature = abi.encode(testKey.toKeyHash(), erc7739Sig, "");
+
+        // Bob cannot transfer more than the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount + 1
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        permit2.permitWitnessTransferFrom(permit, invalidTransferDetails, address(signerAccount), witness, Permit2Utils.WITNESS_TYPE_STRING, wrappedSignature);
+
+        // Bob can transfer the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory validTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount
+        });
+        vm.prank(bob);
+        permit2.permitWitnessTransferFrom(permit, validTransferDetails, address(signerAccount), witness, Permit2Utils.WITNESS_TYPE_STRING, wrappedSignature);
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
+    }
+
+    // Test that a permit2 signature from a 7739 signer can be used to
+    // transfer native ETH using the ERC20-eth contract (no witness)
+    function test_permit2SignatureTransferNativeWith7739() public {
+        // Deploy ERC20ETH and Permit2
+        ERC20ETH erc20Eth = new ERC20ETH();
+        IPermit2 permit2 = IPermit2(Permit2Utils.deployPermit2());
+
+        // Give signerAccount some ETH
+        uint256 spendAmount = 1 ether;
+        uint256 totalAmount = 2 ether;
+        vm.deal(address(signerAccount), totalAmount);
+
+        // Approve ERC20ETH to use signerAccount's native ETH
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(erc20Eth), type(uint256).max);
+        
+        // Register a key for ERC7739 signing
+        TestKey memory testKey = TestKeyManager.withSeed(KeyType.Secp256k1, 0x123456);
+        vm.prank(address(signerAccount));
+        signerAccount.register(testKey.toKey());
+        
+        // Create permit details (no witness)
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(erc20Eth),
+                amount: spendAmount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+
+        // Get domain information for ERC7739 signing
+        bytes memory signerAccountDomainBytes = TypedDataSignBuilder.toDomainBytes(IERC5267(address(signerAccount)));
+        
+        // Create ERC7739 signature for permit2 (no witness)
+        bytes memory erc7739Sig = testKey.signPermitTransfer7739(
+            permit,
+            bytes32(0), // typehash not used when witness is 0
+            bytes32(0), // no witness
+            permit2.DOMAIN_SEPARATOR(),
+            signerAccountDomainBytes,
+            bob
+        );
+        
+        // Wrap the ERC7739 signature for the signer account
+        bytes memory wrappedSignature = abi.encode(testKey.toKeyHash(), erc7739Sig, "");
+
+        // Bob cannot transfer more than the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount + 1
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        permit2.permitTransferFrom(permit, invalidTransferDetails, address(signerAccount), wrappedSignature);
+
+        // Bob can transfer the approved amount
+        ISignatureTransfer.SignatureTransferDetails memory validTransferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: bob,
+            requestedAmount: spendAmount
+        });
+        vm.prank(bob);
+        permit2.permitTransferFrom(permit, validTransferDetails, address(signerAccount), wrappedSignature);
 
         // Verify the transfer
         assertEq(bob.balance, spendAmount);
