@@ -1,5 +1,5 @@
 # EntrypointLib
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/libraries/EntrypointLib.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/libraries/EntrypointLib.sol)
 
 *This library is used to dirty the most significant bit of the cached entrypoint
 to indicate that the entrypoint has been overriden by the account*

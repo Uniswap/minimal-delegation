@@ -1,5 +1,5 @@
 # ICalibur
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/interfaces/ICalibur.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/interfaces/ICalibur.sol)
 
 **Inherits:**
 [IKeyManagement](/src/interfaces/IKeyManagement.sol/interface.IKeyManagement.md), [IERC4337Account](/src/interfaces/IERC4337Account.sol/interface.IERC4337Account.md), [IERC7821](/src/interfaces/IERC7821.sol/interface.IERC7821.md), [IERC1271](/src/interfaces/IERC1271.sol/interface.IERC1271.md), [IEIP712](/src/interfaces/IEIP712.sol/interface.IEIP712.md), IERC5267, [IERC7201](/src/interfaces/IERC7201.sol/interface.IERC7201.md), [IERC7914](/src/interfaces/IERC7914.sol/interface.IERC7914.md), [INonceManager](/src/interfaces/INonceManager.sol/interface.INonceManager.md), [IMulticall](/src/interfaces/IMulticall.sol/interface.IMulticall.md)

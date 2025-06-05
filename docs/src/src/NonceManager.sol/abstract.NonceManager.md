@@ -1,5 +1,5 @@
 # NonceManager
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/NonceManager.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/NonceManager.sol)
 
 **Inherits:**
 [INonceManager](/src/interfaces/INonceManager.sol/interface.INonceManager.md), [BaseAuthorization](/src/BaseAuthorization.sol/contract.BaseAuthorization.md)

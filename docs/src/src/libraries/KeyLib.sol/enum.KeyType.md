@@ -1,5 +1,5 @@
 # KeyType
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/libraries/KeyLib.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/libraries/KeyLib.sol)
 
 *The type of key.*
 

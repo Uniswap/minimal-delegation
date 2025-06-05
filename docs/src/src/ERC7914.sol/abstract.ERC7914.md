@@ -1,5 +1,5 @@
 # ERC7914
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/ERC7914.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/ERC7914.sol)
 
 **Inherits:**
 [IERC7914](/src/interfaces/IERC7914.sol/interface.IERC7914.md), [BaseAuthorization](/src/BaseAuthorization.sol/contract.BaseAuthorization.md)

@@ -1,5 +1,5 @@
 # HooksLib
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/libraries/HooksLib.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/libraries/HooksLib.sol)
 
 **Author:**
 Inspired by https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol

@@ -26,7 +26,7 @@ import {SettingsBuilder} from "./utils/SettingsBuilder.sol";
 import {ICalibur} from "../src/interfaces/ICalibur.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
 import {BatchedCall} from "../src/libraries/BatchedCallLib.sol";
-import {IGuardedExecutorHook} from "../src/hooks/execution/GuardedExecutorHook.sol";
+import {IGuardedExecutorHook} from "../src/hooks/example/GuardedExecutorHook.sol";
 
 contract CaliburExecuteHooksTest is TokenHandler, HookHandler, ExecuteFixtures, DelegationHandler {
     using TestKeyManager for TestKey;
