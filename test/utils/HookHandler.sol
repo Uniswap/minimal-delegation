@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {Test} from "forge-std/Test.sol";
 import {IHook} from "src/interfaces/IHook.sol";
 import {MockHook} from "./MockHook.sol";
-import {GuardedExecutorHook} from "src/hooks/execution/GuardedExecutorHook.sol";
+import {GuardedExecutorHook} from "src/hooks/example/GuardedExecutorHook.sol";
 
 abstract contract HookHandler is Test {
     MockHook internal noHooks;

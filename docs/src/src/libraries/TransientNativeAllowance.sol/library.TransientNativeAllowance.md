@@ -1,5 +1,5 @@
 # TransientNativeAllowance
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/libraries/TransientNativeAllowance.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/libraries/TransientNativeAllowance.sol)
 
 This is a temporary library that allows us to use transient storage (tstore/tload)
 TODO: This library can be deleted when we have the transient keyword support in solidity.

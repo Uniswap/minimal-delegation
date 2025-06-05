@@ -2,9 +2,9 @@
 - [Home](README.md)
 # src
   - [❱ hooks](src/hooks/README.md)
-    - [❱ execution](src/hooks/execution/README.md)
-      - [IGuardedExecutorHook](src/hooks/execution/GuardedExecutorHook.sol/interface.IGuardedExecutorHook.md)
-      - [GuardedExecutorHook](src/hooks/execution/GuardedExecutorHook.sol/contract.GuardedExecutorHook.md)
+    - [❱ example](src/hooks/example/README.md)
+      - [IGuardedExecutorHook](src/hooks/example/GuardedExecutorHook.sol/interface.IGuardedExecutorHook.md)
+      - [GuardedExecutorHook](src/hooks/example/GuardedExecutorHook.sol/contract.GuardedExecutorHook.md)
     - [❱ shared](src/hooks/shared/README.md)
       - [AccountKeyHash](src/hooks/shared/AccountKeyHashLib.sol/type.AccountKeyHash.md)
       - [AccountKeyHashLib](src/hooks/shared/AccountKeyHashLib.sol/library.AccountKeyHashLib.md)

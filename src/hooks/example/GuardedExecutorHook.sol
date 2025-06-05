@@ -13,13 +13,26 @@ interface IGuardedExecutorHook is IExecutionHook {
     error SelfCallNotAllowed();
     // For testing convenience
 
+    /// @notice Sentinel value which represents any key hash.
     function ANY_KEYHASH() external view returns (bytes32);
+    /// @notice Sentinel value which represents any target address.
     function ANY_TARGET() external view returns (address);
+    /// @notice Sentinel value which represents any function selector.
     function ANY_FN_SEL() external view returns (bytes4);
+    
+    /// @notice Set the canExecute flag for a keyHash, to, and selector.
+    /// @dev Note that this hook does not support restricting any `value` sent along with the call
+    /// @param keyHash the bytes32 keyHash
+    /// @param to the target address
+    /// @param selector the function selector
+    /// @param can flag to set
     function setCanExecute(bytes32 keyHash, address to, bytes4 selector, bool can) external;
 }
 
 /// @title GuardedExecutorHook
+/// @notice This is an example implementation of a hook which restricts keys from executing calls
+///         based on the target address and function selector.
+/// @notice For educational purposes only. This is unaudited code. Do not use this hook in production.
 /// @author modified from https://github.com/ithacaxyz/account/blob/main/src/GuardedExecutor.sol
 contract GuardedExecutorHook is IGuardedExecutorHook {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;

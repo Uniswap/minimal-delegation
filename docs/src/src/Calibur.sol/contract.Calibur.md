@@ -1,5 +1,5 @@
 # Calibur
-[Git Source](https://github.com/Uniswap/minimal-delegation/blob/1457ed9d5e0382ab8547f6bc36a3738475e8b5fe/src/Calibur.sol)
+[Git Source](https://github.com/Uniswap/minimal-delegation/blob/8189d62a80ed3ac2bd308849641dca52350f024a/src/Calibur.sol)
 
 **Inherits:**
 [ICalibur](/src/interfaces/ICalibur.sol/interface.ICalibur.md), [ERC7821](/src/ERC7821.sol/abstract.ERC7821.md), [ERC1271](/src/ERC1271.sol/abstract.ERC1271.md), [ERC4337Account](/src/ERC4337Account.sol/abstract.ERC4337Account.md), [KeyManagement](/src/KeyManagement.sol/abstract.KeyManagement.md), [NonceManager](/src/NonceManager.sol/abstract.NonceManager.md), [ERC7914](/src/ERC7914.sol/abstract.ERC7914.md), [ERC7201](/src/ERC7201.sol/contract.ERC7201.md), [ERC7739](/src/ERC7739.sol/abstract.ERC7739.md), [EIP712](/src/EIP712.sol/contract.EIP712.md), [Multicall](/src/Multicall.sol/abstract.Multicall.md), Receiver
