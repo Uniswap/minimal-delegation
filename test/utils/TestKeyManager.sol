@@ -7,11 +7,6 @@ import {WebAuthn} from "webauthn-sol/src/WebAuthn.sol";
 import {Utils, WebAuthnInfo} from "webauthn-sol/test/Utils.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {ISignatureTransfer} from "../../lib/permit2/src/interfaces/ISignatureTransfer.sol";
-import {Permit2Utils} from "./Permit2Utils.sol";
-import {TypedDataSignBuilder} from "./TypedDataSignBuilder.sol";
-import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
-import {ERC7739Utils} from "../../src/libraries/ERC7739Utils.sol";
 
 struct TestKey {
     KeyType keyType;
@@ -97,106 +92,6 @@ library TestKeyManager {
         } else {
             revert KeyNotSupported();
         }
-    }
-
-    /// @dev Signs a permit2 transfer message
-    /// @param key The key to sign with
-    /// @param permit The permit data to sign
-    /// @param typehash The typehash to use (0 for default PERMIT_TRANSFER_FROM_TYPEHASH)
-    /// @param witness Optional witness data to include in the signature
-    /// @param domainSeparator The domain separator for the permit2 contract
-    /// @param spender The spender address
-    function signPermitTransfer(
-        TestKey memory key,
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        bytes32 typehash,
-        bytes32 witness,
-        bytes32 domainSeparator,
-        address spender
-    ) internal view returns (bytes memory) {
-
-        bytes32 tokenPermissions = keccak256(abi.encode(Permit2Utils.TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
-        bytes32 msgHash;
-        if (witness == bytes32(0)) {
-            msgHash = keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    domainSeparator,
-                    keccak256(
-                        abi.encode(
-                            Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline
-                        )
-                    )
-                )
-            );
-        }
-        else {
-            msgHash = keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    domainSeparator,
-                    keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))
-                )
-            );
-        }
-
-        return sign(key, msgHash);
-    }
-
-    /// @dev Signs a permit2 transfer message using ERC7739 format
-    /// @param key The key to sign with
-    /// @param permit The permit data to sign
-    /// @param typehash The typehash to use
-    /// @param witness Optional witness data to include in the signature
-    /// @param permit2DomainSeparator The domain separator for the permit2 contract
-    /// @param signerAccountDomainBytes The domain bytes for the signer account (ERC7739 verifier)
-    /// @param spender The spender address
-    function signPermitTransfer7739(
-        TestKey memory key,
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        bytes32 typehash,
-        bytes32 witness,
-        bytes32 permit2DomainSeparator,
-        bytes memory signerAccountDomainBytes,
-        address spender
-    ) internal view returns (bytes memory) {
-        // Create the permit2 contents hash using existing constants
-        bytes32 tokenPermissions = keccak256(abi.encode(Permit2Utils.TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
-        bytes32 contentsHash;
-        string memory contentType;
-        string memory contentsDescr;
-        
-        if (witness == bytes32(0)) {
-            // Non-witness case: use PERMIT_TRANSFER_FROM_TYPEHASH
-            contentsHash = keccak256(abi.encode(Permit2Utils.PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline));
-            contentType = Permit2Utils.PERMIT_TRANSFER_FROM_CONTENT_TYPE;
-            contentsDescr = string(abi.encodePacked(contentType, Permit2Utils.PERMIT_TRANSFER_FROM_NAME));
-        } else {
-            // Witness case: use provided typehash
-            contentsHash = keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness));
-            contentType = Permit2Utils.FULL_EXAMPLE_WITNESS_TYPE;
-            contentsDescr = string(abi.encodePacked(contentType, Permit2Utils.PERMIT_WITNESS_TRANSFER_FROM_NAME));
-        }
-
-        // Use TypedDataSignBuilder to create the ERC7739 nested typed data sign hash
-        bytes32 nestedDigest = TypedDataSignBuilder.hashTypedDataSign(
-            contentsHash,
-            signerAccountDomainBytes,
-            permit2DomainSeparator,
-            witness == bytes32(0) ? Permit2Utils.PERMIT_TRANSFER_FROM_NAME : Permit2Utils.PERMIT_WITNESS_TRANSFER_FROM_NAME,
-            contentType
-        );
-        
-        // Sign the nested digest
-        bytes memory signature = sign(key, nestedDigest);
-        
-        // Build the ERC7739 wrapped signature
-        return TypedDataSignBuilder.buildTypedDataSignSignature(
-            signature,
-            permit2DomainSeparator,
-            contentsHash,
-            contentsDescr
-        );
     }
 
     function toKey(TestKey memory key) internal pure returns (Key memory) {

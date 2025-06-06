@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {ISignatureTransfer} from "../../lib/permit2/src/interfaces/ISignatureTransfer.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IPermit2} from "../../lib/permit2/src/interfaces/IPermit2.sol";
+import {TypedDataSignBuilder} from "./TypedDataSignBuilder.sol";
 
 library Permit2Utils {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -34,5 +35,41 @@ library Permit2Utils {
 
         vm.etch(PERMIT2_ADDRESS, bytecode);
         return PERMIT2_ADDRESS;
+    }
+
+    /// @dev Returns permit2 fixtures for non-witness permit transfers
+    /// @param permit The permit data  
+    /// @param spender The spender address
+    /// @param permit2Address The permit2 contract address
+    function getPermit2Fixtures(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        address spender,
+        address permit2Address
+    ) internal view returns (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) {
+        IPermit2 permit2 = IPermit2(permit2Address);
+        appDomainSeparator = permit2.DOMAIN_SEPARATOR();
+        bytes32 tokenPermissions = keccak256(abi.encode(TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        contentsDescr = PERMIT_TRANSFER_FROM_CONTENT_TYPE;
+        contentsHash = keccak256(abi.encode(PERMIT_TRANSFER_FROM_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline));
+    }
+
+    /// @dev Returns permit2 fixtures for witness permit transfers
+    /// @param permit The permit data
+    /// @param witness The witness data hash
+    /// @param spender The spender address  
+    /// @param permit2Address The permit2 contract address
+    function getPermit2WitnessFixtures(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        bytes32 witness,
+        address spender,
+        address permit2Address
+    ) internal view returns (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) {
+        IPermit2 permit2 = IPermit2(permit2Address);
+        appDomainSeparator = permit2.DOMAIN_SEPARATOR();
+        
+        // Contents description and hash for witness permit transfer
+        contentsDescr = FULL_EXAMPLE_WITNESS_TYPE;
+        bytes32 tokenPermissions = keccak256(abi.encode(TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        contentsHash = keccak256(abi.encode(FULL_EXAMPLE_WITNESS_TYPEHASH, tokenPermissions, spender, permit.nonce, permit.deadline, witness));
     }
 }
