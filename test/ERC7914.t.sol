@@ -14,8 +14,10 @@ import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
 import {KeyType} from "../src/libraries/KeyLib.sol";
+import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
+import {ERC1271Handler} from "./utils/ERC1271Handler.sol";
 
-contract ERC7914Test is DelegationHandler {
+contract ERC7914Test is DelegationHandler, ERC1271Handler {
     using Permit2Utils for *;
     using TestKeyManager for TestKey;
 
@@ -418,21 +420,26 @@ contract ERC7914Test is DelegationHandler {
         bytes32 witness = keccak256(abi.encode(witnessData));
         ISignatureTransfer.PermitTransferFrom memory permit = _createPermit(address(setup.erc20Eth), setup.spendAmount);
         bytes memory signerAccountDomainBytes = TypedDataSignBuilder.toDomainBytes(IERC5267(address(signerAccount)));
-        (bytes32 appDomainSeparator, string memory contentsDescr, bytes32 contentsHash) = 
+        (bytes32 appDomainSeparator, , bytes32 contentsHash) = 
             Permit2Utils.getPermit2WitnessFixtures(permit, witness, bob, address(setup.permit2));
+        // For TypedDataSignLib explicit mode, we need sub-types in alphabetical order followed by primary type name
+        string memory contentsDescrExplicit = "MockWitness(uint256 value,address person,bool test)PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,MockWitness witness)TokenPermissions(address token,uint256 amount)PermitWitnessTransferFrom";
+        (string memory contentsName, string memory contentsType) =
+            mockERC7739Utils.decodeContentsDescr(contentsDescrExplicit);
         bytes32 digest = TypedDataSignBuilder.hashTypedDataSign(
             contentsHash,
             signerAccountDomainBytes,
             appDomainSeparator,
-            Permit2Utils.PERMIT_WITNESS_TRANSFER_FROM_NAME,
-            Permit2Utils.FULL_EXAMPLE_WITNESS_TYPE
+            contentsName,
+            contentsType
         );
+
         bytes memory signature = testKey.sign(digest);
         bytes memory erc7739Sig = TypedDataSignBuilder.buildTypedDataSignSignature(
             signature,
             appDomainSeparator,
             contentsHash,
-            contentsDescr
+            contentsDescrExplicit
         );
         bytes memory wrappedSignature = abi.encode(testKey.toKeyHash(), erc7739Sig, "");
         _testPermit2Transfer(setup.permit2, permit, wrappedSignature, setup.spendAmount, setup.totalAmount, true, witness, Permit2Utils.WITNESS_TYPE_STRING);
