@@ -28,5 +28,8 @@ forge test
 - [OpenZeppelin Audit 05/2025](audits/OpenZeppelin_audit.pdf)
 - [Cantina Audit 04/2025](audits/Cantina_audit.pdf)
 
+## License
+MIT
+
 ## Disclaimer
 There are a few example hooks referenced in the repo. Be aware that these example hooks are not production code and may contain bugs. We do not recommend you to deploy these hooks or use them as reference implementations for productionized code. They are proof of concepts.
