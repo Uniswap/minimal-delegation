@@ -5,8 +5,24 @@ import {DelegationHandler} from "./utils/DelegationHandler.sol";
 import {IERC7914} from "../src/interfaces/IERC7914.sol";
 import {ERC7914} from "../src/ERC7914.sol";
 import {BaseAuthorization} from "../src/BaseAuthorization.sol";
+import {IPermit2} from "../lib/permit2/src/interfaces/IPermit2.sol";
+import {ISignatureTransfer} from "../lib/permit2/src/interfaces/ISignatureTransfer.sol";
+import {ERC20ETH} from "../lib/erc20-eth/src/ERC20Eth.sol";
+import {IAllowanceTransfer} from "../lib/permit2/src/interfaces/IAllowanceTransfer.sol";
+import {Permit2Utils} from "./utils/Permit2Utils.sol";
+import {TestKeyManager, TestKey} from "./utils/TestKeyManager.sol";
+import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
+import {TypedDataSignBuilder} from "./utils/TypedDataSignBuilder.sol";
+import {KeyType} from "../src/libraries/KeyLib.sol";
+import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
+import {ERC1271Handler} from "./utils/ERC1271Handler.sol";
+import {PermitSingle, PermitDetails} from "./utils/MockERC1271VerifyingContract.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract ERC7914Test is DelegationHandler {
+contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
+    using Permit2Utils for *;
+    using TestKeyManager for TestKey;
+
     event TransferFromNative(address indexed from, address indexed to, uint256 value);
     event ApproveNative(address indexed owner, address indexed spender, uint256 value);
     event ApproveNativeTransient(address indexed owner, address indexed spender, uint256 value);
@@ -15,6 +31,79 @@ contract ERC7914Test is DelegationHandler {
 
     address bob = makeAddr("bob");
     address recipient = makeAddr("recipient");
+
+    struct Permit2TestSetup {
+        ERC20ETH erc20Eth;
+        IPermit2 permit2;
+        uint256 spendAmount;
+        uint256 totalAmount;
+    }
+
+    function _setupPermit2Test() internal returns (Permit2TestSetup memory setup) {
+        setup.erc20Eth = new ERC20ETH();
+        setup.permit2 = IPermit2(Permit2Utils.deployPermit2());
+        setup.spendAmount = 1 ether;
+        setup.totalAmount = 2 ether;
+        
+        vm.deal(address(signerAccount), setup.totalAmount);
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(setup.erc20Eth), type(uint256).max);
+    }
+
+    function _createPermit(address token, uint256 amount) internal view returns (ISignatureTransfer.PermitTransferFrom memory) {
+        return ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: token,
+                amount: amount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+    }
+
+    function _testPermit2Transfer(
+        IPermit2 permit2,
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        bytes memory sig,
+        uint256 spendAmount,
+        uint256 totalAmount,
+        bool isWitness,
+        bytes32 witness,
+        string memory witnessTypeString
+    ) internal {
+        // Test invalid transfer (too much)
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransfer = 
+            ISignatureTransfer.SignatureTransferDetails({
+                to: bob,
+                requestedAmount: spendAmount + 1
+            });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        if (isWitness) {
+            permit2.permitWitnessTransferFrom(permit, invalidTransfer, address(signerAccount), witness, witnessTypeString, sig);
+        } else {
+            permit2.permitTransferFrom(permit, invalidTransfer, address(signerAccount), sig);
+        }
+
+        // Test valid transfer
+        ISignatureTransfer.SignatureTransferDetails memory validTransfer = 
+            ISignatureTransfer.SignatureTransferDetails({
+                to: bob,
+                requestedAmount: spendAmount
+            });
+        
+        vm.prank(bob);
+        if (isWitness) {
+            permit2.permitWitnessTransferFrom(permit, validTransfer, address(signerAccount), witness, witnessTypeString, sig);
+        } else {
+            permit2.permitTransferFrom(permit, validTransfer, address(signerAccount), sig);
+        }
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
+    }
 
     function setUp() public {
         setUpDelegation();
@@ -245,5 +334,39 @@ contract ERC7914Test is DelegationHandler {
             assertEq(bob.balance, bobBalanceBefore);
             assertEq(address(signerAccount).balance, signerAccountBalanceBefore);
         }
+    }
+
+    // Test that a permit2 signature can be used to transfer native ETH
+    // using the ERC20-eth contract
+    function test_permit2SignatureTransferNative() public {
+        Permit2TestSetup memory setup = _setupPermit2Test();
+        ISignatureTransfer.PermitTransferFrom memory permit = _createPermit(address(setup.erc20Eth), setup.spendAmount);
+
+        bytes memory sig;
+        {        
+            (bytes32 appDomainSeparator, , bytes32 contentsHash) = Permit2Utils.getPermit2Fixtures(permit, bob, address(setup.permit2));
+        
+            bytes32 msgHash = MessageHashUtils.toTypedDataHash(appDomainSeparator, contentsHash);
+            sig = signerTestKey.sign(msgHash);
+        }
+        _testPermit2Transfer(setup.permit2, permit, sig, setup.spendAmount, setup.totalAmount, false, bytes32(0), "");
+    }
+
+    // Test that a permit2 witness signature can be used to transfer native ETH
+    // using the ERC20-eth contract
+    function test_permit2WitnessSignatureTransferNative() public {
+        Permit2TestSetup memory setup = _setupPermit2Test();
+        Permit2Utils.MockWitness memory witnessData = Permit2Utils.MockWitness(10000000, address(5), true);
+        bytes32 witness = keccak256(abi.encode(witnessData));
+        ISignatureTransfer.PermitTransferFrom memory permit = _createPermit(address(setup.erc20Eth), setup.spendAmount);
+        
+        bytes memory sig;
+        {        
+            (bytes32 appDomainSeparator, , bytes32 contentsHash) = Permit2Utils.getPermit2WitnessFixtures(permit, witness, bob, address(setup.permit2));
+        
+            bytes32 msgHash = MessageHashUtils.toTypedDataHash(appDomainSeparator, contentsHash);
+            sig = signerTestKey.sign(msgHash);
+        }
+        _testPermit2Transfer(setup.permit2, permit, sig, setup.spendAmount, setup.totalAmount, true, witness, Permit2Utils.WITNESS_TYPE_STRING);
     }
 }
