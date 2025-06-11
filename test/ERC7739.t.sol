@@ -126,7 +126,7 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
     }
 
     function test_signTypedSignData_permitSingleTransfer() public {
-        // Create a test key with a different private key and register it with the signer account
+        // Register a test key with the signer account
         uint256 testPrivateKey = 0x123456;
         TestKey memory testKey = TestKeyManager.withSeed(KeyType.Secp256k1, testPrivateKey);
         vm.prank(address(signerAccount));
@@ -225,7 +225,7 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
     }
 
     function test_signTypedSignData_permitSingleTransfer_transferNative() public {
-        // Create a test key with a different private key and register it with the signer account
+        // Register a test key with the signer account
         uint256 testPrivateKey = 0x123456;
         TestKey memory testKey = TestKeyManager.withSeed(KeyType.Secp256k1, testPrivateKey);
         vm.prank(address(signerAccount));
