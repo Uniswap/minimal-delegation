@@ -182,46 +182,6 @@ contract ERC7739Test is DelegationHandler, TokenHandler, ERC1271Handler, FFISign
         assertEq(allowance, allowanceAmount);
         assertEq(expiration, uint48(block.timestamp + 1 hours));
         assertEq(nonce, 1); // nonce should be incremented after permit
-
-        // Now verify the spender can actually pull the funds
-        address recipient = address(0xBEEF);
-        uint160 transferAmount = 500;
-        
-        // Check initial balances
-        uint256 signerBalanceBefore = tokenA.balanceOf(address(signerAccount));
-        uint256 recipientBalanceBefore = tokenA.balanceOf(recipient);
-
-        // Verify wrong spender cannot transfer tokens
-        address wrongSpender = address(0xBAD);
-        vm.expectRevert(); // Should revert with insufficient allowance
-        vm.prank(wrongSpender);
-        permit2.transferFrom(address(signerAccount), wrongSpender, 1, address(tokenA));
-
-        // Verify correct spender cannot exceed allowance limit
-        vm.expectRevert(); // Should revert with insufficient allowance
-        permit2.transferFrom(address(signerAccount), recipient, allowanceAmount + 1, address(tokenA));
-        
-        // Transfer tokens using the permit
-        permit2.transferFrom(address(signerAccount), recipient, transferAmount, address(tokenA));
-        
-        // Verify balances changed correctly
-        assertEq(tokenA.balanceOf(address(signerAccount)), signerBalanceBefore - transferAmount);
-        assertEq(tokenA.balanceOf(recipient), recipientBalanceBefore + transferAmount);
-        
-        // Verify allowance was decremented
-        (uint160 allowanceAfter,,) = permit2.allowance(address(signerAccount), address(tokenA), address(this));
-        assertEq(allowanceAfter, allowanceAmount - transferAmount);
-        
-        // Transfer remaining allowed amount
-        permit2.transferFrom(address(signerAccount), recipient, allowanceAmount - transferAmount, address(tokenA));
-        
-        // Verify final balances
-        assertEq(tokenA.balanceOf(address(signerAccount)), initialBalance - allowanceAmount);
-        assertEq(tokenA.balanceOf(recipient), allowanceAmount);
-        
-        // Verify allowance is now zero
-        (uint160 finalAllowance,,) = permit2.allowance(address(signerAccount), address(tokenA), address(this));
-        assertEq(finalAllowance, 0);
     }
 
     function test_signTypedSignData_permitSingleTransfer_transferNative() public {

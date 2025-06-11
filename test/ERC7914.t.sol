@@ -17,6 +17,7 @@ import {KeyType} from "../src/libraries/KeyLib.sol";
 import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {ERC1271Handler} from "./utils/ERC1271Handler.sol";
 import {PermitSingle, PermitDetails} from "./utils/MockERC1271VerifyingContract.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     using Permit2Utils for *;
@@ -345,13 +346,7 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         {        
             (bytes32 appDomainSeparator, , bytes32 contentsHash) = Permit2Utils.getPermit2Fixtures(permit, bob, address(setup.permit2));
         
-            bytes32 msgHash = keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    appDomainSeparator,
-                    contentsHash
-                )
-            );
+            bytes32 msgHash = MessageHashUtils.toTypedDataHash(appDomainSeparator, contentsHash);
             sig = signerTestKey.sign(msgHash);
         }
         _testPermit2Transfer(setup.permit2, permit, sig, setup.spendAmount, setup.totalAmount, false, bytes32(0), "");
@@ -369,13 +364,7 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         {        
             (bytes32 appDomainSeparator, , bytes32 contentsHash) = Permit2Utils.getPermit2WitnessFixtures(permit, witness, bob, address(setup.permit2));
         
-            bytes32 msgHash = keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    appDomainSeparator,
-                    contentsHash
-                )
-            );
+            bytes32 msgHash = MessageHashUtils.toTypedDataHash(appDomainSeparator, contentsHash);
             sig = signerTestKey.sign(msgHash);
         }
         _testPermit2Transfer(setup.permit2, permit, sig, setup.spendAmount, setup.totalAmount, true, witness, Permit2Utils.WITNESS_TYPE_STRING);
