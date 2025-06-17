@@ -18,6 +18,9 @@ import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {ERC1271Handler} from "./utils/ERC1271Handler.sol";
 import {PermitSingle, PermitDetails} from "./utils/MockERC1271VerifyingContract.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ERC7914FunctionDetector} from "./utils/ERC7914FunctionDetector.sol";
+import {MockNonERC7914Contract} from "./utils/MockNonERC7914Contract.sol";
+import {MockSameErrorContract} from "./utils/MockSameErrorContract.sol";
 
 contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     using Permit2Utils for *;
@@ -29,8 +32,13 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     event TransferFromNativeTransient(address indexed from, address indexed to, uint256 value);
     event NativeAllowanceUpdated(address indexed spender, uint256 value);
 
+    address caliburAddress = address(signerAccount);
     address bob = makeAddr("bob");
     address recipient = makeAddr("recipient");
+    
+    ERC7914FunctionDetector detector;
+    MockNonERC7914Contract nonERC7914Contract;
+    MockSameErrorContract sameErrorContract;
 
     struct Permit2TestSetup {
         ERC20ETH erc20Eth;
@@ -107,6 +115,9 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
 
     function setUp() public {
         setUpDelegation();
+        detector = new ERC7914FunctionDetector(address(signerAccount));
+        nonERC7914Contract = new MockNonERC7914Contract();
+        sameErrorContract = new MockSameErrorContract();
     }
 
     function test_approveNative_revertsWithUnauthorized() public {
@@ -368,5 +379,101 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
             sig = signerTestKey.sign(msgHash);
         }
         _testPermit2Transfer(setup.permit2, permit, sig, setup.spendAmount, setup.totalAmount, true, witness, Permit2Utils.WITNESS_TYPE_STRING);
+    }
+
+    // ======= ERC7914 Detection Tests =======
+
+    /// @notice Test ERC7914 detection functionality across different contract types
+    function test_erc7914Detection() public {
+        detector = new ERC7914FunctionDetector(address(signerAccount));
+        // Test with non-ERC7914 contract
+        bool hasSupport = detector.hasERC7914Support(address(nonERC7914Contract));
+        assertFalse(hasSupport, "Non-ERC7914 contract should not be detected");
+
+        // Test short circuit for calibur address 
+        // Normally this would fail, but since we tell the detector that the 
+        // calibur address is the non-ERC7914 contract, it will short circuit 
+        // and return true
+        detector = new ERC7914FunctionDetector(address(nonERC7914Contract));
+        hasSupport = detector.hasERC7914Support(address(nonERC7914Contract));
+        assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
+        
+        // Revert to the original detector
+        detector = new ERC7914FunctionDetector(address(signerAccount));
+
+        // Test with EOA
+        address eoa = makeAddr("testEOA");
+        hasSupport = detector.hasERC7914Support(eoa);
+        assertFalse(hasSupport, "EOA should not support ERC7914");
+
+        // Test with ERC7914-supporting contract (calibur address does not match signerAccount)
+        hasSupport = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
+    }
+
+    /// @notice Test ERC7914 detection remains consistent regardless of allowance state
+    function test_erc7914DetectionConsistency() public {
+        // Test detection before setting any allowances
+        bool supportBefore = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(supportBefore, "Should detect ERC7914 support before allowances");
+        
+        // Set up allowances on the ERC7914-supporting contract
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(bob, 5 ether);
+        
+        vm.prank(address(signerAccount));
+        signerAccount.approveNativeTransient(recipient, 5 ether);
+
+        // Test detection after setting allowances
+        bool supportAfter = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(supportAfter, "Should still detect ERC7914 support after allowances");
+        
+        // Should be consistent
+        assertEq(supportBefore, supportAfter, "Detection should be consistent regardless of allowance state");
+    }
+
+    /// @notice Test detector doesn't modify contract state
+    function test_erc7914DetectionStateInvariant() public {
+        // Set an allowance to test state preservation
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(bob, type(uint256).max);
+
+        // Get initial state
+        uint256 allowanceBefore = signerAccount.nativeAllowance(bob);
+        
+        // Run detection
+        bool hasSupport = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(hasSupport, "Should detect ERC7914 support");
+        
+        // Verify state hasn't changed
+        uint256 allowanceAfter = signerAccount.nativeAllowance(bob);
+        assertEq(allowanceBefore, allowanceAfter, "Detector should not modify contract state");
+    }
+
+    /// @notice Test that same error selector doesn't cause false positive
+    function test_erc7914DetectionSameErrorSelectorNoFalsePositive() public {
+        // Verify the mock contract has the same error selector
+        vm.expectRevert(MockSameErrorContract.Unauthorized.selector);
+        sameErrorContract.someOtherFunction(address(0), 0);
+        
+        // Also verify BaseAuthorization has the same error selector
+        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
+        vm.prank(bob); // Call from unauthorized address
+        signerAccount.approveNative(address(0), 0);
+        
+        // Verify both errors have the same selector (this is what we're testing for collision)
+        assertEq(
+            MockSameErrorContract.Unauthorized.selector, 
+            BaseAuthorization.Unauthorized.selector, 
+            "Error selectors should be the same"
+        );
+        
+        // The key test: detector should return FALSE because the function name doesn't match
+        bool hasSupport = detector.hasERC7914Support(address(sameErrorContract));
+        assertFalse(hasSupport, "Contract with same error selector but different function name should NOT be detected as ERC7914");
+        
+        // Double-check by testing that it correctly detects the real ERC7914 contract
+        bool realSupport = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(realSupport, "Real ERC7914 contract should still be detected");
     }
 }
