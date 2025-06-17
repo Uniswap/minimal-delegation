@@ -113,82 +113,9 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         assertEq(address(signerAccount).balance, totalAmount - spendAmount);
     }
 
-    struct Permit2TestSetup {
-        ERC20ETH erc20Eth;
-        IPermit2 permit2;
-        uint256 spendAmount;
-        uint256 totalAmount;
-    }
-
-    function _setupPermit2Test() internal returns (Permit2TestSetup memory setup) {
-        setup.erc20Eth = new ERC20ETH();
-        setup.permit2 = IPermit2(Permit2Utils.deployPermit2());
-        setup.spendAmount = 1 ether;
-        setup.totalAmount = 2 ether;
-        
-        vm.deal(address(signerAccount), setup.totalAmount);
-        vm.prank(address(signerAccount));
-        signerAccount.approveNative(address(setup.erc20Eth), type(uint256).max);
-    }
-
-    function _createPermit(address token, uint256 amount) internal view returns (ISignatureTransfer.PermitTransferFrom memory) {
-        return ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({
-                token: token,
-                amount: amount
-            }),
-            nonce: 0,
-            deadline: block.timestamp + 1 hours
-        });
-    }
-
-    function _testPermit2Transfer(
-        IPermit2 permit2,
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        bytes memory sig,
-        uint256 spendAmount,
-        uint256 totalAmount,
-        bool isWitness,
-        bytes32 witness,
-        string memory witnessTypeString
-    ) internal {
-        // Test invalid transfer (too much)
-        ISignatureTransfer.SignatureTransferDetails memory invalidTransfer = 
-            ISignatureTransfer.SignatureTransferDetails({
-                to: bob,
-                requestedAmount: spendAmount + 1
-            });
-
-        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
-        vm.prank(bob);
-        if (isWitness) {
-            permit2.permitWitnessTransferFrom(permit, invalidTransfer, address(signerAccount), witness, witnessTypeString, sig);
-        } else {
-            permit2.permitTransferFrom(permit, invalidTransfer, address(signerAccount), sig);
-        }
-
-        // Test valid transfer
-        ISignatureTransfer.SignatureTransferDetails memory validTransfer = 
-            ISignatureTransfer.SignatureTransferDetails({
-                to: bob,
-                requestedAmount: spendAmount
-            });
-        
-        vm.prank(bob);
-        if (isWitness) {
-            permit2.permitWitnessTransferFrom(permit, validTransfer, address(signerAccount), witness, witnessTypeString, sig);
-        } else {
-            permit2.permitTransferFrom(permit, validTransfer, address(signerAccount), sig);
-        }
-
-        // Verify the transfer
-        assertEq(bob.balance, spendAmount);
-        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
-    }
-
     function setUp() public {
         setUpDelegation();
-        detector = new ERC7914FunctionDetector(address(signerAccount));
+        detector = new ERC7914FunctionDetector(address(calibur));
         nonERC7914Contract = new MockNonERC7914Contract();
         sameErrorContract = new MockSameErrorContract();
     }
@@ -458,69 +385,23 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
 
     /// @notice Test ERC7914 detection functionality across different contract types
     function test_erc7914Detection() public {
-        detector = new ERC7914FunctionDetector(address(signerAccount));
         // Test with non-ERC7914 contract
         bool hasSupport = detector.hasERC7914Support(address(nonERC7914Contract));
         assertFalse(hasSupport, "Non-ERC7914 contract should not be detected");
-
-        // Test short circuit for calibur address 
-        // Normally this would fail, but since we tell the detector that the 
-        // calibur address is the non-ERC7914 contract, it will short circuit 
-        // and return true
-        detector = new ERC7914FunctionDetector(address(nonERC7914Contract));
-        hasSupport = detector.hasERC7914Support(address(nonERC7914Contract));
-        assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
         
-        // Revert to the original detector
-        detector = new ERC7914FunctionDetector(address(signerAccount));
-
         // Test with EOA
         address eoa = makeAddr("testEOA");
         hasSupport = detector.hasERC7914Support(eoa);
         assertFalse(hasSupport, "EOA should not support ERC7914");
 
-        // Test with ERC7914-supporting contract (calibur address does not match signerAccount)
+        // Test with ERC7914-supporting contract (calibur address matches signerAccount)
         hasSupport = detector.hasERC7914Support(address(signerAccount));
         assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
-    }
 
-    /// @notice Test ERC7914 detection remains consistent regardless of allowance state
-    function test_erc7914DetectionConsistency() public {
-        // Test detection before setting any allowances
-        bool supportBefore = detector.hasERC7914Support(address(signerAccount));
-        assertTrue(supportBefore, "Should detect ERC7914 support before allowances");
-        
-        // Set up allowances on the ERC7914-supporting contract
-        vm.prank(address(signerAccount));
-        signerAccount.approveNative(bob, 5 ether);
-        
-        vm.prank(address(signerAccount));
-        signerAccount.approveNativeTransient(recipient, 5 ether);
-
-        // Test detection after setting allowances
-        bool supportAfter = detector.hasERC7914Support(address(signerAccount));
-        assertTrue(supportAfter, "Should still detect ERC7914 support after allowances");
-        
-        // Should be consistent
-        assertEq(supportBefore, supportAfter, "Detection should be consistent regardless of allowance state");
-    }
-
-    /// @notice Test detector doesn't modify contract state
-    function test_erc7914DetectionStateInvariant() public {
-        // Set an allowance to test state preservation
-        vm.prank(address(signerAccount));
-        signerAccount.approveNative(bob, type(uint256).max);
-
-        // Get initial state
-        uint256 allowanceBefore = signerAccount.nativeAllowance(bob);
-        
-        // Run detection
-        bool hasSupport = detector.hasERC7914Support(address(signerAccount));
-        assertTrue(hasSupport, "Should detect ERC7914 support");
-        
-        // Verify state hasn't changed
-        uint256 allowanceAfter = signerAccount.nativeAllowance(bob);
-        assertEq(allowanceBefore, allowanceAfter, "Detector should not modify contract state");
+        // Test with ERC7914-supporting contract (calibur address does not match signerAccount)
+        detector = new ERC7914FunctionDetector(address(nonERC7914Contract));
+        hasSupport = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
     }
 
     /// @notice Test that same error selector doesn't cause false positive

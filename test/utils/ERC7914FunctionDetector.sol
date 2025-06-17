@@ -5,6 +5,12 @@ import {IERC7914} from "../../src/interfaces/IERC7914.sol";
 
 contract ERC7914FunctionDetector {
     
+    // EIP-7702 constants from account-abstraction library
+    bytes3 internal constant EIP7702_PREFIX = 0xef0100;
+    
+    // EIP-7702 bytecode structure: 3 bytes prefix + 20 bytes delegate address = 23 bytes total
+    uint256 internal constant EIP7702_BYTECODE_SIZE = 23;
+    
     address public immutable caliburAddress;
     constructor(address _caliburAddress) {
         caliburAddress = _caliburAddress;
@@ -16,10 +22,6 @@ contract ERC7914FunctionDetector {
      * @return hasERC7914Support true if ERC7914 is supported, false otherwise
      */
     function hasERC7914Support(address wallet) external view returns (bool) {
-        // Check if the wallet is Calibur
-        if (wallet == caliburAddress) {
-            return true;
-        }
 
         // EOAs cannot support ERC7914
         uint256 codeSize;
@@ -30,8 +32,51 @@ contract ERC7914FunctionDetector {
             return false;
         }
 
-        // Check if approveNative function exists
+        // Check if this is an EIP-7702 wallet delegating to Calibur
+        if (_isEip7702Delegate(wallet)) {
+            address delegate = _getEip7702Delegate(wallet);
+            // If it delegates to Calibur, it has ERC7914 support
+            if (delegate == caliburAddress) {
+                return true;
+            }
+            // If it delegates to another contract, check that contract
+            return _checkApproveNative(delegate);
+        }
+
+        // For regular contracts, check if approveNative function exists
         return _checkApproveNative(wallet);
+    }
+
+    /**
+     * @notice Get the EIP-7702 bytecode from contract (prefix + delegate address)
+     * @param wallet The wallet address to read from
+     * @return code The first 23 bytes of bytecode (3 byte prefix + 20 byte delegate)
+     */
+    function _getContractCode(address wallet) private view returns (bytes32 code) {
+        assembly ("memory-safe") {
+            extcodecopy(wallet, 0, 0, EIP7702_BYTECODE_SIZE)
+            code := mload(0)
+        }
+    }
+
+    /**
+     * @notice Check if an address is an EIP-7702 wallet
+     * @param wallet The wallet address to check
+     * @return true if it's an EIP-7702 wallet, false otherwise
+     */
+    function _isEip7702Delegate(address wallet) private view returns (bool) {
+        if (wallet.code.length < EIP7702_BYTECODE_SIZE) return false;
+        return bytes3(_getContractCode(wallet)) == EIP7702_PREFIX;
+    }
+
+    /**
+     * @notice Get the delegate address from an EIP-7702 wallet
+     * @param wallet The EIP-7702 wallet address
+     * @return delegate The delegate contract address
+     */
+    function _getEip7702Delegate(address wallet) private view returns (address) {
+        bytes32 code = _getContractCode(wallet);
+        return address(bytes20(code << 24));
     }
 
     function _checkApproveNative(address wallet) private view returns (bool) {
