@@ -113,6 +113,79 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         assertEq(address(signerAccount).balance, totalAmount - spendAmount);
     }
 
+    struct Permit2TestSetup {
+        ERC20ETH erc20Eth;
+        IPermit2 permit2;
+        uint256 spendAmount;
+        uint256 totalAmount;
+    }
+
+    function _setupPermit2Test() internal returns (Permit2TestSetup memory setup) {
+        setup.erc20Eth = new ERC20ETH();
+        setup.permit2 = IPermit2(Permit2Utils.deployPermit2());
+        setup.spendAmount = 1 ether;
+        setup.totalAmount = 2 ether;
+        
+        vm.deal(address(signerAccount), setup.totalAmount);
+        vm.prank(address(signerAccount));
+        signerAccount.approveNative(address(setup.erc20Eth), type(uint256).max);
+    }
+
+    function _createPermit(address token, uint256 amount) internal view returns (ISignatureTransfer.PermitTransferFrom memory) {
+        return ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: token,
+                amount: amount
+            }),
+            nonce: 0,
+            deadline: block.timestamp + 1 hours
+        });
+    }
+
+    function _testPermit2Transfer(
+        IPermit2 permit2,
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        bytes memory sig,
+        uint256 spendAmount,
+        uint256 totalAmount,
+        bool isWitness,
+        bytes32 witness,
+        string memory witnessTypeString
+    ) internal {
+        // Test invalid transfer (too much)
+        ISignatureTransfer.SignatureTransferDetails memory invalidTransfer = 
+            ISignatureTransfer.SignatureTransferDetails({
+                to: bob,
+                requestedAmount: spendAmount + 1
+            });
+
+        vm.expectRevert(abi.encodeWithSelector(ISignatureTransfer.InvalidAmount.selector, spendAmount));
+        vm.prank(bob);
+        if (isWitness) {
+            permit2.permitWitnessTransferFrom(permit, invalidTransfer, address(signerAccount), witness, witnessTypeString, sig);
+        } else {
+            permit2.permitTransferFrom(permit, invalidTransfer, address(signerAccount), sig);
+        }
+
+        // Test valid transfer
+        ISignatureTransfer.SignatureTransferDetails memory validTransfer = 
+            ISignatureTransfer.SignatureTransferDetails({
+                to: bob,
+                requestedAmount: spendAmount
+            });
+        
+        vm.prank(bob);
+        if (isWitness) {
+            permit2.permitWitnessTransferFrom(permit, validTransfer, address(signerAccount), witness, witnessTypeString, sig);
+        } else {
+            permit2.permitTransferFrom(permit, validTransfer, address(signerAccount), sig);
+        }
+
+        // Verify the transfer
+        assertEq(bob.balance, spendAmount);
+        assertEq(address(signerAccount).balance, totalAmount - spendAmount);
+    }
+
     function setUp() public {
         setUpDelegation();
         detector = new ERC7914FunctionDetector(address(signerAccount));

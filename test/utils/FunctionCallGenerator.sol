@@ -38,10 +38,29 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
     address private immutable _tokenA;
     address private immutable _tokenB;
 
+    TestKey[] internal memoizedRegisteredKeys;
+    TestKey[] internal memoizedRevokedKeys;
+
     constructor(ICalibur _signerAccount, address tokenA, address tokenB) {
         signerAccount = _signerAccount;
         _tokenA = tokenA;
         _tokenB = tokenB;
+    }
+
+    modifier useMemoizedKeys() {
+        _;
+        // clear storage of memoized keys
+        delete memoizedRegisteredKeys;
+        delete memoizedRevokedKeys;
+    }
+
+    function _keyIsMemoized(TestKey[] storage memoizedKeys, TestKey memory testKey) internal view returns (bool) {
+        for (uint256 i = 0; i < memoizedKeys.length; i++) {
+            if (vm.addr(memoizedKeys[i].privateKey) == vm.addr(testKey.privateKey)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function _testKeyIsSignerAccount(TestKey memory testKey) internal view returns (bool) {
@@ -113,7 +132,12 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
             isRegistered = true;
         } catch (bytes memory _revertData) {
             assertEq(bytes4(_revertData), IKeyManagement.KeyDoesNotExist.selector);
-            isRegistered = false;
+            // If the key is in the memo, that means it was registered in this current call and can be operated on
+            if (_keyIsMemoized(memoizedRegisteredKeys, testKey)) {
+                isRegistered = true;
+            } else {
+                isRegistered = false;
+            }
         }
 
         bytes memory revertData;
@@ -123,20 +147,24 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
             if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotRegisterRootKey.selector);
             }
+            memoizedRegisteredKeys.push(testKey);
             return _registerCall(testKey, revertData);
         }
         // REVOKE == 1
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 1) {
-            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered
-            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH) {
+            // Cannot revoke the key if unregistered OR if its the rootKeyHash since it cannot be registered OR if the key has already been revoked this call
+            if (!isRegistered || currentKeyHash == KeyLib.ROOT_KEY_HASH || _keyIsMemoized(memoizedRevokedKeys, testKey))
+            {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             }
+            memoizedRevokedKeys.push(testKey);
             return _revokeCall(currentKeyHash, revertData);
         }
         // UPDATE == 2
         else if (randomSeed % FUZZED_FUNCTION_COUNT == 2) {
             Settings settings = _randSettings();
-            if (!isRegistered) {
+            // Cannot update the key if unregistered OR if the key has already been revoked this call
+            if (!isRegistered || _keyIsMemoized(memoizedRevokedKeys, testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.KeyDoesNotExist.selector);
             } else if (_testKeyIsSignerAccount(testKey)) {
                 revertData = _wrapCallFailedRevertData(IKeyManagement.CannotUpdateRootKey.selector);
@@ -145,6 +173,14 @@ abstract contract FunctionCallGenerator is InvariantFixtures {
         } else {
             return _tokenTransferCall(_tokenA, vm.randomAddress(), 1);
         }
+    }
+
+    function _generateHandlerCalls(uint256 count) internal useMemoizedKeys returns (HandlerCall[] memory) {
+        HandlerCall[] memory handlerCalls = CallUtils.initHandlerArray();
+        for (uint256 i = 0; i < count; i++) {
+            handlerCalls = handlerCalls.push(_generateHandlerCall(vm.randomUint()));
+        }
+        return handlerCalls;
     }
 
     /// @notice Executes registered callbacks for handler calls
