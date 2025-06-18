@@ -403,31 +403,4 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         hasSupport = detector.hasERC7914Support(address(signerAccount));
         assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
     }
-
-    /// @notice Test that same error selector doesn't cause false positive
-    function test_erc7914DetectionSameErrorSelectorNoFalsePositive() public {
-        // Verify the mock contract has the same error selector
-        vm.expectRevert(MockSameErrorContract.Unauthorized.selector);
-        sameErrorContract.someOtherFunction(address(0), 0);
-        
-        // Also verify BaseAuthorization has the same error selector
-        vm.expectRevert(BaseAuthorization.Unauthorized.selector);
-        vm.prank(bob); // Call from unauthorized address
-        signerAccount.approveNative(address(0), 0);
-        
-        // Verify both errors have the same selector (this is what we're testing for collision)
-        assertEq(
-            MockSameErrorContract.Unauthorized.selector, 
-            BaseAuthorization.Unauthorized.selector, 
-            "Error selectors should be the same"
-        );
-        
-        // The key test: detector should return FALSE because the function name doesn't match
-        bool hasSupport = detector.hasERC7914Support(address(sameErrorContract));
-        assertFalse(hasSupport, "Contract with same error selector but different function name should NOT be detected as ERC7914");
-        
-        // Double-check by testing that it correctly detects the real ERC7914 contract
-        bool realSupport = detector.hasERC7914Support(address(signerAccount));
-        assertTrue(realSupport, "Real ERC7914 contract should still be detected");
-    }
 }

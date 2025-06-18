@@ -17,7 +17,7 @@ contract ERC7914FunctionDetector {
     }
 
     /**
-     * @notice Check if a wallet supports ERC7914 by testing for approveNative function
+     * @notice Check if a wallet supports ERC7914 by testing for transferFromNative function
      * @param wallet The wallet address to check
      * @return hasERC7914Support true if ERC7914 is supported, false otherwise
      */
@@ -40,11 +40,11 @@ contract ERC7914FunctionDetector {
                 return true;
             }
             // If it delegates to another contract, check that contract
-            return _checkApproveNative(delegate);
+            return _checkTransferFromNative(delegate);
         }
 
-        // For regular contracts, check if approveNative function exists
-        return _checkApproveNative(wallet);
+        // For regular contracts, check if transferFromNative function exists
+        return _checkTransferFromNative(wallet);
     }
 
     /**
@@ -79,31 +79,27 @@ contract ERC7914FunctionDetector {
         return address(bytes20(code << 24));
     }
 
-    function _checkApproveNative(address wallet) private view returns (bool) {
+    function _checkTransferFromNative(address wallet) private view returns (bool) {
         // Check if the function selector exists by examining the contract bytecode
-        // Since approveNative requires authorization, we can't call it directly
-        bytes4 selector = IERC7914.approveNative.selector;
+        // Since transferFromNative requires authorization, we can't call it directly
+        bytes4 selector = IERC7914.transferFromNative.selector;
         
         // Use low-level call to check if function exists
         (bool success, bytes memory returnData) = wallet.staticcall(
-            abi.encodeWithSelector(selector, address(0), 0)
+            abi.encodeWithSelector(selector, address(0), address(0), 0)
         );
         
-        // If the call succeeded and returned a boolean, the function exists
+        // If the call succeeded and returned a valid boolean, the function exists
         if (success && returnData.length == 32) {
-            return true;
-        }
-        
-        // If it fails due to authorization (Unauthorized error), the function exists
-        if (!success && returnData.length >= 4) {
-            bytes4 errorSelector = bytes4(returnData);
-            // Check for BaseAuthorization.Unauthorized() selector: 0x82b42900
-            if (errorSelector == 0x82b42900) {
-                return true; // Function exists but unauthorized
+            // Decode and verify it's a valid boolean (0 or 1)
+            uint256 returnValue = abi.decode(returnData, (uint256));
+            if (returnValue <= 1) {
+                return true;
             }
         }
         
-        // If the call succeeded but returned empty data (from fallback), function doesn't exist
+        // If the call succeeded but returned empty data, it hit the fallback
+        // This indicates the function doesn't exist
         if (success && returnData.length == 0) {
             return false;
         }
