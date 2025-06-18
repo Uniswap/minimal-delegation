@@ -18,6 +18,9 @@ import {FFISignTypedData} from "./utils/FFISignTypedData.sol";
 import {ERC1271Handler} from "./utils/ERC1271Handler.sol";
 import {PermitSingle, PermitDetails} from "./utils/MockERC1271VerifyingContract.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ERC7914FunctionDetector} from "./utils/ERC7914FunctionDetector.sol";
+import {MockNonERC7914Contract} from "./utils/MockNonERC7914Contract.sol";
+import {MockWrongReturnTypeContract} from "./utils/MockWrongReturnTypeContract.sol";
 
 contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     using Permit2Utils for *;
@@ -29,8 +32,13 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     event TransferFromNativeTransient(address indexed from, address indexed to, uint256 value);
     event NativeAllowanceUpdated(address indexed spender, uint256 value);
 
+    address caliburAddress = address(signerAccount);
     address bob = makeAddr("bob");
     address recipient = makeAddr("recipient");
+    
+    ERC7914FunctionDetector detector;
+    MockNonERC7914Contract nonERC7914Contract;
+    MockWrongReturnTypeContract wrongReturnTypeContract;
 
     struct Permit2TestSetup {
         ERC20ETH erc20Eth;
@@ -107,6 +115,9 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
 
     function setUp() public {
         setUpDelegation();
+        detector = new ERC7914FunctionDetector(address(calibur));
+        nonERC7914Contract = new MockNonERC7914Contract();
+        wrongReturnTypeContract = new MockWrongReturnTypeContract();
     }
 
     function test_approveNative_revertsWithUnauthorized() public {
@@ -368,5 +379,35 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
             sig = signerTestKey.sign(msgHash);
         }
         _testPermit2Transfer(setup.permit2, permit, sig, setup.spendAmount, setup.totalAmount, true, witness, Permit2Utils.WITNESS_TYPE_STRING);
+    }
+
+    // ======= ERC7914 Detection Tests =======
+
+    /// @notice Test ERC7914 detection functionality across different contract types
+    function test_erc7914Detection() public {
+        // Test with non-ERC7914 contract
+        bool hasSupport = detector.hasERC7914Support(address(nonERC7914Contract));
+        assertFalse(hasSupport, "Non-ERC7914 contract should not be detected");
+        
+        // Test with EOA
+        address eoa = makeAddr("testEOA");
+        hasSupport = detector.hasERC7914Support(eoa);
+        assertFalse(hasSupport, "EOA should not support ERC7914");
+
+        // Test with ERC7914-supporting contract (calibur address matches signerAccount)
+        hasSupport = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
+
+        // Test with ERC7914-supporting contract (calibur address does not match signerAccount)
+        detector = new ERC7914FunctionDetector(address(nonERC7914Contract));
+        hasSupport = detector.hasERC7914Support(address(signerAccount));
+        assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
+    }
+
+    /// @notice Test that contracts with transferFromNative function but wrong return type are not detected as ERC7914
+    function test_erc7914DetectionWrongReturnType() public {
+        // Test with contract that has transferFromNative function but returns uint256 instead of bool
+        bool hasSupport = detector.hasERC7914Support(address(wrongReturnTypeContract));
+        assertFalse(hasSupport, "Contract with wrong return type should not be detected as ERC7914");
     }
 }
