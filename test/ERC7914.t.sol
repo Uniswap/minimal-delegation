@@ -20,7 +20,7 @@ import {PermitSingle, PermitDetails} from "./utils/MockERC1271VerifyingContract.
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ERC7914FunctionDetector} from "./utils/ERC7914FunctionDetector.sol";
 import {MockNonERC7914Contract} from "./utils/MockNonERC7914Contract.sol";
-import {MockSameErrorContract} from "./utils/MockSameErrorContract.sol";
+import {MockWrongReturnTypeContract} from "./utils/MockWrongReturnTypeContract.sol";
 
 contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     using Permit2Utils for *;
@@ -38,7 +38,7 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
     
     ERC7914FunctionDetector detector;
     MockNonERC7914Contract nonERC7914Contract;
-    MockSameErrorContract sameErrorContract;
+    MockWrongReturnTypeContract wrongReturnTypeContract;
 
     struct Permit2TestSetup {
         ERC20ETH erc20Eth;
@@ -117,7 +117,7 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         setUpDelegation();
         detector = new ERC7914FunctionDetector(address(calibur));
         nonERC7914Contract = new MockNonERC7914Contract();
-        sameErrorContract = new MockSameErrorContract();
+        wrongReturnTypeContract = new MockWrongReturnTypeContract();
     }
 
     function test_approveNative_revertsWithUnauthorized() public {
@@ -402,5 +402,12 @@ contract ERC7914Test is DelegationHandler, ERC1271Handler, FFISignTypedData {
         detector = new ERC7914FunctionDetector(address(nonERC7914Contract));
         hasSupport = detector.hasERC7914Support(address(signerAccount));
         assertTrue(hasSupport, "ERC7914-supporting contract should be detected");
+    }
+
+    /// @notice Test that contracts with transferFromNative function but wrong return type are not detected as ERC7914
+    function test_erc7914DetectionWrongReturnType() public {
+        // Test with contract that has transferFromNative function but returns uint256 instead of bool
+        bool hasSupport = detector.hasERC7914Support(address(wrongReturnTypeContract));
+        assertFalse(hasSupport, "Contract with wrong return type should not be detected as ERC7914");
     }
 }
